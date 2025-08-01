@@ -335,5 +335,18 @@ namespace Pulsar.Server.Models
                 SaveSettings();
             }
         }
+
+        public static bool AllowLocalhost
+        {
+            get
+            {
+                return LoadSettings().AllowLocalhost;
+            }
+            set
+            {
+                LoadSettings().AllowLocalhost = value;
+                SaveSettings();
+            }
+        }
     }
 }
