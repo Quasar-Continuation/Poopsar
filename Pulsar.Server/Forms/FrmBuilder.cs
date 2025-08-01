@@ -385,6 +385,33 @@ namespace Pulsar.Server.Forms
         {
             if (txtHost.Text.Length < 1) return;
 
+            // Fuck you if you merge the two if statements. Fuck you and your embeded if statements and if statement chains. Skid.
+            //~Biggy.
+
+            // we dont want the cli to connect to any localhost ips like 127.0.0.1 but instead us.
+            // Too many retards do this shit it gets annoying. ~Biggy
+            // I also allowed hosts to still use 127.0.0.1 if they want to debug ~Biggy
+            if (txtHost.Text.Contains("127.0.0.1") && !Models.Settings.AllowLocalhost)
+            {
+                MessageBox.Show("Hey dumbass any localhost ips wont connect to your server."); 
+                return;
+            }
+
+            // This is to only serve to remove localhost ip from the hosts if there is one existent. QOL and useful. ~Biggy
+            if (!Models.Settings.AllowLocalhost)
+            {
+                // find all added hosts and remove any that have 127.0.0.1 included.
+                foreach (var hostI in _hosts)
+                {
+                    if (hostI.Hostname.ToString().Contains("127.0.0.1"))
+                    {
+                        _hosts.Remove(hostI);
+                         break;
+                    }
+                }
+                
+            }
+             
             HasChanged();
 
             var host = txtHost.Text;
@@ -1070,6 +1097,11 @@ namespace Pulsar.Server.Forms
         {
             LoadIconPreview(txtIconPath.Text);
             HasChanged();
+        }
+
+        private void generalPage_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

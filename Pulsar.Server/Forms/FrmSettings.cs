@@ -37,6 +37,7 @@ namespace Pulsar.Server.Forms
 
         private void FrmSettings_Load(object sender, EventArgs e)
         {
+            chk_localhostAllowed.Checked = Settings.AllowLocalhost;
             ncPort.Value = Settings.ListenPort;
             chkDarkMode.Checked = Settings.DarkMode;
             chkHideFromScreenCapture.Checked = Settings.HideFromScreenCapture;
@@ -160,6 +161,7 @@ namespace Pulsar.Server.Forms
             Settings.TelegramChatID = txtTelegramChatID.Text;
             Settings.TelegramBotToken = txtTelegramToken.Text;
             Settings.TelegramNotifications = chkTelegramNotis.Checked;
+            Settings.AllowLocalhost = chk_localhostAllowed.Checked;
             DiscordRPCManager.ApplyDiscordRPC(this);
 
             FrmMain mainForm = Application.OpenForms.OfType<FrmMain>().FirstOrDefault();
@@ -317,6 +319,16 @@ namespace Pulsar.Server.Forms
         {
             ScreenCaptureHider.ScreenCaptureHider.FormsHiddenFromScreenCapture = chkHideFromScreenCapture.Checked;
             ScreenCaptureHider.ScreenCaptureHider.Refresh();
+        }
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void chk_localhostAllowed_CheckedChanged(object sender, EventArgs e)
+        {
+            Settings.AllowLocalhost = chk_localhostAllowed.Checked;
         }
     }
 }
