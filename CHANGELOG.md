@@ -1,5 +1,9 @@
 # Pulsar Changelog
 
+## Pulsar v1.4.2 []
+* Added "Allow localhost" setting which prevents 127.0.0.1 from being used unless allowed and will auto remove related ips when disabled.
+* Changed the look and size of the Settings page.
+
 ## Pulsar v1.4.1 [12.03.2023]
 * Added missing WOW64 subsystem autostart locations
 * Fixed file transfers of files larger than 2 GB
