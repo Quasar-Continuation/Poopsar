@@ -1,15 +1,14 @@
-using Pulsar.Common.Cryptography;
 using Pulsar.Common.Messages;
 using Pulsar.Common.Messages.Other;
 using System;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Pulsar.Server.TelegramSender;
-using dnlib;
-using Pulsar.Server.Models;
+using System.Security.Cryptography;
+using Pulsar.Common.Cryptography;
+using System.Text;
 
 namespace Pulsar.Server.Networking
 {
@@ -41,15 +40,15 @@ namespace Pulsar.Server.Networking
         private void OnClientConnected(Client client)
         {
             if (ProcessingDisconnect || !Listening) return;
-            if (Pulsar.Server.Models.Settings.TelegramNotifications)
+            if (Models.Settings.TelegramNotifications)
             {
                 Task.Run(() => Send.SendConnectionMessage(
-                    Pulsar.Server.Models.Settings.TelegramBotToken,
-                    Pulsar.Server.Models.Settings.TelegramChatID,
+                    Models.Settings.TelegramBotToken,
+                    Models.Settings.TelegramChatID,
                     client.Value.Username,
                     client.EndPoint.Address.ToString(),
                     client.Value.Country
-));
+                ));
             }
 
 
@@ -138,7 +137,29 @@ namespace Pulsar.Server.Networking
                 return;
             }
 
-            MessageHandler.Process(client, message);
+            if (IsHighPriorityMessage(message))
+            {
+                MessageHandler.Process(client, message);
+            }
+            else
+            {
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    try
+                    {
+                        MessageHandler.Process(client, message);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Message processing error: {ex.Message}");
+                    }
+                });
+            }
+        }
+
+        private bool IsHighPriorityMessage(IMessage message)
+        {
+            return message is ClientIdentificationResult;
         }
 
         private bool IdentifyClient(Client client, ClientIdentification packet)
