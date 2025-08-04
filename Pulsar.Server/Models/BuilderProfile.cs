@@ -356,8 +356,8 @@ namespace Pulsar.Server.Models
         {
             if (string.IsNullOrEmpty(profileName)) 
                 throw new ArgumentException("Invalid Profile Path");
-            
-            _profilePath = Path.Combine(Application.StartupPath, "Profiles", profileName + ".json");
+
+            _profilePath = Path.Combine(Application.StartupPath, "PulsarStuff", profileName + ".json");
             Load();
         }
 
