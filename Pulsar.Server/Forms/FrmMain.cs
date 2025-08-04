@@ -87,8 +87,8 @@ namespace Pulsar.Server.Forms
                 this.Invoke(new Action(() => OnLogReceived(sender, client, log)));
                 return;
             }
-        }        
-        
+        }
+
         private void RegisterMessageHandler()
         {
             MessageHandler.Register(_clientDebugLogHandler);
@@ -100,8 +100,8 @@ namespace Pulsar.Server.Forms
             _clientStatusHandler.UserClipboardStatusUpdated += SetUserClipboardByClient;
             MessageHandler.Register(_getCryptoAddressHander);
             _getCryptoAddressHander.AddressReceived += OnAddressReceived;
-        }        
-        
+        }
+
         private void UnregisterMessageHandler()
         {
             MessageHandler.Unregister(_clientDebugLogHandler);
@@ -121,19 +121,26 @@ namespace Pulsar.Server.Forms
             _titleUpdateRunning = true;
             try
             {
-                this.Invoke((MethodInvoker)delegate
+                this.BeginInvoke((MethodInvoker)delegate
                 {
-                    int selected = lstClients.SelectedItems.Count;
-                    this.Text = (selected > 0)
-                        ? string.Format("Pulsar - Connected: {0} [Selected: {1}]", ListenServer.ConnectedClients.Length,
-                            selected)
-                        : string.Format("Pulsar - Connected: {0}", ListenServer.ConnectedClients.Length);
+                    try
+                    {
+                        int selected = lstClients.SelectedItems.Count;
+                        int connected = ListenServer?.ConnectedClients?.Length ?? 0;
+                        this.Text = (selected > 0)
+                            ? string.Format("Pulsar - Connected: {0} [Selected: {1}]", connected, selected)
+                            : string.Format("Pulsar - Connected: {0}", connected);
+                    }
+                    finally
+                    {
+                        _titleUpdateRunning = false;
+                    }
                 });
             }
             catch (Exception)
             {
+                _titleUpdateRunning = false;
             }
-            _titleUpdateRunning = false;
         }
 
         private void InitializeServer()
@@ -341,7 +348,7 @@ namespace Pulsar.Server.Forms
                 DebugLogRichBox.SelectionStart = DebugLogRichBox.TextLength;
                 DebugLogRichBox.SelectionLength = 0;
                 DebugLogRichBox.ScrollToCaret();
-                
+
                 DebugLogRichBox.SelectionStart = originalSelectionStart;
                 DebugLogRichBox.SelectionColor = originalSelectionColor;
             }
@@ -512,19 +519,46 @@ namespace Pulsar.Server.Forms
             UpdateConnectedClientsCount();
         }
 
+        private bool _countUpdateRunning;
+
         private void UpdateConnectedClientsCount()
         {
-            this.Invoke((MethodInvoker)delegate
+            if (_countUpdateRunning) return;
+            _countUpdateRunning = true;
+
+            ThreadPool.QueueUserWorkItem(_ =>
             {
-                connectedToolStripStatusLabel.Text = $"Connected: {ListenServer.ConnectedClients.Length}";
+                try
+                {
+                    var count = ListenServer?.ConnectedClients?.Length ?? 0;
+                    this.BeginInvoke((MethodInvoker)delegate
+                    {
+                        try
+                        {
+                            connectedToolStripStatusLabel.Text = $"Connected: {count}";
+                        }
+                        finally
+                        {
+                            _countUpdateRunning = false;
+                        }
+                    });
+                }
+                catch (Exception)
+                {
+                    _countUpdateRunning = false;
+                }
             });
         }
 
         private void ProcessClientConnections(object state)
         {
+            const int batchSize = 10; // up to 10 clients at once
+            var batch = new List<KeyValuePair<Client, bool>>(batchSize);
+
             while (true)
             {
-                KeyValuePair<Client, bool> client;
+                batch.Clear();
+
                 lock (_clientConnections)
                 {
                     if (!ListenServer.Listening)
@@ -542,24 +576,35 @@ namespace Pulsar.Server.Forms
                         return;
                     }
 
-                    client = _clientConnections.Dequeue();
+                    while (batch.Count < batchSize && _clientConnections.Count > 0)
+                    {
+                        batch.Add(_clientConnections.Dequeue());
+                    }
                 }
 
-                if (client.Key != null)
+                foreach (var client in batch)
                 {
-                    switch (client.Value)
+                    if (client.Key != null)
                     {
-                        case true:
-                            AddClientToListview(client.Key);
-                            StartAutomatedTask(client.Key);
-                            if (Settings.ShowPopup)
-                                ShowPopup(client.Key);
-                            break;
+                        switch (client.Value)
+                        {
+                            case true:
+                                AddClientToListview(client.Key);
+                                ThreadPool.QueueUserWorkItem(_ => StartAutomatedTask(client.Key));
+                                if (Settings.ShowPopup)
+                                    ThreadPool.QueueUserWorkItem(_ => ShowPopup(client.Key));
+                                break;
 
-                        case false:
-                            RemoveClientFromListview(client.Key);
-                            break;
+                            case false:
+                                RemoveClientFromListview(client.Key);
+                                break;
+                        }
                     }
+                }
+
+                if (_clientConnections.Count > 0)
+                {
+                    Thread.Sleep(10);
                 }
             }
         }
@@ -896,9 +941,11 @@ namespace Pulsar.Server.Forms
                 {
                     lock (_lockClients)
                     {
+                        lstClients.BeginUpdate();
                         lstClients.Items.Add(lvi);
                         AddStarButton(lvi, client);
                         SortClientsByFavoriteStatus();
+                        lstClients.EndUpdate();
                     }
                     //lvi.UseItemStyleForSubItems = false;
                     //lvi.SubItems[4].ForeColor = Color.Green;
@@ -975,6 +1022,7 @@ namespace Pulsar.Server.Forms
                 {
                     lock (_lockClients)
                     {
+                        lstClients.BeginUpdate();
                         foreach (ListViewItem lvi in lstClients.Items.Cast<ListViewItem>()
                             .Where(lvi => lvi != null && client.Equals(lvi.Tag)))
                         {
@@ -991,6 +1039,7 @@ namespace Pulsar.Server.Forms
                             lvi.Remove();
                             break;
                         }
+                        lstClients.EndUpdate();
                     }
                 });
                 UpdateWindowTitle();
@@ -1001,25 +1050,93 @@ namespace Pulsar.Server.Forms
             }
         }
 
+        private readonly Dictionary<Client, Dictionary<string, object>> _pendingStatusUpdates = new Dictionary<Client, Dictionary<string, object>>();
+        private readonly object _statusUpdateLock = new object();
+        private bool _statusUpdatePending = false;
+
         private void SetStatusByClient(object sender, Client client, string text)
         {
-            var item = GetListViewItemByClient(client);
-            if (item != null)
-                item.SubItems[STATUS_ID].Text = text;
+            QueueStatusUpdate(client, "status", text);
         }
 
         private void SetUserStatusByClient(object sender, Client client, UserStatus userStatus)
         {
-            var item = GetListViewItemByClient(client);
-            if (item != null)
-                item.SubItems[USERSTATUS_ID].Text = userStatus.ToString();
-        }        
-        
+            QueueStatusUpdate(client, "userStatus", userStatus.ToString());
+        }
+
         private void SetUserActiveWindowByClient(object sender, Client client, string newWindow)
         {
-            var item = GetListViewItemByClient(client);
-            if (item != null)
-                item.SubItems[CURRENTWINDOW_ID].Text = newWindow;
+            QueueStatusUpdate(client, "window", newWindow);
+        }
+
+        private void QueueStatusUpdate(Client client, string field, object value)
+        {
+            if (client == null) return;
+
+            lock (_statusUpdateLock)
+            {
+                if (!_pendingStatusUpdates.ContainsKey(client))
+                    _pendingStatusUpdates[client] = new Dictionary<string, object>();
+
+                _pendingStatusUpdates[client][field] = value;
+
+                if (!_statusUpdatePending)
+                {
+                    _statusUpdatePending = true;
+                    ThreadPool.QueueUserWorkItem(_ => ProcessStatusUpdates());
+                }
+            }
+        }
+
+        private void ProcessStatusUpdates()
+        {
+            Thread.Sleep(50); //small delay for batched updates.
+
+            Dictionary<Client, Dictionary<string, object>> updates;
+            lock (_statusUpdateLock)
+            {
+                updates = new Dictionary<Client, Dictionary<string, object>>(_pendingStatusUpdates);
+                _pendingStatusUpdates.Clear();
+                _statusUpdatePending = false;
+            }
+
+            if (updates.Count == 0) return;
+
+            this.BeginInvoke((MethodInvoker)delegate
+            {
+                lstClients.BeginUpdate();
+                try
+                {
+                    foreach (var update in updates)
+                    {
+                        var item = lstClients.Items.Cast<ListViewItem>()
+                            .FirstOrDefault(lvi => lvi != null && update.Key.Equals(lvi.Tag));
+
+                        if (item != null)
+                        {
+                            foreach (var fieldUpdate in update.Value)
+                            {
+                                switch (fieldUpdate.Key)
+                                {
+                                    case "status":
+                                        item.SubItems[STATUS_ID].Text = fieldUpdate.Value?.ToString();
+                                        break;
+                                    case "userStatus":
+                                        item.SubItems[USERSTATUS_ID].Text = fieldUpdate.Value?.ToString();
+                                        break;
+                                    case "window":
+                                        item.SubItems[CURRENTWINDOW_ID].Text = fieldUpdate.Value?.ToString();
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                }
+                finally
+                {
+                    lstClients.EndUpdate();
+                }
+            });
         }
 
         private void SetUserClipboardByClient(object sender, Client client, string clipboardText)
@@ -1722,8 +1839,8 @@ namespace Pulsar.Server.Forms
             {
                 frm.ShowDialog();
             }
-        }        
-        
+        }
+
         public static void AddNotiEvent(FrmMain frmMain, string client, string keywords, string windowText)
         {
             if (frmMain.lstNoti.InvokeRequired)
@@ -1734,7 +1851,7 @@ namespace Pulsar.Server.Forms
             ListViewItem item = new ListViewItem(client);
             item.SubItems.Add(DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
             item.SubItems.Add(keywords);
-            
+
             // truncate
             string displayText = windowText;
             if (windowText.Length > 100)
@@ -1742,14 +1859,14 @@ namespace Pulsar.Server.Forms
                 displayText = windowText.Substring(0, 100) + "...";
             }
             item.SubItems.Add(displayText);
-            
+
             item.ToolTipText = windowText;
-            
+
             frmMain.lstNoti.Items.Add(item);
 
             string notificationTitle = $"Keyword Triggered: {keywords}";
             string notificationText;
-            
+
             if (keywords.Contains("(Clipboard)"))
             {
                 notificationText = $"Client: {client}\nClipboard: {(windowText.Length > 50 ? windowText.Substring(0, 50) + "..." : windowText)}";

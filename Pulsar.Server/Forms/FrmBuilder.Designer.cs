@@ -301,7 +301,6 @@ namespace Pulsar.Server.Forms
             this.generalPage.Size = new System.Drawing.Size(391, 376);
             this.generalPage.TabIndex = 4;
             this.generalPage.Text = "Basic Settings";
-            this.generalPage.Click += new System.EventHandler(this.generalPage_Click);
             // 
             // chkCryptable
             // 

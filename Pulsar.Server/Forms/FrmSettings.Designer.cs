@@ -66,7 +66,7 @@ namespace Pulsar.Server.Forms
             // 
             // btnSave
             // 
-            this.btnSave.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.btnSave.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.btnSave.Location = new System.Drawing.Point(437, 442);
             this.btnSave.Name = "btnSave";
@@ -78,7 +78,7 @@ namespace Pulsar.Server.Forms
             // 
             // lblPort
             // 
-            this.lblPort.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.lblPort.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.lblPort.AutoSize = true;
             this.lblPort.Location = new System.Drawing.Point(12, 11);
@@ -89,7 +89,7 @@ namespace Pulsar.Server.Forms
             // 
             // ncPort
             // 
-            this.ncPort.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.ncPort.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.ncPort.Location = new System.Drawing.Point(111, 7);
             this.ncPort.Maximum = new decimal(new int[] {
@@ -113,7 +113,7 @@ namespace Pulsar.Server.Forms
             // 
             // chkAutoListen
             // 
-            this.chkAutoListen.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.chkAutoListen.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chkAutoListen.AutoSize = true;
             this.chkAutoListen.Location = new System.Drawing.Point(15, 124);
@@ -125,7 +125,7 @@ namespace Pulsar.Server.Forms
             // 
             // chkPopup
             // 
-            this.chkPopup.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.chkPopup.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chkPopup.AutoSize = true;
             this.chkPopup.Location = new System.Drawing.Point(15, 147);
@@ -137,7 +137,7 @@ namespace Pulsar.Server.Forms
             // 
             // btnListen
             // 
-            this.btnListen.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.btnListen.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.btnListen.Location = new System.Drawing.Point(207, 7);
             this.btnListen.Name = "btnListen";
@@ -149,7 +149,7 @@ namespace Pulsar.Server.Forms
             // 
             // btnCancel
             // 
-            this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.btnCancel.Location = new System.Drawing.Point(289, 442);
             this.btnCancel.Name = "btnCancel";
@@ -161,7 +161,7 @@ namespace Pulsar.Server.Forms
             // 
             // chkUseUpnp
             // 
-            this.chkUseUpnp.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.chkUseUpnp.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chkUseUpnp.AutoSize = true;
             this.chkUseUpnp.Location = new System.Drawing.Point(15, 170);
@@ -173,7 +173,7 @@ namespace Pulsar.Server.Forms
             // 
             // chkShowTooltip
             // 
-            this.chkShowTooltip.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.chkShowTooltip.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chkShowTooltip.AutoSize = true;
             this.chkShowTooltip.Location = new System.Drawing.Point(15, 193);
@@ -185,7 +185,7 @@ namespace Pulsar.Server.Forms
             // 
             // chkNoIPIntegration
             // 
-            this.chkNoIPIntegration.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.chkNoIPIntegration.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chkNoIPIntegration.AutoSize = true;
             this.chkNoIPIntegration.Location = new System.Drawing.Point(308, 123);
@@ -198,7 +198,7 @@ namespace Pulsar.Server.Forms
             // 
             // lblHost
             // 
-            this.lblHost.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.lblHost.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.lblHost.AutoSize = true;
             this.lblHost.Enabled = false;
@@ -210,7 +210,7 @@ namespace Pulsar.Server.Forms
             // 
             // lblPass
             // 
-            this.lblPass.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.lblPass.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.lblPass.AutoSize = true;
             this.lblPass.Enabled = false;
@@ -222,7 +222,7 @@ namespace Pulsar.Server.Forms
             // 
             // lblUser
             // 
-            this.lblUser.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.lblUser.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.lblUser.AutoSize = true;
             this.lblUser.Enabled = false;
@@ -234,7 +234,7 @@ namespace Pulsar.Server.Forms
             // 
             // txtNoIPPass
             // 
-            this.txtNoIPPass.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.txtNoIPPass.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.txtNoIPPass.Enabled = false;
             this.txtNoIPPass.Location = new System.Drawing.Point(366, 199);
@@ -244,7 +244,7 @@ namespace Pulsar.Server.Forms
             // 
             // txtNoIPUser
             // 
-            this.txtNoIPUser.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.txtNoIPUser.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.txtNoIPUser.Enabled = false;
             this.txtNoIPUser.Location = new System.Drawing.Point(366, 174);
@@ -254,7 +254,7 @@ namespace Pulsar.Server.Forms
             // 
             // txtNoIPHost
             // 
-            this.txtNoIPHost.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.txtNoIPHost.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.txtNoIPHost.Enabled = false;
             this.txtNoIPHost.Location = new System.Drawing.Point(366, 146);
@@ -265,7 +265,7 @@ namespace Pulsar.Server.Forms
             // 
             // chkShowPassword
             // 
-            this.chkShowPassword.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.chkShowPassword.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chkShowPassword.AutoSize = true;
             this.chkShowPassword.Enabled = false;
@@ -279,7 +279,7 @@ namespace Pulsar.Server.Forms
             // 
             // chkIPv6Support
             // 
-            this.chkIPv6Support.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.chkIPv6Support.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chkIPv6Support.AutoSize = true;
             this.chkIPv6Support.Location = new System.Drawing.Point(15, 101);
@@ -291,7 +291,7 @@ namespace Pulsar.Server.Forms
             // 
             // chkDarkMode
             // 
-            this.chkDarkMode.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.chkDarkMode.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chkDarkMode.AutoSize = true;
             this.chkDarkMode.Checked = true;
@@ -305,7 +305,7 @@ namespace Pulsar.Server.Forms
             // 
             // chkEventLog
             // 
-            this.chkEventLog.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.chkEventLog.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chkEventLog.AutoSize = true;
             this.chkEventLog.Location = new System.Drawing.Point(15, 216);
@@ -317,7 +317,7 @@ namespace Pulsar.Server.Forms
             // 
             // chkDiscordRPC
             // 
-            this.chkDiscordRPC.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.chkDiscordRPC.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chkDiscordRPC.AutoSize = true;
             this.chkDiscordRPC.Checked = true;
@@ -332,7 +332,7 @@ namespace Pulsar.Server.Forms
             // 
             // chkTelegramNotis
             // 
-            this.chkTelegramNotis.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.chkTelegramNotis.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chkTelegramNotis.AutoSize = true;
             this.chkTelegramNotis.Location = new System.Drawing.Point(308, 7);
@@ -345,7 +345,7 @@ namespace Pulsar.Server.Forms
             // 
             // txtTelegramToken
             // 
-            this.txtTelegramToken.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.txtTelegramToken.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.txtTelegramToken.Enabled = false;
             this.txtTelegramToken.Location = new System.Drawing.Point(376, 33);
@@ -356,7 +356,7 @@ namespace Pulsar.Server.Forms
             // 
             // label1
             // 
-            this.label1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.label1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.label1.AutoSize = true;
             this.label1.Enabled = false;
@@ -369,7 +369,7 @@ namespace Pulsar.Server.Forms
             // 
             // txtTelegramChatID
             // 
-            this.txtTelegramChatID.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.txtTelegramChatID.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.txtTelegramChatID.Enabled = false;
             this.txtTelegramChatID.Location = new System.Drawing.Point(377, 61);
@@ -379,7 +379,7 @@ namespace Pulsar.Server.Forms
             // 
             // label2
             // 
-            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.label2.AutoSize = true;
             this.label2.Enabled = false;
@@ -391,7 +391,7 @@ namespace Pulsar.Server.Forms
             // 
             // button1
             // 
-            this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.button1.Location = new System.Drawing.Point(329, 87);
             this.button1.Name = "button1";
@@ -424,7 +424,7 @@ namespace Pulsar.Server.Forms
             // 
             // chkHideFromScreenCapture
             // 
-            this.chkHideFromScreenCapture.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.chkHideFromScreenCapture.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chkHideFromScreenCapture.AutoSize = true;
             this.chkHideFromScreenCapture.Location = new System.Drawing.Point(15, 78);
@@ -528,5 +528,6 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.RichTextBox BlockedRichTB;
         private System.Windows.Forms.CheckBox chkHideFromScreenCapture;
         private System.Windows.Forms.CheckBox chk_localhostAllowed;
+
     }
 }
