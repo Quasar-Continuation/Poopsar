@@ -1,14 +1,14 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 using Pulsar.Common.Models;
 using System.Collections.Generic;
 
 namespace Pulsar.Common.Messages.Administration.StartupManager
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class GetStartupItemsResponse : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public List<StartupItem> StartupItems { get; set; }
     }
 }

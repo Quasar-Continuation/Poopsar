@@ -1,21 +1,21 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.UserSupport.MessageBox
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoShowMessageBox : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Caption { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public string Text { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public string Button { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public string Icon { get; set; }
     }
 }

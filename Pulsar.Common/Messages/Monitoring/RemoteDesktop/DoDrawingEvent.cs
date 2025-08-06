@@ -1,37 +1,37 @@
-using ProtoBuf;
+using MessagePack;
 using Pulsar.Common.Messages.Other;
 using System.Drawing;
 
 namespace Pulsar.Common.Messages.Monitoring.RemoteDesktop
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoDrawingEvent : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public int X { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public int Y { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public int PrevX { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public int PrevY { get; set; }
 
-        [ProtoMember(5)]
+        [Key(5)]
         public int StrokeWidth { get; set; }
 
-        [ProtoMember(6)]
+        [Key(6)]
         public int ColorArgb { get; set; }
 
-        [ProtoMember(7)]
+        [Key(7)]
         public bool IsEraser { get; set; }
 
-        [ProtoMember(8)]
+        [Key(8)]
         public bool IsClearAll { get; set; }
 
-        [ProtoMember(9)]
+        [Key(9)]
         public int MonitorIndex { get; set; }
     }
 } 

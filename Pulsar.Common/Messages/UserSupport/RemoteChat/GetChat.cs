@@ -1,12 +1,12 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.UserSupport.RemoteChat
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class GetChat : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Message { get; set; }
     }
 }

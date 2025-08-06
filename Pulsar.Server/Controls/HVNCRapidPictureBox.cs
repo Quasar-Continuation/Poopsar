@@ -8,6 +8,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.ComponentModel;
 
 namespace Pulsar.Server.Controls
 {
@@ -29,6 +30,7 @@ namespace Pulsar.Server.Controls
         /// <summary>
         /// True if the PictureBox is currently streaming images, else False.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool Running { get; set; }
 
         /// <summary>
@@ -44,6 +46,7 @@ namespace Pulsar.Server.Controls
         /// <summary>
         /// Provides thread-safe access to the Image of this Picturebox.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Image GetImageSafe
         {
             get

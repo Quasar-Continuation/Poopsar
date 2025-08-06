@@ -1,5 +1,6 @@
 ﻿using Pulsar.Server.Enums;
 using System;
+using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Forms;
 
@@ -19,6 +20,7 @@ namespace Pulsar.Server.Controls
             set { }
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool IsHexNumber
         {
             get { return isHexNumber; }
@@ -48,6 +50,7 @@ namespace Pulsar.Server.Controls
             }
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public WordType Type
         {
             get { return type; }

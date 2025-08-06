@@ -1,13 +1,17 @@
 ﻿using Pulsar.Server.Forms.DarkMode;
 using Pulsar.Server.Helper;
 using System;
+using System.ComponentModel;
 using System.Windows.Forms;
 
 namespace Pulsar.Server.Forms
 {
     public partial class FrmVisitWebsite : Form
     {
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string Url { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool Hidden { get; set; }
 
         private readonly int _selectedClients;

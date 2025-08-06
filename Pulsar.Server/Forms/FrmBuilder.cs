@@ -981,7 +981,6 @@ namespace Pulsar.Server.Forms
                             Icon iconextracted = Icon.ExtractAssociatedIcon(ofd.FileName);
 
                             Bitmap bitmap = iconextracted.ToBitmap();
-                            //bitmap.Save("out.bmp");
 
                             SaveBitmapAsIcon(bitmap, tempIconPath);
 

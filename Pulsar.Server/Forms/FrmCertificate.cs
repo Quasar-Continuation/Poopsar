@@ -1,4 +1,5 @@
-﻿using Pulsar.Server.Forms.DarkMode;
+﻿using Org.BouncyCastle.Crypto.Paddings;
+using Pulsar.Server.Forms.DarkMode;
 using Pulsar.Server.Helper;
 using Pulsar.Server.Models;
 using System;
@@ -57,9 +58,9 @@ namespace Pulsar.Server.Forms
                 {
                     try
                     {
-                        SetCertificate(new X509Certificate2(ofd.FileName, "", X509KeyStorageFlags.Exportable));
-
-                        //btnSave.Select();
+                        byte[] bytes = File.ReadAllBytes(ofd.FileName);
+                        var cert = X509CertificateLoader.LoadPkcs12(bytes, null, X509KeyStorageFlags.Exportable);
+                        SetCertificate(cert);
 
                         btnSave.PerformClick();
 

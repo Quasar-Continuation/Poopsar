@@ -1,18 +1,18 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Administration.FileManager
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoZipFolder : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string SourcePath { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public string DestinationPath { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public int CompressionLevel { get; set; } = (int)System.IO.Compression.CompressionLevel.Optimal;
     }
 }

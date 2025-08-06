@@ -18,8 +18,11 @@ namespace Pulsar.Server.Forms
     {
         private readonly int _selectedClients;
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string Lang { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string Script { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool Hidden { get; set; }
 
         public FrmRemoteScripting(int selected)

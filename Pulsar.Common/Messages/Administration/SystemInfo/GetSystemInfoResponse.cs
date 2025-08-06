@@ -1,14 +1,14 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 using System;
 using System.Collections.Generic;
 
 namespace Pulsar.Common.Messages
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class GetSystemInfoResponse : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public List<Tuple<string, string>> SystemInfos { get; set; }
     }
 }

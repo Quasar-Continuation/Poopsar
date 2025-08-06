@@ -1,9 +1,9 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.ClientManagement.WinRE
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoRemoveWinREPersistence : IMessage
     {
     }

@@ -1,24 +1,24 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Administration.RegistryEditor
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class GetRenameRegistryValueResponse : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string KeyPath { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public string OldValueName { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public string NewValueName { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public bool IsError { get; set; }
 
-        [ProtoMember(5)]
+        [Key(5)]
         public string ErrorMsg { get; set; }
     }
 }

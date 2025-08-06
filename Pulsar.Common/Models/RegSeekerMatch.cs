@@ -1,17 +1,17 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 
 namespace Pulsar.Common.Models
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class RegSeekerMatch
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Key { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public RegValueData[] Data { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public bool HasSubKeys { get; set; }
 
         public override string ToString()

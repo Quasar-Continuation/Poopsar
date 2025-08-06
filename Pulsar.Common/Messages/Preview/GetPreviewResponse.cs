@@ -1,46 +1,46 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 using Pulsar.Common.Video;
 
 namespace Pulsar.Common.Messages.Preview
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class GetPreviewResponse : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public byte[] Image { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public int Quality { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public int Monitor { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public Resolution Resolution { get; set; }
 
-        [ProtoMember(5)]
+        [Key(5)]
         public string CPU { get; set; }
 
-        [ProtoMember(6)]
+        [Key(6)]
         public string GPU { get; set; }
 
-        [ProtoMember(7)]
+        [Key(7)]
         public string RAM { get; set; }
 
-        [ProtoMember(8)]
+        [Key(8)]
         public string Uptime { get; set; }
 
-        [ProtoMember(9)]
+        [Key(9)]
         public string AV { get; set; }
 
-        [ProtoMember(10)]
+        [Key(10)]
         public string MainBrowser { get; set; }
 
-        [ProtoMember(11)]
+        [Key(11)]
         public bool HasWebcam { get; set; }
 
-        [ProtoMember(12)]
+        [Key(12)]
         public string AFKTime { get; set; }
     }
 }

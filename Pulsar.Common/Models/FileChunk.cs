@@ -1,14 +1,14 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 
 namespace Pulsar.Common.Models
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class FileChunk
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public long Offset { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public byte[] Data { get; set; }
     }
 }

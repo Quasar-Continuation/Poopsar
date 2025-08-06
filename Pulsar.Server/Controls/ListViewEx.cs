@@ -2,6 +2,7 @@
 using Pulsar.Server.Helper;
 using Pulsar.Server.Utilities;
 using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 namespace Pulsar.Server.Controls
@@ -19,6 +20,7 @@ namespace Pulsar.Server.Controls
         private const int WS_VSCROLL = 0x00200000;
         private const int WS_HSCROLL = 0x00100000;
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ListViewColumnSorter LvwColumnSorter { get; set; }
 
         /// <summary>
@@ -74,7 +76,7 @@ namespace Pulsar.Server.Controls
         {
             // Yes I chatGPT this I have no idea wtf is going on.
             // Force scrollbars to update by sending scroll messages
-            if (IsHandleCreated && !PlatformHelper.RunningOnMono)
+            if (IsHandleCreated)
             {
                 // Scroll to bottom and then back to top to refresh vertical scrollbar
                 NativeMethods.SendMessage(this.Handle, WM_VSCROLL, (IntPtr)SB_BOTTOM, IntPtr.Zero);
@@ -93,17 +95,9 @@ namespace Pulsar.Server.Controls
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
-            if (PlatformHelper.RunningOnMono) return;
-            if (PlatformHelper.VistaOrHigher)
-            {
-                // set window theme to explorer
-                NativeMethods.SetWindowTheme(this.Handle, "explorer", null);
-            }
-            if (PlatformHelper.XpOrHigher)
-            {
-                // removes the ugly dotted line around focused item
-                NativeMethods.SendMessage(this.Handle, WM_CHANGEUISTATE, _removeDots, IntPtr.Zero);
-            }
+
+            NativeMethods.SetWindowTheme(this.Handle, "explorer", null);
+            NativeMethods.SendMessage(this.Handle, WM_CHANGEUISTATE, _removeDots, IntPtr.Zero);
 
             // Add this to refresh scrollbars after creation
             this.BeginInvoke(new Action(() => RefreshScrollBars()));

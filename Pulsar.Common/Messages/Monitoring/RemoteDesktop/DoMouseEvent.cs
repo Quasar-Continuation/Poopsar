@@ -1,25 +1,25 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Enums;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Monitoring.RemoteDesktop
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoMouseEvent : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public MouseAction Action { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public bool IsMouseDown { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public int X { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public int Y { get; set; }
 
-        [ProtoMember(5)]
+        [Key(5)]
         public int MonitorIndex { get; set; }
     }
 }

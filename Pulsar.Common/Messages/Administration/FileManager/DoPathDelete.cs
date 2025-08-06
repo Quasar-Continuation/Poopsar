@@ -1,16 +1,16 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Enums;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Administration.FileManager
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoPathDelete : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Path { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public FileType PathType { get; set; }
     }
 }

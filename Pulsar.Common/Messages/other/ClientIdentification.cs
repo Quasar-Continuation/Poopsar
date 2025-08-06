@@ -1,44 +1,44 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 
 namespace Pulsar.Common.Messages.Other
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class ClientIdentification : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Version { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public string OperatingSystem { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public string AccountType { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public string Country { get; set; }
 
-        [ProtoMember(5)]
+        [Key(5)]
         public string CountryCode { get; set; }
 
-        [ProtoMember(6)]
+        [Key(6)]
         public int ImageIndex { get; set; }
 
-        [ProtoMember(7)]
+        [Key(7)]
         public string Id { get; set; }
 
-        [ProtoMember(8)]
+        [Key(8)]
         public string Username { get; set; }
 
-        [ProtoMember(9)]
+        [Key(9)]
         public string PcName { get; set; }
 
-        [ProtoMember(10)]
+        [Key(10)]
         public string Tag { get; set; }
 
-        [ProtoMember(11)]
+        [Key(11)]
         public string EncryptionKey { get; set; }
 
-        [ProtoMember(12)]
+        [Key(12)]
         public byte[] Signature { get; set; }
     }
 }

@@ -1,15 +1,15 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Preview
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class GetPreviewImage : IMessage
     {
-        [ProtoMember(2)]
+        [Key(2)]
         public int Quality { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public int DisplayIndex { get; set; }
     }
 }

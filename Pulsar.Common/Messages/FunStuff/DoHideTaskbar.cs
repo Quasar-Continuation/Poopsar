@@ -1,13 +1,13 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 using Pulsar.Common.Models;
 
 namespace Pulsar.Common.Messages.FunStuff
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoHideTaskbar : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Message { get; set; }
     }
 }

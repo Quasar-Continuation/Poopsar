@@ -1,12 +1,12 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Administration.FileManager
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class GetDirectory : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string RemotePath { get; set; }
     }
 }

@@ -1,24 +1,24 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Administration.ReverseProxy
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class ReverseProxyConnectResponse : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public int ConnectionId { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public bool IsConnected { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public byte[] LocalAddress { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public int LocalPort { get; set; }
 
-        [ProtoMember(5)]
+        [Key(5)]
         public string HostName { get; set; }
     }
 }

@@ -3,6 +3,7 @@ using Pulsar.Common.Helpers;
 using Pulsar.Common.Models;
 using Pulsar.Server.Forms.DarkMode;
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Windows.Forms;
 
@@ -10,6 +11,7 @@ namespace Pulsar.Server.Forms
 {
     public partial class FrmStartupAdd : Form
     {
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public StartupItem StartupItem { get; set; }
 
         public FrmStartupAdd()

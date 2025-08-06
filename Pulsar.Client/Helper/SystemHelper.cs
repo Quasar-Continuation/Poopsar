@@ -47,7 +47,7 @@ namespace Pulsar.Client.Helper
             {
                 string antivirusName = string.Empty;
                 // starting with Windows Vista we must use the root\SecurityCenter2 namespace
-                string scope = (PlatformHelper.VistaOrHigher) ? "root\\SecurityCenter2" : "root\\SecurityCenter";
+                string scope = "root\\SecurityCenter2";
                 string query = "SELECT * FROM AntivirusProduct";
 
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query))
@@ -73,7 +73,7 @@ namespace Pulsar.Client.Helper
             {
                 string firewallName = string.Empty;
                 // starting with Windows Vista we must use the root\SecurityCenter2 namespace
-                string scope = (PlatformHelper.VistaOrHigher) ? "root\\SecurityCenter2" : "root\\SecurityCenter";
+                string scope = "root\\SecurityCenter2";
                 string query = "SELECT * FROM FirewallProduct";
 
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query))

@@ -1,21 +1,21 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Audio
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class GetMicrophone : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public bool CreateNew { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public int DeviceIndex { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public int Bitrate { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public bool Destroy { get; set; }
     }
 }

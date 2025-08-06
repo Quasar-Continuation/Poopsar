@@ -1,21 +1,21 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Administration.TCPConnections
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoCloseConnection : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string LocalAddress { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public ushort LocalPort { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public string RemoteAddress { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public ushort RemotePort { get; set; }
     }
 }

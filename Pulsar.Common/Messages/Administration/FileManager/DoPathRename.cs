@@ -1,19 +1,19 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Enums;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Administration.FileManager
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoPathRename : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Path { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public string NewPath { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public FileType PathType { get; set; }
     }
 }

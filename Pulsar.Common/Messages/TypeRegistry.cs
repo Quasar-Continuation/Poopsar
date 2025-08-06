@@ -1,44 +1,39 @@
-﻿using ProtoBuf.Meta;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Pulsar.Common.Messages
 {
+    /// <summary>
+    /// Legacy TypeRegistry - no longer needed with MessagePack serialization.
+    /// Kept for compatibility during migration.
+    /// </summary>
     public static class TypeRegistry
     {
         /// <summary>
-        /// The internal index of the message type.
+        /// Legacy method - no longer needed with MessagePack.
         /// </summary>
-        private static int _typeIndex;
-
-        /// <summary>
-        /// Adds a Type to the serializer so a message can be properly serialized.
-        /// </summary>
-        /// <param name="parent">The parent type, i.e.: IMessage</param>
+        /// <param name="parent">The parent type</param>
         /// <param name="type">Type to be added</param>
         public static void AddTypeToSerializer(Type parent, Type type)
         {
-            if (type == null || parent == null)
-                throw new ArgumentNullException();
-
-            bool isAlreadyAdded = RuntimeTypeModel.Default[parent].GetSubtypes().Any(subType => subType.DerivedType.Type == type);
-
-            if (!isAlreadyAdded)
-                RuntimeTypeModel.Default[parent].AddSubType(++_typeIndex, type);
+            // No-op: MessagePack handles polymorphism through custom resolvers
         }
 
         /// <summary>
-        /// Adds Types to the serializer.
+        /// Legacy method - no longer needed with MessagePack.
         /// </summary>
-        /// <param name="parent">The parent type, i.e.: IMessage</param>
-        /// <param name="types">Types to add.</param>
+        /// <param name="parent">The parent type</param>
+        /// <param name="types">Types to add</param>
         public static void AddTypesToSerializer(Type parent, params Type[] types)
         {
-            foreach (Type type in types)
-                AddTypeToSerializer(parent, type);
+            // No-op: MessagePack handles polymorphism through custom resolvers
         }
 
+        /// <summary>
+        /// Gets all types that implement the specified interface.
+        /// Still used by legacy code during migration.
+        /// </summary>
         public static IEnumerable<Type> GetPacketTypes(Type type)
         {
             return AppDomain.CurrentDomain.GetAssemblies()

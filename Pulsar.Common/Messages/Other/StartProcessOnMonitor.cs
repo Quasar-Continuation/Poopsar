@@ -1,16 +1,16 @@
 ﻿using System;
-using ProtoBuf;
+using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Other
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class StartProcessOnMonitor : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Application { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public int MonitorID { get; set; }
     }
 }

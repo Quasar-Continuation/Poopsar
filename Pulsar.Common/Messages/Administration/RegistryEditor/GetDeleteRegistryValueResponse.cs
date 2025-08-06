@@ -1,21 +1,21 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class GetDeleteRegistryValueResponse : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string KeyPath { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public string ValueName { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public bool IsError { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public string ErrorMsg { get; set; }
     }
 }

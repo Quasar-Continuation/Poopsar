@@ -6,8 +6,8 @@
 		AForge.Video
 		AForge.Video.DirectShow
 		Gma.System.MouseKeyHook
-		protobuf-net
-		protobuf-net.Core
+		MessagePack
+		MessagePack.Annotations
 		Pulsar.Common
 		SharpDX
 		SharpDX.Direct3D11
@@ -24,6 +24,7 @@
 		System.Collections.Immutable
 		System.Numerics.Vectors
 		System.Buffers
+		System.Threading.Tasks.Extensions
 	</IncludeAssemblies>
   </Costura>
 </Weavers>

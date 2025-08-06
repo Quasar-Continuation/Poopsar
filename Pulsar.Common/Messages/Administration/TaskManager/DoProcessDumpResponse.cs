@@ -1,30 +1,30 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Administration.TaskManager
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoProcessDumpResponse : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public bool Result { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public string DumpPath { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public long Length { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public int Pid { get; set; }
 
-        [ProtoMember(5)]
+        [Key(5)]
         public string ProcessName { get; set; }
 
-        [ProtoMember(6)]
+        [Key(6)]
         public string FailureReason { get; set; }
 
-        [ProtoMember(7)]
+        [Key(7)]
         public long UnixTime { get; set; }
     }
 }

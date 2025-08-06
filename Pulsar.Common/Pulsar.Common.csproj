@@ -1,9 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks>net472</TargetFrameworks>
+		<TargetFrameworks>net472;net9.0-windows</TargetFrameworks>
 		<OutputType>Library</OutputType>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 		<Configurations>Debug;Release;ReleaseWithDonut</Configurations>
+		<UseWindowsForms Condition="'$(TargetFramework)' == 'net9.0-windows'">true</UseWindowsForms>
+		<CustomResourceTypesSupport Condition="'$(TargetFramework)' == 'net9.0-windows'">true</CustomResourceTypesSupport>
+		<EnableWindowsTargeting Condition="'$(TargetFramework)' == 'net9.0-windows'">true</EnableWindowsTargeting>
 	</PropertyGroup>
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
 		<OutputPath>..\bin\Debug\</OutputPath>
@@ -25,22 +28,28 @@
 	  <EmbeddedResource Remove="Messages\Administration\RemoteExecute\**" />
 	  <None Remove="Messages\Administration\RemoteExecute\**" />
 	</ItemGroup>
-	<ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net472'">
 		<Reference Include="System.Management" />
 		<Reference Include="System.ServiceModel" />
 		<Reference Include="System.Windows.Forms" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0-windows'">
+		<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+		<PackageReference Include="System.Drawing.Common" Version="9.0.7" />
+		<PackageReference Include="System.Management" Version="9.0.7" />
+		<PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
+		<PackageReference Include="System.ServiceModel.Http" Version="8.1.2" />
+		<PackageReference Include="System.ServiceModel.Duplex" Version="6.0.0" />
+		<PackageReference Include="System.ServiceModel.NetTcp" Version="8.1.2" />
+		<PackageReference Include="System.ServiceModel.Security" Version="6.0.0" />
+		<PackageReference Include="System.ServiceModel.Federation" Version="8.1.2" />
 	</ItemGroup>	
 	<ItemGroup>
-		<PackageReference Include="protobuf-net">
-			<Version>3.2.52</Version>
+		<PackageReference Include="MessagePack">
+			<Version>3.1.4</Version>
 		</PackageReference>
 		<PackageReference Include="System.Runtime.CompilerServices.Unsafe">
 			<Version>6.1.2</Version>
 		</PackageReference>
-	</ItemGroup>
-	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-		<PackageReference Include="Microsoft.Win32.Registry" />
-		<PackageReference Include="System.Drawing.Common" />
-		<PackageReference Include="System.Management" />
 	</ItemGroup>
 </Project>

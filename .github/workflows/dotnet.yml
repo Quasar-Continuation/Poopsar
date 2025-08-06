@@ -1,0 +1,80 @@
+name: .NET Framework Windows Release
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      repository-projects: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Debug List Files
+        run: Get-ChildItem -Path ${{ github.workspace }} -Recurse
+        shell: pwsh
+
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+
+      - name: Restore Dependencies
+        run: nuget restore Pulsar.sln
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1
+
+      - name: Build Solution
+        run: msbuild Pulsar.sln /p:Configuration=Release
+        shell: cmd
+
+      - name: Zip Build Output
+        run: Compress-Archive -Path "D:\a\Poopsar\Poopsar\bin\Release\net472\*" -DestinationPath "build_output.zip"
+        shell: pwsh
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: build_output.zip
+
+        # delete
+      - name: Delete old AutoBuild release
+        uses: dev-drprasad/delete-tag-and-release@v1.1
+        with:
+          tag_name: AutoBuild
+          delete_release: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # we need release
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: AutoBuild
+          release_name: AutoBuild
+          body: "Automated Build Release"
+          draft: false
+          prerelease: false
+
+      # upload
+      - name: Upload Release Asset (build_output.zip)
+        id: upload-release-asset-zip
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build_output.zip
+          asset_name: build_output.zip
+          asset_content_type: application/octet-stream

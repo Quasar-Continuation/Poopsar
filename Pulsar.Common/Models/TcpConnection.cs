@@ -1,27 +1,27 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Enums;
 
 namespace Pulsar.Common.Models
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class TcpConnection
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string ProcessName { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public string LocalAddress { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public ushort LocalPort { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public string RemoteAddress { get; set; }
 
-        [ProtoMember(5)]
+        [Key(5)]
         public ushort RemotePort { get; set; }
 
-        [ProtoMember(6)]
+        [Key(6)]
         public ConnectionState State { get; set; }
     }
 }

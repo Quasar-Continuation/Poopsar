@@ -219,13 +219,12 @@ namespace Pulsar.Server.Networking
         protected bool ProcessingDisconnect { get; set; }
 
         /// <summary>
-        /// Constructor of the server, initializes serializer types.
+        /// Constructor of the server.
         /// </summary>
         /// <param name="serverCertificate">The server certificate.</param>
         protected Server(X509Certificate2 serverCertificate)
         {
             ServerCertificate = serverCertificate;
-            TypeRegistry.AddTypesToSerializer(typeof(IMessage), TypeRegistry.GetPacketTypes(typeof(IMessage)).ToArray());
         }
 
         /// <summary>

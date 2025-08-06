@@ -1,17 +1,17 @@
 ﻿using System;
-using ProtoBuf;
+using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Monitoring.HVNC
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class StartHVNCProcess : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Path { get; set; }
-        [ProtoMember(2)]
+        [Key(2)]
         public string Arguments { get; set; }
-        [ProtoMember(3)]
+        [Key(3)]
         public bool DontCloneProfile { get; set; }
     }
 }

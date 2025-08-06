@@ -1,18 +1,18 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoRenameRegistryKey : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string ParentPath { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public string OldKeyName { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public string NewKeyName { get; set; }
     }
 }

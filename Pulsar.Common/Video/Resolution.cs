@@ -1,15 +1,15 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using System;
 
 namespace Pulsar.Common.Video
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class Resolution : IEquatable<Resolution>
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public int Width { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public int Height { get; set; }
 
         public bool Equals(Resolution other)

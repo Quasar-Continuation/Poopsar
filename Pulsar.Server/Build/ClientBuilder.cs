@@ -162,10 +162,10 @@ namespace Pulsar.Server.Build
 
             byte[] signature;
             // https://stackoverflow.com/a/49777672 RSACryptoServiceProvider must be changed with .NET 4.6
-            using (var csp = (RSACryptoServiceProvider)caCertificate.PrivateKey)
+            using (var csp = caCertificate.GetRSAPrivateKey())
             {
                 var hash = Sha256.ComputeHash(Encoding.UTF8.GetBytes(key));
-                signature = csp.SignHash(hash, CryptoConfig.MapNameToOID("SHA256"));
+                signature = csp.SignHash(hash, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
             }
 
             foreach (var typeDef in asmDef.Modules[0].Types)

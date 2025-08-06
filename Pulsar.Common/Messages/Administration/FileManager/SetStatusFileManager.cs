@@ -1,15 +1,15 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Administration.FileManager
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class SetStatusFileManager : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Message { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public bool SetLastDirectorySeen { get; set; }
     }
 }

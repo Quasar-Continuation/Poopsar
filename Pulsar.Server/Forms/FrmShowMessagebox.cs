@@ -1,6 +1,7 @@
 ﻿using Pulsar.Server.Forms.DarkMode;
 using Pulsar.Server.Helper;
 using System;
+using System.ComponentModel;
 using System.Windows.Forms;
 
 namespace Pulsar.Server.Forms
@@ -9,10 +10,15 @@ namespace Pulsar.Server.Forms
     {
         private readonly int _selectedClients;
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string MsgBoxCaption { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string MsgBoxText { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string MsgBoxButton { get; set; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string MsgBoxIcon { get; set; }
+
 
         public FrmShowMessagebox(int selected)
         {

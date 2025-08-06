@@ -1,22 +1,22 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 using Pulsar.Common.Models;
 
 namespace Pulsar.Common.Messages
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class GetChangeRegistryValueResponse : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string KeyPath { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public RegValueData Value { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public bool IsError { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public string ErrorMsg { get; set; }
     }
 }

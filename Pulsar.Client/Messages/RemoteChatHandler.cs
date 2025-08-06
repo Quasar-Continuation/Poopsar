@@ -38,18 +38,13 @@ namespace Pulsar.Client.Messages
 
         public void HandleChatAction(ISender sender, DoChatAction msg)
         {
-            if (_chatThread != null && _chatThread.IsAlive)
+            var frmChat = (FrmRemoteChat)Application.OpenForms["FrmRemoteChat"];
+            if (frmChat != null)
             {
-                var frmChat = (FrmRemoteChat)Application.OpenForms["FrmRemoteChat"];
-                if (frmChat != null)
+                frmChat.Invoke((MethodInvoker)delegate
                 {
-                    frmChat.Invoke((MethodInvoker)delegate
-                    {
-                        frmChat.txtMessages.Clear();
-                    });
-                }
-                _chatThread.Join(500); 
-                _chatThread = null;
+                    frmChat.txtMessages.Clear();
+                });
             }
         }
 
@@ -92,18 +87,23 @@ namespace Pulsar.Client.Messages
 
         public static void HandleDoChatStop(ISender client, DoKillChatForm packet)
         {
+            var frmChat = (FrmRemoteChat)Application.OpenForms["FrmRemoteChat"];
+            if (frmChat != null)
+            {
+                frmChat.Invoke((MethodInvoker)delegate
+                {
+                    frmChat.Active = false;
+                    frmChat.Close();
+                });
+            }
+            
             if (_chatThread != null && _chatThread.IsAlive)
             {
-                var frmChat = (FrmRemoteChat)Application.OpenForms["FrmRemoteChat"];
-                if (frmChat != null)
-                {
-                    frmChat.Invoke((MethodInvoker)delegate
-                    {
-                        frmChat.Active = false;
-                        frmChat.Close();
-                    });
-                }
                 _chatThread.Join(500); 
+                _chatThread = null;
+            }
+            else
+            {
                 _chatThread = null;
             }
         }

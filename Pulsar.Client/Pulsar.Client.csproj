@@ -82,8 +82,8 @@
 		<PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
 		<PackageReference Include="NAudio.WinForms" Version="2.2.1" />
 		<PackageReference Include="NAudio.WinMM" Version="2.2.1" />		
-		<PackageReference Include="protobuf-net">
-			<Version>3.2.52</Version>
+		<PackageReference Include="MessagePack">
+			<Version>3.1.4</Version>
 		</PackageReference>
 		<PackageReference Include="System.Runtime.CompilerServices.Unsafe">
 			<Version>6.1.2</Version>
@@ -97,7 +97,7 @@
 		<PackageReference Include="System.IO.Compression" Version="4.3.0" />
 	</ItemGroup>
 	<Target Name="CopyWindows" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT'">
-		<Exec Command="copy &quot;$(TargetPath)&quot; &quot;$(TargetDir)client.bin&quot; /Y" />
+		<Exec Command="copy &quot;$(TargetPath)&quot; &quot;$(OutputPath)\..\net9.0-windows\client.bin&quot; /Y" />
 	</Target>
 
 </Project>

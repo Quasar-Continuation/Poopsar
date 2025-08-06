@@ -1,12 +1,12 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Monitoring.Clipboard
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoSendAddress : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Address { get; set; }
     }
 }

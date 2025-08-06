@@ -1,20 +1,20 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 
 namespace Pulsar.Common.Models
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class RecoveredAccount
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Username { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public string Password { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public string Url { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public string Application { get; set; }
     }
 }

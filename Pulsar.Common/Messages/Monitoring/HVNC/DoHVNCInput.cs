@@ -1,19 +1,19 @@
 ﻿using System;
-using ProtoBuf;
+using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Monitoring.HVNC
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoHVNCInput : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public uint msg { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public int wParam { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public int lParam { get; set; }
     }
 }

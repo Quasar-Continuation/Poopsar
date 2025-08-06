@@ -1,21 +1,20 @@
 ﻿using Gma.System.MouseKeyHook;
 using Pulsar.Common.Enums;
-using Pulsar.Common.Helpers;
 using Pulsar.Common.Messages;
 using Pulsar.Common.Messages.Monitoring.Clipboard;
 using Pulsar.Server.Forms.DarkMode;
+using Pulsar.Server.Forms.RemoteDesktopPopUp;
 using Pulsar.Server.Helper;
 using Pulsar.Server.Messages;
 using Pulsar.Server.Networking;
 using Pulsar.Server.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Threading;
 using System.Windows.Forms;
-using System.Diagnostics;
-using System.IO;
-using Pulsar.Server.Forms.RemoteDesktopPopUp;
 
 namespace Pulsar.Server.Forms
 {
@@ -70,12 +69,12 @@ namespace Pulsar.Server.Forms
         /// A list of pressed keys for synchronization between key down & -up events.
         /// </summary>
         private readonly List<Keys> _keysPressed;
-        
+
         /// <summary>
         /// Monitors clipboard changes on the server to send to the client
         /// </summary>
         private ClipboardMonitor _clipboardMonitor;
-        
+
         /// <summary>
         /// States whether bidirectional clipboard sync is enabled
         /// </summary>
@@ -134,22 +133,22 @@ namespace Pulsar.Server.Forms
             InitializeComponent();
 
             DarkModeManager.ApplyDarkMode(this);
-			ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
-            
+            ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
+
             colorPicker.BackColor = _drawingColor;
             colorPicker.FlatStyle = FlatStyle.Flat;
             colorPicker.FlatAppearance.BorderColor = Color.White;
             colorPicker.Text = "Color";
             colorPicker.ForeColor = Color.White;
-            
+
             ConfigureDrawingButtons();
-            
+
             btnShowDrawingTools.Enabled = false;
-            
+
             strokeWidthTrackBar.Value = _strokeWidth;
             strokeWidthTrackBar.ValueChanged += strokeWidthTrackBar_ValueChanged;
             colorPicker.Click += colorPicker_Click;
-            
+
             // Update tooltip text for bidirectional clipboard
             toolTipButtons.SetToolTip(this.btnBiDirectionalClipboard, "Enable bidirectional clipboard sync");
         }
@@ -233,22 +232,12 @@ namespace Pulsar.Server.Forms
         /// </summary>
         private void SubscribeEvents()
         {
-            // TODO: Check Hook.GlobalEvents vs Hook.AppEvents below
-            // TODO: Maybe replace library with .NET events like on Linux
-            if (PlatformHelper.RunningOnMono) // Mono/Linux
-            {
-                this.KeyDown += OnKeyDown;
-                this.KeyUp += OnKeyUp;
-            }
-            else // Windows
-            {
-                _keyboardHook = Hook.GlobalEvents();
-                _keyboardHook.KeyDown += OnKeyDown;
-                _keyboardHook.KeyUp += OnKeyUp;
+            _keyboardHook = Hook.GlobalEvents();
+            _keyboardHook.KeyDown += OnKeyDown;
+            _keyboardHook.KeyUp += OnKeyUp;
 
-                _mouseHook = Hook.AppEvents();
-                _mouseHook.MouseWheel += OnMouseWheelMove;
-            }
+            _mouseHook = Hook.AppEvents();
+            _mouseHook.MouseWheel += OnMouseWheelMove;
         }
 
         /// <summary>
@@ -256,24 +245,16 @@ namespace Pulsar.Server.Forms
         /// </summary>
         private void UnsubscribeEvents()
         {
-            if (PlatformHelper.RunningOnMono) // Mono/Linux
+            if (_keyboardHook != null)
             {
-                this.KeyDown -= OnKeyDown;
-                this.KeyUp -= OnKeyUp;
+                _keyboardHook.KeyDown -= OnKeyDown;
+                _keyboardHook.KeyUp -= OnKeyUp;
+                _keyboardHook.Dispose();
             }
-            else // Windows
+            if (_mouseHook != null)
             {
-                if (_keyboardHook != null)
-                {
-                    _keyboardHook.KeyDown -= OnKeyDown;
-                    _keyboardHook.KeyUp -= OnKeyUp;
-                    _keyboardHook.Dispose();
-                }
-                if (_mouseHook != null)
-                {
-                    _mouseHook.MouseWheel -= OnMouseWheelMove;
-                    _mouseHook.Dispose();
-                }
+                _mouseHook.MouseWheel -= OnMouseWheelMove;
+                _mouseHook.Dispose();
             }
         }
 
@@ -291,7 +272,7 @@ namespace Pulsar.Server.Forms
             this.ActiveControl = picDesktop;
 
             _remoteDesktopHandler.BeginReceiveFrames(barQuality.Value, cbMonitors.SelectedIndex, useGpu);
-            
+
             btnShowDrawingTools.Enabled = true;
         }
 
@@ -309,21 +290,21 @@ namespace Pulsar.Server.Forms
             this.ActiveControl = picDesktop;
 
             _remoteDesktopHandler.EndReceiveFrames();
-            
+
             btnShowDrawingTools.Enabled = false;
-            
+
             if (panelDrawingTools.Visible)
             {
                 panelDrawingTools.Visible = false;
                 btnShowDrawingTools.Image = Properties.Resources.arrow_up;
                 toolTipButtons.SetToolTip(btnShowDrawingTools, "Show drawing tools");
             }
-            
+
             _enableDrawingMode = false;
             _enableEraserMode = false;
-            
+
             ConfigureDrawingButtons();
-            
+
             picDesktop.Cursor = Cursors.Default;
         }
 
@@ -392,7 +373,7 @@ namespace Pulsar.Server.Forms
         {
             this.Text = WindowHelper.GetWindowTitle("Remote Desktop", _connectClient);
 
-            OnResize(EventArgs.Empty); // trigger resize event to align controls 
+            OnResize(EventArgs.Empty); // trigger resize event to align controls
 
             panelDrawingTools.Visible = false;
             btnShowDrawingTools.Image = Properties.Resources.arrow_up;
@@ -400,12 +381,12 @@ namespace Pulsar.Server.Forms
 
             _enableDrawingMode = false;
             _enableEraserMode = false;
-            
+
             ConfigureDrawingButtons();
 
             _remoteDesktopHandler.RefreshDisplays();
         }
-        
+
         /// <summary>
         /// Updates the title with the current frames per second.
         /// </summary>
@@ -488,22 +469,22 @@ namespace Pulsar.Server.Forms
             {
                 if ((_enableDrawingMode || _enableEraserMode) && e.Button == MouseButtons.Left)
                 {
-                    if (_previousMousePosition != Point.Empty && 
+                    if (_previousMousePosition != Point.Empty &&
                         (_previousMousePosition.X != e.X || _previousMousePosition.Y != e.Y))
                     {
                         int selectedDisplayIndex = cbMonitors.SelectedIndex;
-                        
+
                         bool useEraser = _enableEraserMode;
-                        
+
                         _remoteDesktopHandler.SendDrawingEvent(
                             e.X, e.Y,
                             _previousMousePosition.X, _previousMousePosition.Y,
-                            _strokeWidth, 
+                            _strokeWidth,
                             _drawingColor.ToArgb(),
                             useEraser,
                             false,
                             selectedDisplayIndex);
-                        
+
                         _previousMousePosition = e.Location;
                     }
                 }
@@ -585,7 +566,7 @@ namespace Pulsar.Server.Forms
                    || ((key & Keys.Scroll) == Keys.Scroll);
         }
 
-        #endregion
+        #endregion Remote Desktop Input
 
         #region Remote Desktop Configuration
 
@@ -668,20 +649,20 @@ namespace Pulsar.Server.Forms
         {
             if (!_remoteDesktopHandler.IsStarted)
             {
-                MessageBox.Show("Drawing is only available when Remote Desktop is started", 
+                MessageBox.Show("Drawing is only available when Remote Desktop is started",
                     "Drawing unavailable", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            
+
             _enableDrawingMode = !_enableDrawingMode;
-            
+
             if (_enableDrawingMode)
             {
                 _enableEraserMode = false;
-                
+
                 btnEraser.BackColor = SystemColors.Control;
                 toolTipButtons.SetToolTip(btnEraser, "Enable eraser");
-                
+
                 btnDrawing.BackColor = Color.FromArgb(120, 170, 120);
                 toolTipButtons.SetToolTip(btnDrawing, "Disable drawing");
                 picDesktop.Cursor = Cursors.Cross;
@@ -692,7 +673,7 @@ namespace Pulsar.Server.Forms
                 toolTipButtons.SetToolTip(btnDrawing, "Enable drawing");
                 picDesktop.Cursor = Cursors.Default;
             }
-            
+
             this.ActiveControl = picDesktop;
         }
 
@@ -700,20 +681,20 @@ namespace Pulsar.Server.Forms
         {
             if (!_remoteDesktopHandler.IsStarted)
             {
-                MessageBox.Show("Eraser is only available when Remote Desktop is started", 
+                MessageBox.Show("Eraser is only available when Remote Desktop is started",
                     "Eraser unavailable", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            
+
             _enableEraserMode = !_enableEraserMode;
-            
+
             if (_enableEraserMode)
             {
                 _enableDrawingMode = false;
-                
+
                 btnDrawing.BackColor = SystemColors.Control;
                 toolTipButtons.SetToolTip(btnDrawing, "Enable drawing");
-                
+
                 btnEraser.BackColor = Color.FromArgb(120, 170, 120);
                 toolTipButtons.SetToolTip(btnEraser, "Disable eraser");
                 picDesktop.Cursor = Cursors.Hand;
@@ -724,7 +705,7 @@ namespace Pulsar.Server.Forms
                 toolTipButtons.SetToolTip(btnEraser, "Enable eraser");
                 picDesktop.Cursor = Cursors.Default;
             }
-            
+
             this.ActiveControl = picDesktop;
         }
 
@@ -737,16 +718,16 @@ namespace Pulsar.Server.Forms
         {
             if (visible && !_remoteDesktopHandler.IsStarted)
             {
-                MessageBox.Show("Drawing tools are only available when Remote Desktop is started", 
+                MessageBox.Show("Drawing tools are only available when Remote Desktop is started",
                     "Drawing unavailable", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            
+
             panelDrawingTools.Visible = visible;
-            btnShowDrawingTools.Image = visible ? 
-                Properties.Resources.arrow_down : 
+            btnShowDrawingTools.Image = visible ?
+                Properties.Resources.arrow_down :
                 Properties.Resources.arrow_up;
-            toolTipButtons.SetToolTip(btnShowDrawingTools, 
+            toolTipButtons.SetToolTip(btnShowDrawingTools,
                 visible ? "Hide drawing tools" : "Show drawing tools");
             this.ActiveControl = picDesktop;
         }
@@ -755,54 +736,54 @@ namespace Pulsar.Server.Forms
         {
             if (!_remoteDesktopHandler.IsStarted)
             {
-                MessageBox.Show("Clear drawing is only available when Remote Desktop is started", 
+                MessageBox.Show("Clear drawing is only available when Remote Desktop is started",
                     "Clear unavailable", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            
+
             int displayIndex = cbMonitors.SelectedIndex;
             _remoteDesktopHandler.SendDrawingEvent(0, 0, 0, 0, 0, 0, false, true, displayIndex);
         }
-        
+
         private void colorPicker_Click(object sender, EventArgs e)
         {
             if (!_remoteDesktopHandler.IsStarted)
             {
-                MessageBox.Show("Color selection is only available when Remote Desktop is started", 
+                MessageBox.Show("Color selection is only available when Remote Desktop is started",
                     "Color selection unavailable", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            
+
             ColorDialog colorDialog = new ColorDialog();
             colorDialog.Color = _drawingColor;
             colorDialog.AllowFullOpen = true;
             colorDialog.AnyColor = true;
-            
+
             if (colorDialog.ShowDialog() == DialogResult.OK)
             {
                 _drawingColor = colorDialog.Color;
                 colorPicker.BackColor = _drawingColor;
-                
+
                 colorPicker.ForeColor = GetContrastColor(_drawingColor);
             }
         }
-        
+
         private void strokeWidthTrackBar_ValueChanged(object sender, EventArgs e)
         {
             _strokeWidth = strokeWidthTrackBar.Value;
         }
-        
+
         private Color GetContrastColor(Color color)
         {
             int brightness = (int)Math.Sqrt(
                 color.R * color.R * 0.299 +
                 color.G * color.G * 0.587 +
                 color.B * color.B * 0.114);
-                
+
             return brightness > 130 ? Color.Black : Color.White;
         }
 
-        #endregion
+        #endregion Remote Desktop Configuration
 
         /// <summary>
         /// Updates the visual state of the input buttons based on current input settings
@@ -849,9 +830,9 @@ namespace Pulsar.Server.Forms
         private void btnBiDirectionalClipboard_Click(object sender, EventArgs e)
         {
             _enableBidirectionalClipboard = !_enableBidirectionalClipboard;
-            
+
             UpdateInputButtonsVisualState();
-            
+
             _clipboardMonitor.IsEnabled = _enableBidirectionalClipboard;
             Debug.WriteLine(_clipboardMonitor.IsEnabled ? "Clipboard monitor enabled." : "Clipboard monitor disabled.");
 
@@ -862,7 +843,7 @@ namespace Pulsar.Server.Forms
                     try
                     {
                         Thread.CurrentThread.SetApartmentState(ApartmentState.STA);
-                        
+
                         if (Clipboard.ContainsText())
                         {
                             string clipboardText = Clipboard.GetText();

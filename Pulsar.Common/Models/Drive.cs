@@ -1,14 +1,14 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 
 namespace Pulsar.Common.Models
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class Drive
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string DisplayName { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public string RootDirectory { get; set; }
     }
 }

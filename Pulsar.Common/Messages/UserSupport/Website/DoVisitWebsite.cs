@@ -1,15 +1,15 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.UserSupport.Website
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoVisitWebsite : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Url { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public bool Hidden { get; set; }
     }
 }

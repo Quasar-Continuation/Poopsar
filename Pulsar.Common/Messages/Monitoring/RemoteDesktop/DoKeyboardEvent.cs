@@ -1,15 +1,15 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Monitoring.RemoteDesktop
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoKeyboardEvent : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public byte Key { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public bool KeyDown { get; set; }
     }
 }

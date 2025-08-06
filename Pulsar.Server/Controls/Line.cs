@@ -1,4 +1,5 @@
 ﻿using Pulsar.Server.Models;
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -12,6 +13,7 @@ namespace Pulsar.Server.Controls
             Vertical
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Alignment LineAlignment { get; set; }
 
         public Line()

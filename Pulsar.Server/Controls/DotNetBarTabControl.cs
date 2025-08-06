@@ -1,6 +1,7 @@
 ﻿using Pulsar.Server.Models;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -28,6 +29,7 @@ namespace Pulsar.Server.Controls
         /// <summary>
         /// Gets or sets whether close buttons are shown on tabs.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool ShowCloseButtons
         {
             get { return _showCloseButtons; }

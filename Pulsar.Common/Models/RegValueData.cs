@@ -1,18 +1,18 @@
 ﻿using Microsoft.Win32;
-using ProtoBuf;
+using MessagePack;
 
 namespace Pulsar.Common.Models
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class RegValueData
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Name { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public RegistryValueKind Kind { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public byte[] Data { get; set; }
     }
 }

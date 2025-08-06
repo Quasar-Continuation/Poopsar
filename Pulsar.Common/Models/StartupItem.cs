@@ -1,18 +1,18 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Enums;
 
 namespace Pulsar.Common.Models
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class StartupItem
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Name { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public string Path { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public StartupType Type { get; set; }
     }
 }

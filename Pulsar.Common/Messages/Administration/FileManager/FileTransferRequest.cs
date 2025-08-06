@@ -1,15 +1,15 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class FileTransferRequest : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public int Id { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public string RemotePath { get; set; }
     }
 }

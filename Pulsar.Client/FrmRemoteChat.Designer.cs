@@ -81,6 +81,7 @@
             this.ShowInTaskbar = false;
             this.Text = "FrmRemoteChat";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.FrmRemoteChat_FormClosed);
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FrmRemoteChat_FormClosing);
             this.ResumeLayout(false);
             this.PerformLayout();
 

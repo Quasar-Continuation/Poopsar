@@ -1,21 +1,21 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.UserSupport.RemoteChat
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoStartChatForm : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Title { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public string WelcomeMessage { get; set; }
-        [ProtoMember(3)]
+        [Key(3)]
         public bool TopMost { get; set; }
-        [ProtoMember(4)]
+        [Key(4)]
         public bool DisableClose { get; set; }
-        [ProtoMember(5)]
+        [Key(5)]
         public bool DisableType { get; set; }
     }
 }

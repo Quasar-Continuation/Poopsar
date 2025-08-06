@@ -1,11 +1,11 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 
 namespace Pulsar.Common.Messages.Other
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class ClientIdentificationResult : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public bool Result { get; set; }
     }
 }

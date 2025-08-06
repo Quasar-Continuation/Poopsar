@@ -1,31 +1,31 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Enums;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Monitoring.HVNC
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class GetHVNCDesktop : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public bool CreateNew { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public int Quality { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public int DisplayIndex { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public RemoteDesktopStatus Status { get; set; }
 
-        [ProtoMember(5)]
+        [Key(5)]
         public bool UseGPU { get; set; }
 
-        [ProtoMember(6)]
+        [Key(6)]
         public int FramesRequested { get; set; } = 1;
 
-        [ProtoMember(7)]
+        [Key(7)]
         public bool IsBufferedMode { get; set; } = true;
     }
 }

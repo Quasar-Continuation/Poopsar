@@ -1,12 +1,12 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Administration.RegistryEditor
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoCreateRegistryKey : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string ParentPath { get; set; }
     }
 }

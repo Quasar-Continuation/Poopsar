@@ -1,9 +1,9 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Administration.TaskManager
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class GetProcesses : IMessage
     {
     }

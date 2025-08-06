@@ -1,5 +1,4 @@
-﻿using ProtoBuf;
-using Pulsar.Common.Messages.Other;
+﻿using Pulsar.Common.Messages.Other;
 using Pulsar.Common.Networking;
 using Pulsar.Server.Forms;
 using System;
@@ -257,11 +256,8 @@ namespace Pulsar.Server.Networking
                         {
                             try
                             {
-                                using (var stream = new MemoryStream(_readBuffer))
-                                {
-                                    var message = Serializer.Deserialize<IMessage>(stream);
-                                    OnClientRead(message, _readBuffer.Length);
-                                }
+                                var message = PulsarMessagePackSerializer.Deserialize(_readBuffer);
+                                OnClientRead(message, _readBuffer.Length);
                             }
                             finally
                             {
@@ -326,15 +322,10 @@ namespace Pulsar.Server.Networking
             {
                 lock (_sendMessageLock)
                 {
-                    using (var ms = new MemoryStream())
-                    {
-                        Serializer.Serialize(ms, message);
-
-                        var payload = ms.ToArray();
-                        _stream.Write(BitConverter.GetBytes(payload.Length), 0, HEADER_SIZE);
-                        _stream.Write(payload, 0, payload.Length);
-                        _stream.Flush();
-                    }
+                    var payload = PulsarMessagePackSerializer.Serialize(message);
+                    _stream.Write(BitConverter.GetBytes(payload.Length), 0, HEADER_SIZE);
+                    _stream.Write(payload, 0, payload.Length);
+                    _stream.Flush();
                 }
             }
             catch

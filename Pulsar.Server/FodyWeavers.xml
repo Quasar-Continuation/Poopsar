@@ -16,10 +16,9 @@
 			Newtonsoft.Json
 			Open.NAT
 			BouncyCastle.Crypto
-			protobuf-net
+			MessagePack
 			System.IO.Compression.ZipFile
 			Vestris.ResourceLib
-			protobuf-net.Core
 			System.Memory
 			System.Runtime.CompilerServices.Unsafe
 			System.Resources.Extensions

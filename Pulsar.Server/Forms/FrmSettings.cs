@@ -57,7 +57,6 @@ namespace Pulsar.Server.Forms
             chkDiscordRPC.Checked = Settings.DiscordRPC; // Will load as false by default
             _previousDiscordRPCState = chkDiscordRPC.Checked;
 
-
             string pulsarPath = Path.Combine(Application.StartupPath, "PulsarStuff");
             string filePath = Path.Combine(pulsarPath, "blocked.json");
 

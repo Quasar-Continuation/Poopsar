@@ -1,12 +1,12 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Administration.RemoteShell
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class DoShellExecute : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Command { get; set; }
     }
 }

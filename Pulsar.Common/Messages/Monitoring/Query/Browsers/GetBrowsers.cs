@@ -1,9 +1,9 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
 namespace Pulsar.Common.Messages.Monitoring.Query
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class GetBrowsers : IMessage
     {
 

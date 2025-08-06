@@ -1,14 +1,14 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 
 namespace Pulsar.Common.Models.Query.Browsers
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class QueryBrowsers
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public string Location { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public string Browser { get; set; }
     }
 }

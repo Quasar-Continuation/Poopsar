@@ -1,31 +1,31 @@
-﻿using ProtoBuf;
+﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 using Pulsar.Common.Video;
 
 namespace Pulsar.Common.Messages.Webcam
 {
-    [ProtoContract]
+    [MessagePackObject]
     public class GetWebcamResponse : IMessage
     {
-        [ProtoMember(1)]
+        [Key(1)]
         public byte[] Image { get; set; }
 
-        [ProtoMember(2)]
+        [Key(2)]
         public int Quality { get; set; }
 
-        [ProtoMember(3)]
+        [Key(3)]
         public int Monitor { get; set; }
 
-        [ProtoMember(4)]
+        [Key(4)]
         public Resolution Resolution { get; set; }
 
-        [ProtoMember(5)]
+        [Key(5)]
         public long Timestamp { get; set; }
 
-        [ProtoMember(6)]
+        [Key(6)]
         public bool IsLastRequestedFrame { get; set; }
 
-        [ProtoMember(7)]
+        [Key(7)]
         public float FrameRate { get; set; }
     }
 }
