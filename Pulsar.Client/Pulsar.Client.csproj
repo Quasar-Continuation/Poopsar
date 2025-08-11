@@ -97,7 +97,10 @@
 		<PackageReference Include="System.IO.Compression" Version="4.3.0" />
 	</ItemGroup>
 	<Target Name="CopyWindows" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT'">
-		<Exec Command="copy &quot;$(TargetPath)&quot; &quot;$(OutputPath)\..\net9.0-windows\client.bin&quot; /Y" />
+		<!-- Create the target directory if it doesn't exist -->
+		<MakeDir Directories="$(OutputPath)\..\net9.0-windows" ContinueOnError="true" />
+		<!-- Copy the client executable as client.bin to the server output directory -->
+		<Copy SourceFiles="$(TargetPath)" DestinationFiles="$(OutputPath)\..\net9.0-windows\client.bin" ContinueOnError="true" />
 	</Target>
 
 </Project>

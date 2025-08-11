@@ -320,6 +320,39 @@ namespace Pulsar.Client.Messages
             }
         }
 
+        /// <summary>
+        /// Validates and sanitizes a file path to prevent path traversal attacks.
+        /// </summary>
+        /// <param name="filePath">The file path to validate.</param>
+        /// <returns>A safe file path or null if the path is invalid.</returns>
+        private string ValidateAndSanitizeFilePath(string filePath)
+        {
+            try
+            {
+                string fileName = Path.GetFileName(filePath);
+                if (string.IsNullOrEmpty(fileName) || fileName.Contains(".."))
+                    return null;
+
+                char[] invalidChars = Path.GetInvalidFileNameChars();
+                if (fileName.IndexOfAny(invalidChars) >= 0)
+                    return null;
+
+                string safePath = Path.Combine(Path.GetTempPath(), fileName);
+                
+                string fullPath = Path.GetFullPath(safePath);
+                string tempDir = Path.GetFullPath(Path.GetTempPath());
+                
+                if (!fullPath.StartsWith(tempDir, StringComparison.OrdinalIgnoreCase))
+                    return null;
+
+                return fullPath;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         private void Execute(ISender client, FileTransferChunk message)
         {
             try
@@ -332,6 +365,19 @@ namespace Pulsar.Client.Messages
                     {
                         // generate new temporary file path if empty
                         filePath = FileHelper.GetTempFilePath(message.FileExtension);
+                    }
+                    else
+                    {
+                        filePath = ValidateAndSanitizeFilePath(filePath);
+                        if (filePath == null)
+                        {
+                            client.Send(new FileTransferCancel
+                            {
+                                Id = message.Id,
+                                Reason = "Invalid file path - security violation"
+                            });
+                            return;
+                        }
                     }
 
                     if (File.Exists(filePath))

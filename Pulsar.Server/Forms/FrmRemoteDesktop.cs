@@ -413,7 +413,7 @@ namespace Pulsar.Server.Forms
             if (WindowState == FormWindowState.Minimized)
                 return;
 
-            _remoteDesktopHandler.LocalResolution = picDesktop.Size;
+            _remoteDesktopHandler.LocalResolution = picDesktop.ClientSize;
             btnShow.Left = (this.Width - btnShow.Width) / 2;
             btnShow.Top = this.Height - btnShow.Height - 40;
         }
@@ -441,7 +441,7 @@ namespace Pulsar.Server.Forms
 
         private void picDesktop_MouseDown(object sender, MouseEventArgs e)
         {
-            if (picDesktop.Image != null && this.ContainsFocus)
+            if (this.ContainsFocus)
             {
                 if ((_enableDrawingMode || _enableEraserMode) && e.Button == MouseButtons.Left)
                 {
@@ -465,7 +465,7 @@ namespace Pulsar.Server.Forms
 
         private void picDesktop_MouseMove(object sender, MouseEventArgs e)
         {
-            if (picDesktop.Image != null && this.ContainsFocus)
+            if (this.ContainsFocus)
             {
                 if ((_enableDrawingMode || _enableEraserMode) && e.Button == MouseButtons.Left)
                 {
@@ -499,7 +499,7 @@ namespace Pulsar.Server.Forms
 
         private void picDesktop_MouseUp(object sender, MouseEventArgs e)
         {
-            if (picDesktop.Image != null && this.ContainsFocus)
+            if (this.ContainsFocus)
             {
                 if ((_enableDrawingMode || _enableEraserMode) && e.Button == MouseButtons.Left)
                 {
@@ -523,7 +523,7 @@ namespace Pulsar.Server.Forms
 
         private void OnMouseWheelMove(object sender, MouseEventArgs e)
         {
-            if (picDesktop.Image != null && _enableMouseInput && this.ContainsFocus)
+            if (_enableMouseInput && this.ContainsFocus)
             {
                 _remoteDesktopHandler.SendMouseEvent(e.Delta == 120 ? MouseAction.ScrollUp : MouseAction.ScrollDown,
                     false, 0, 0, cbMonitors.SelectedIndex);

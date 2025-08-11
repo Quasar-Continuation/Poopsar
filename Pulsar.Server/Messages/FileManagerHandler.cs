@@ -206,6 +206,32 @@ namespace Pulsar.Server.Messages
             };
             _client.Send(zipMessage);
         }
+
+        /// <summary>
+        /// Sanitizes a filename to prevent path traversal attacks.
+        /// </summary>
+        /// <param name="fileName">The filename to sanitize.</param>
+        /// <returns>A safe filename or null if the filename is invalid.</returns>
+        private string SanitizeFileName(string fileName)
+        {
+            if (string.IsNullOrEmpty(fileName))
+                return null;
+
+            fileName = Path.GetFileName(fileName);
+            
+            if (string.IsNullOrEmpty(fileName) || fileName.Contains(".."))
+                return null;
+
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+            if (fileName.IndexOfAny(invalidChars) >= 0)
+                return null;
+
+            if (fileName.StartsWith(".") || fileName.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            return fileName;
+        }
+
         /// <summary>
         /// Begins downloading a file from the client.
         /// </summary>
@@ -223,7 +249,36 @@ namespace Pulsar.Server.Messages
                 Directory.CreateDirectory(_baseDownloadPath);
 
             string fileName = string.IsNullOrEmpty(localFileName) ? Path.GetFileName(remotePath) : localFileName;
+            
+            // SECURITY FIX: Validate and sanitize filename to prevent path traversal
+            fileName = SanitizeFileName(fileName);
+            if (fileName == null)
+            {
+                OnReport("Download failed: Invalid filename");
+                return;
+            }
+
             string localPath = Path.Combine(_baseDownloadPath, fileName);
+            
+            // SECURITY FIX: Ensure the resolved path stays within the download directory
+            try
+            {
+                string fullPath = Path.GetFullPath(localPath);
+                string baseDir = Path.GetFullPath(_baseDownloadPath);
+                
+                if (!fullPath.StartsWith(baseDir, StringComparison.OrdinalIgnoreCase))
+                {
+                    OnReport("Download failed: Path traversal attempt detected");
+                    return;
+                }
+                
+                localPath = fullPath;
+            }
+            catch
+            {
+                OnReport("Download failed: Invalid path");
+                return;
+            }
 
             int i = 1;
             while (!overwrite && File.Exists(localPath))
@@ -231,6 +286,27 @@ namespace Pulsar.Server.Messages
                 // rename file if it exists already
                 var newFileName = string.Format("{0}({1}){2}", Path.GetFileNameWithoutExtension(localPath), i, Path.GetExtension(localPath));
                 localPath = Path.Combine(_baseDownloadPath, newFileName);
+                
+                // Re-validate the new path
+                try
+                {
+                    string fullPath = Path.GetFullPath(localPath);
+                    string baseDir = Path.GetFullPath(_baseDownloadPath);
+                    
+                    if (!fullPath.StartsWith(baseDir, StringComparison.OrdinalIgnoreCase))
+                    {
+                        OnReport("Download failed: Path validation error");
+                        return;
+                    }
+                    
+                    localPath = fullPath;
+                }
+                catch
+                {
+                    OnReport("Download failed: Path validation error");
+                    return;
+                }
+                
                 i++;
             }
 

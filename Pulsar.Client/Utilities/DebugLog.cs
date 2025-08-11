@@ -88,6 +88,13 @@ namespace Pulsar.Client.User
                 return true;
             }
 
+            if (ex is ApplicationException && 
+                ex.Message.Contains("No devices of the category") &&
+                ex.StackTrace?.Contains("AForge.Video.DirectShow.FilterInfoCollection.CollectFilters") == true)
+            {
+                return true;
+            }
+
             return false;
         }
 

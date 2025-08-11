@@ -140,7 +140,7 @@
             this.MinimizeBox = false;
             this.Name = "FrmCertificate";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Pulsar - Certificate Wizard";
+            this.Text = "Pulsar NATIVE EDITION - Certificate Wizard";
             this.ResumeLayout(false);
             this.PerformLayout();
 

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using System.ComponentModel;
+using System.Drawing.Drawing2D;
 
 namespace Pulsar.Server.Controls
 {
@@ -28,15 +29,19 @@ namespace Pulsar.Server.Controls
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool Running { get; set; }
 
-        /// <summary>
-        /// Returns the width of the original screen.
-        /// </summary>
-        public int ScreenWidth { get; private set; }
+    /// <summary>
+    /// Returns the width of the original screen.
+    /// </summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    [Browsable(false)]
+    public int ScreenWidth { get; private set; }
 
-        /// <summary>
-        /// Returns the height of the original screen.
-        /// </summary>
-        public int ScreenHeight { get; private set; }
+    /// <summary>
+    /// Returns the height of the original screen.
+    /// </summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    [Browsable(false)]
+    public int ScreenHeight { get; private set; }
 
         /// <summary>
         /// Provides thread-safe access to the Image of this Picturebox.
@@ -46,21 +51,43 @@ namespace Pulsar.Server.Controls
         {
             get
             {
-                return Image;
+                lock (_imageLock)
+                {
+                    return _frame;
+                }
             }
             set
             {
                 lock (_imageLock)
                 {
-                    Image = value;
+                    var old = _frame;
+                    _frame = value as Bitmap;
+                    old?.Dispose();
                 }
+
+                RequestRepaint();
             }
         }
 
         /// <summary>
         /// The lock object for the Picturebox's image.
         /// </summary>
-        private readonly object _imageLock = new object();
+    private readonly object _imageLock = new object();
+
+    /// <summary>
+    /// Latest frame to draw. We avoid assigning to PictureBox.Image to prevent cross-thread UI access and allocations.
+    /// </summary>
+    private Bitmap _frame;
+
+    /// <summary>
+    /// Small placeholder assigned to base.Image so existing code paths that check Image != null keep working.
+    /// </summary>
+    private Bitmap _placeholder;
+
+    /// <summary>
+    /// Prevent flooding the message queue; coalesce multiple UpdateImage calls into one repaint.
+    /// </summary>
+    private bool _repaintPending;
 
         /// <summary>
         /// The Stopwatch for internal FPS measuring.
@@ -123,20 +150,18 @@ namespace Pulsar.Server.Controls
             {
                 CountFps();
 
-                if ((ScreenWidth != bmp.Width) && (ScreenHeight != bmp.Height))
+                if ((ScreenWidth != bmp.Width) || (ScreenHeight != bmp.Height))
                     UpdateScreenSize(bmp.Width, bmp.Height);
 
+                // Swap the frame without resizing; scaling is handled in OnPaint for speed.
                 lock (_imageLock)
                 {
-                    // get old image to dispose it correctly
-                    var oldImage = GetImageSafe;
-
-                    SuspendLayout();
-                    GetImageSafe = cloneBitmap ? new Bitmap(bmp, Width, Height) /*resize bitmap*/ : bmp;
-                    ResumeLayout();
-
-                    oldImage?.Dispose();
+                    var old = _frame;
+                    _frame = cloneBitmap ? (Bitmap)bmp.Clone() : bmp;
+                    old?.Dispose();
                 }
+
+                RequestRepaint();
             }
             catch (InvalidOperationException)
             {
@@ -152,26 +177,55 @@ namespace Pulsar.Server.Controls
         public RapidPictureBox()
         {
             this.SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
-        }
 
-        protected override CreateParams CreateParams
-        {
-            get
-            {
-                CreateParams cp = base.CreateParams;
-                cp.ExStyle |= 0x02000000;  // Turn on WS_EX_COMPOSITED
-                return cp;
-            }
+            _placeholder = new Bitmap(1, 1);
+            _placeholder.SetPixel(0, 0, Color.Transparent);
+            base.Image = _placeholder;
         }
 
         protected override void OnPaint(PaintEventArgs pe)
         {
+            Bitmap localFrame = null;
             lock (_imageLock)
             {
-                if (GetImageSafe != null)
+                if (_frame == null)
+                    return;
+                localFrame = _frame;
+            }
+
+            var g = pe.Graphics;
+            g.SmoothingMode = SmoothingMode.None;
+            g.CompositingMode = CompositingMode.SourceCopy;
+            g.CompositingQuality = CompositingQuality.HighSpeed;
+            g.PixelOffsetMode = PixelOffsetMode.Half;
+
+            if (localFrame != null)
+            {
+                var cs = this.ClientSize;
+                if (cs.Width <= 0 || cs.Height <= 0)
+                    return;
+
+                double sx = (double)cs.Width / localFrame.Width;
+                double sy = (double)cs.Height / localFrame.Height;
+                bool upscaling = sx >= 1.0 || sy >= 1.0;
+                g.InterpolationMode = upscaling ? InterpolationMode.NearestNeighbor : InterpolationMode.Low;
+
+                g.DrawImage(localFrame, this.ClientRectangle);
+            }
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs pevent)
+        {
+            if (this.BackColor.A == 255)
+            {
+                using (var b = new SolidBrush(this.BackColor))
                 {
-                    pe.Graphics.DrawImage(GetImageSafe, Location);
+                    pevent.Graphics.FillRectangle(b, this.ClientRectangle);
                 }
+            }
+            else
+            {
+                base.OnPaintBackground(pevent);
             }
         }
 
@@ -187,6 +241,59 @@ namespace Pulsar.Server.Controls
             _sWatch = Stopwatch.StartNew();
 
             _frameCounter.Update(deltaTime);
+        }
+
+        private void RequestRepaint()
+        {
+            if (_repaintPending)
+                return;
+
+            _repaintPending = true;
+
+            void doInvalidate()
+            {
+                if (!IsDisposed)
+                {
+                    Invalidate();
+                    Update();
+                }
+                _repaintPending = false;
+            }
+
+            if (IsHandleCreated && InvokeRequired)
+            {
+                try { BeginInvoke((Action)(doInvalidate)); } catch { _repaintPending = false; }
+            }
+            else
+            {
+                doInvalidate();
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                lock (_imageLock)
+                {
+                    _frame?.Dispose();
+                    _frame = null;
+                }
+                try
+                {
+                    if (ReferenceEquals(base.Image, _placeholder))
+                    {
+                        base.Image = null;
+                    }
+                    _placeholder?.Dispose();
+                }
+                catch { }
+                finally
+                {
+                    _placeholder = null;
+                }
+            }
+            base.Dispose(disposing);
         }
     }
 }

