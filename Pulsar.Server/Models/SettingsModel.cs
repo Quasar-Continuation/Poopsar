@@ -60,5 +60,8 @@ namespace Pulsar.Server.Models
 
         [JsonProperty("reverseProxyPort")]
         public ushort ReverseProxyPort { get; set; } = 3128;
+
+        [JsonProperty("AllowLocalhost")]
+        public bool AllowLocalhost { get; set; } = false;
     }
 }

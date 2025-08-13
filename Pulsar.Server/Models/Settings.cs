@@ -10,6 +10,7 @@ namespace Pulsar.Server.Models
         private static readonly string PulsarStuffDir = Path.Combine(Application.StartupPath, "PulsarStuff");
         private static readonly string SettingsPath = Path.Combine(PulsarStuffDir, "settings.json");
         private static SettingsModel _settings;
+
         private static readonly object _lockObject = new object();
 
         public static readonly string CertificatePath = Path.Combine(PulsarStuffDir, "Pulsar.p12");
@@ -332,6 +333,19 @@ namespace Pulsar.Server.Models
             set
             {
                 LoadSettings().ReverseProxyPort = value;
+                SaveSettings();
+            }
+        }
+
+        public static bool AllowLocalhost
+        {
+            get
+            {
+                return LoadSettings().AllowLocalhost;
+            }
+            set
+            {
+                LoadSettings().AllowLocalhost = value;
                 SaveSettings();
             }
         }

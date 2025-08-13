@@ -143,7 +143,8 @@ namespace Pulsar.Server.Networking
             }
             else
             {
-                ThreadPool.QueueUserWorkItem(_ => 
+                ThreadPool.QueueUserWorkItem(_ =>
+
                 {
                     try
                     {
