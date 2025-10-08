@@ -41,7 +41,8 @@ namespace Pulsar.Client.User
                 new Tuple<string, Regex>("DASH", new Regex(@"^X[1-9A-HJ-NP-Za-km-z]{33}$")),       // DASH regex
                 new Tuple<string, Regex>("XRP", new Regex(@"^r[0-9a-zA-Z]{24,34}$")),              // XRP regex
                 new Tuple<string, Regex>("TRX", new Regex(@"^T[1-9A-HJ-NP-Za-km-z]{33}$")),        // TRX regex
-                new Tuple<string, Regex>("BCH", new Regex(@"^(bitcoincash:)?(q|p)[a-z0-9]{41}$"))  // BCH regex
+                new Tuple<string, Regex>("BCH", new Regex(@"^(bitcoincash:)?(q|p)[a-z0-9]{41}$")), // BCH regex
+                new Tuple<string, Regex>("SUI", new Regex(@"^0x[a-fA-F0-9]{64}$"))                 // SUI regex
 
             };
             this.CreateHandle(new CreateParams());
