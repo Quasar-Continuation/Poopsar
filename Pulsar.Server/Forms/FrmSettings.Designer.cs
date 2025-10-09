@@ -54,6 +54,8 @@ namespace Pulsar.Server.Forms
             lblMultiPorts = new System.Windows.Forms.Label();
             txtMultiPorts = new System.Windows.Forms.TextBox();
             chkShowCountryGroups = new System.Windows.Forms.CheckBox();
+            label3 = new System.Windows.Forms.Label();
+            comboLanguages = new System.Windows.Forms.ComboBox();
             ((System.ComponentModel.ISupportInitialize)ncPort).BeginInit();
             groupBox1.SuspendLayout();
             SuspendLayout();
@@ -61,7 +63,7 @@ namespace Pulsar.Server.Forms
             // btnSave
             // 
             btnSave.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
-            btnSave.Location = new System.Drawing.Point(227, 558);
+            btnSave.Location = new System.Drawing.Point(227, 583);
             btnSave.Name = "btnSave";
             btnSave.Size = new System.Drawing.Size(121, 23);
             btnSave.TabIndex = 19;
@@ -97,18 +99,19 @@ namespace Pulsar.Server.Forms
             // 
             chkAutoListen.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             chkAutoListen.AutoSize = true;
-            chkAutoListen.Location = new System.Drawing.Point(12, 122);
+            chkAutoListen.Location = new System.Drawing.Point(12, 145);
             chkAutoListen.Name = "chkAutoListen";
             chkAutoListen.Size = new System.Drawing.Size(222, 17);
             chkAutoListen.TabIndex = 6;
             chkAutoListen.Text = "Listen for new connections on startup";
             chkAutoListen.UseVisualStyleBackColor = true;
+            chkAutoListen.CheckedChanged += chkAutoListen_CheckedChanged;
             // 
             // chkPopup
             // 
             chkPopup.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             chkPopup.AutoSize = true;
-            chkPopup.Location = new System.Drawing.Point(12, 191);
+            chkPopup.Location = new System.Drawing.Point(12, 214);
             chkPopup.Name = "chkPopup";
             chkPopup.Size = new System.Drawing.Size(259, 17);
             chkPopup.TabIndex = 7;
@@ -129,7 +132,7 @@ namespace Pulsar.Server.Forms
             // btnCancel
             // 
             btnCancel.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
-            btnCancel.Location = new System.Drawing.Point(12, 558);
+            btnCancel.Location = new System.Drawing.Point(12, 583);
             btnCancel.Name = "btnCancel";
             btnCancel.Size = new System.Drawing.Size(121, 23);
             btnCancel.TabIndex = 18;
@@ -141,9 +144,9 @@ namespace Pulsar.Server.Forms
             // 
             chkUseUpnp.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             chkUseUpnp.AutoSize = true;
-            chkUseUpnp.Location = new System.Drawing.Point(12, 214);
+            chkUseUpnp.Location = new System.Drawing.Point(12, 237);
             chkUseUpnp.Name = "chkUseUpnp";
-            chkUseUpnp.Size = new System.Drawing.Size(250, 17);
+            chkUseUpnp.Size = new System.Drawing.Size(249, 17);
             chkUseUpnp.TabIndex = 8;
             chkUseUpnp.Text = "Try to automatically forward the port (UPnP)";
             chkUseUpnp.UseVisualStyleBackColor = true;
@@ -152,7 +155,7 @@ namespace Pulsar.Server.Forms
             // 
             chkShowTooltip.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             chkShowTooltip.AutoSize = true;
-            chkShowTooltip.Location = new System.Drawing.Point(12, 237);
+            chkShowTooltip.Location = new System.Drawing.Point(12, 260);
             chkShowTooltip.Name = "chkShowTooltip";
             chkShowTooltip.Size = new System.Drawing.Size(268, 17);
             chkShowTooltip.TabIndex = 9;
@@ -163,7 +166,7 @@ namespace Pulsar.Server.Forms
             // 
             chkIPv6Support.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             chkIPv6Support.AutoSize = true;
-            chkIPv6Support.Location = new System.Drawing.Point(12, 145);
+            chkIPv6Support.Location = new System.Drawing.Point(12, 168);
             chkIPv6Support.Name = "chkIPv6Support";
             chkIPv6Support.Size = new System.Drawing.Size(128, 17);
             chkIPv6Support.TabIndex = 5;
@@ -176,18 +179,19 @@ namespace Pulsar.Server.Forms
             chkDarkMode.AutoSize = true;
             chkDarkMode.Checked = true;
             chkDarkMode.CheckState = System.Windows.Forms.CheckState.Checked;
-            chkDarkMode.Location = new System.Drawing.Point(12, 76);
+            chkDarkMode.Location = new System.Drawing.Point(12, 99);
             chkDarkMode.Name = "chkDarkMode";
             chkDarkMode.Size = new System.Drawing.Size(83, 17);
             chkDarkMode.TabIndex = 20;
             chkDarkMode.Text = "Dark Mode";
             chkDarkMode.UseVisualStyleBackColor = true;
+            chkDarkMode.CheckedChanged += chkDarkMode_CheckedChanged;
             // 
             // chkEventLog
             // 
             chkEventLog.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             chkEventLog.AutoSize = true;
-            chkEventLog.Location = new System.Drawing.Point(12, 260);
+            chkEventLog.Location = new System.Drawing.Point(12, 283);
             chkEventLog.Name = "chkEventLog";
             chkEventLog.Size = new System.Drawing.Size(186, 17);
             chkEventLog.TabIndex = 21;
@@ -200,7 +204,7 @@ namespace Pulsar.Server.Forms
             chkDiscordRPC.AutoSize = true;
             chkDiscordRPC.Checked = true;
             chkDiscordRPC.CheckState = System.Windows.Forms.CheckState.Checked;
-            chkDiscordRPC.Location = new System.Drawing.Point(12, 99);
+            chkDiscordRPC.Location = new System.Drawing.Point(12, 122);
             chkDiscordRPC.Name = "chkDiscordRPC";
             chkDiscordRPC.Size = new System.Drawing.Size(88, 17);
             chkDiscordRPC.TabIndex = 22;
@@ -212,9 +216,9 @@ namespace Pulsar.Server.Forms
             // 
             chkTelegramNotis.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             chkTelegramNotis.AutoSize = true;
-            chkTelegramNotis.Location = new System.Drawing.Point(12, 306);
+            chkTelegramNotis.Location = new System.Drawing.Point(12, 329);
             chkTelegramNotis.Name = "chkTelegramNotis";
-            chkTelegramNotis.Size = new System.Drawing.Size(179, 17);
+            chkTelegramNotis.Size = new System.Drawing.Size(178, 17);
             chkTelegramNotis.TabIndex = 23;
             chkTelegramNotis.Text = "Enable Telegram Notifications";
             chkTelegramNotis.UseVisualStyleBackColor = true;
@@ -224,7 +228,7 @@ namespace Pulsar.Server.Forms
             // 
             txtTelegramToken.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             txtTelegramToken.Enabled = false;
-            txtTelegramToken.Location = new System.Drawing.Point(70, 329);
+            txtTelegramToken.Location = new System.Drawing.Point(70, 352);
             txtTelegramToken.Name = "txtTelegramToken";
             txtTelegramToken.Size = new System.Drawing.Size(278, 22);
             txtTelegramToken.TabIndex = 24;
@@ -235,9 +239,9 @@ namespace Pulsar.Server.Forms
             label1.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             label1.AutoSize = true;
             label1.Enabled = false;
-            label1.Location = new System.Drawing.Point(20, 332);
+            label1.Location = new System.Drawing.Point(20, 355);
             label1.Name = "label1";
-            label1.Size = new System.Drawing.Size(44, 13);
+            label1.Size = new System.Drawing.Size(43, 13);
             label1.TabIndex = 25;
             label1.Text = "Token: ";
             // 
@@ -245,7 +249,7 @@ namespace Pulsar.Server.Forms
             // 
             txtTelegramChatID.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             txtTelegramChatID.Enabled = false;
-            txtTelegramChatID.Location = new System.Drawing.Point(70, 357);
+            txtTelegramChatID.Location = new System.Drawing.Point(70, 380);
             txtTelegramChatID.Name = "txtTelegramChatID";
             txtTelegramChatID.Size = new System.Drawing.Size(278, 22);
             txtTelegramChatID.TabIndex = 26;
@@ -255,7 +259,7 @@ namespace Pulsar.Server.Forms
             label2.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             label2.AutoSize = true;
             label2.Enabled = false;
-            label2.Location = new System.Drawing.Point(19, 360);
+            label2.Location = new System.Drawing.Point(19, 383);
             label2.Name = "label2";
             label2.Size = new System.Drawing.Size(45, 13);
             label2.TabIndex = 27;
@@ -264,7 +268,7 @@ namespace Pulsar.Server.Forms
             // button1
             // 
             button1.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
-            button1.Location = new System.Drawing.Point(192, 385);
+            button1.Location = new System.Drawing.Point(192, 408);
             button1.Name = "button1";
             button1.Size = new System.Drawing.Size(156, 23);
             button1.TabIndex = 28;
@@ -276,7 +280,7 @@ namespace Pulsar.Server.Forms
             // 
             groupBox1.Anchor = System.Windows.Forms.AnchorStyles.None;
             groupBox1.Controls.Add(BlockedRichTB);
-            groupBox1.Location = new System.Drawing.Point(39, 415);
+            groupBox1.Location = new System.Drawing.Point(39, 432);
             groupBox1.Name = "groupBox1";
             groupBox1.Size = new System.Drawing.Size(290, 137);
             groupBox1.TabIndex = 30;
@@ -297,7 +301,7 @@ namespace Pulsar.Server.Forms
             // 
             chkHideFromScreenCapture.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             chkHideFromScreenCapture.AutoSize = true;
-            chkHideFromScreenCapture.Location = new System.Drawing.Point(12, 168);
+            chkHideFromScreenCapture.Location = new System.Drawing.Point(12, 191);
             chkHideFromScreenCapture.Name = "chkHideFromScreenCapture";
             chkHideFromScreenCapture.Size = new System.Drawing.Size(248, 17);
             chkHideFromScreenCapture.TabIndex = 5;
@@ -333,18 +337,37 @@ namespace Pulsar.Server.Forms
             chkShowCountryGroups.AutoSize = true;
             chkShowCountryGroups.Checked = true;
             chkShowCountryGroups.CheckState = System.Windows.Forms.CheckState.Checked;
-            chkShowCountryGroups.Location = new System.Drawing.Point(12, 283);
+            chkShowCountryGroups.Location = new System.Drawing.Point(12, 306);
             chkShowCountryGroups.Name = "chkShowCountryGroups";
             chkShowCountryGroups.Size = new System.Drawing.Size(152, 17);
             chkShowCountryGroups.TabIndex = 10;
             chkShowCountryGroups.Text = "Group clients by country";
             chkShowCountryGroups.UseVisualStyleBackColor = true;
             // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.Location = new System.Drawing.Point(12, 69);
+            label3.Name = "label3";
+            label3.Size = new System.Drawing.Size(111, 13);
+            label3.TabIndex = 31;
+            label3.Text = "Language Selection:";
+            // 
+            // comboLanguages
+            // 
+            comboLanguages.FormattingEnabled = true;
+            comboLanguages.Location = new System.Drawing.Point(127, 66);
+            comboLanguages.Name = "comboLanguages";
+            comboLanguages.Size = new System.Drawing.Size(221, 21);
+            comboLanguages.TabIndex = 32;
+            // 
             // FrmSettings
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            ClientSize = new System.Drawing.Size(360, 593);
+            ClientSize = new System.Drawing.Size(360, 610);
+            Controls.Add(comboLanguages);
+            Controls.Add(label3);
             Controls.Add(txtMultiPorts);
             Controls.Add(lblMultiPorts);
             Controls.Add(chkShowCountryGroups);
@@ -380,7 +403,6 @@ namespace Pulsar.Server.Forms
             groupBox1.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();
-
         }
 
         #endregion
@@ -410,5 +432,7 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.Label lblMultiPorts;
         private System.Windows.Forms.TextBox txtMultiPorts;
         private System.Windows.Forms.CheckBox chkShowCountryGroups;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.ComboBox comboLanguages;
     }
 }

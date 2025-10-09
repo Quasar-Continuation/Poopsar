@@ -18,6 +18,7 @@ namespace Pulsar.Server.Forms
 {
     public partial class FrmSettings : Form
     {
+
         private readonly PulsarServer _listenServer;
         private bool _previousDiscordRPCState; // Track previous state of Discord RPC checkbox
 
@@ -31,6 +32,14 @@ namespace Pulsar.Server.Forms
             ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
 
             ToggleListenerSettings(!listenServer.Listening);
+
+            comboLanguages.Items.AddRange(new string[]
+            {
+                "English [EN]",
+                "Chinese [CN]",
+                "Russian [RU]",
+                "Spanish [ES]"
+            });
         }
 
         private void FrmSettings_Load(object sender, EventArgs e)
@@ -228,10 +237,11 @@ namespace Pulsar.Server.Forms
                 MessageBox.Show("Please enter at least one port in 'Ports to listen to'.", "No ports provided", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+
             Settings.ListenPort = ports[0];
             Settings.ListenPorts = ports.Skip(1).ToArray();
-            
             txtMultiPorts.Text = string.Join(", ", ports);
+
             Settings.DarkMode = chkDarkMode.Checked;
             Settings.HideFromScreenCapture = chkHideFromScreenCapture.Checked;
             Settings.IPv6Support = chkIPv6Support.Checked;
@@ -245,6 +255,7 @@ namespace Pulsar.Server.Forms
             Settings.TelegramChatID = txtTelegramChatID.Text;
             Settings.TelegramBotToken = txtTelegramToken.Text;
             Settings.TelegramNotifications = chkTelegramNotis.Checked;
+
             DiscordRPCManager.ApplyDiscordRPC(this);
 
             FrmMain mainForm = Application.OpenForms.OfType<FrmMain>().FirstOrDefault();
@@ -254,10 +265,10 @@ namespace Pulsar.Server.Forms
                 mainForm.RefreshClientGroups();
                 mainForm.RefreshClientTheme();
             }
-
             string[] ipList = BlockedRichTB.Text.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
             var blockedIPs = ipList.ToList();
             string filePath = "blocked.json";
+
             try
             {
                 string json = JsonConvert.SerializeObject(blockedIPs, Formatting.Indented);
@@ -266,7 +277,18 @@ namespace Pulsar.Server.Forms
             catch (Exception)
             {
             }
+            if (comboLanguages.SelectedItem == null)
+            {
+                MessageBox.Show("Please select a language first!");
+                return;
+            }
 
+            var config = new
+            {
+                SelectedLanguage = comboLanguages.SelectedItem.ToString()
+            };
+            string jsonlang = JsonConvert.SerializeObject(config, Formatting.Indented);
+            File.WriteAllText("langconfig.json", jsonlang);
             this.Close();
         }
 
@@ -376,6 +398,16 @@ namespace Pulsar.Server.Forms
         {
             ScreenCaptureHider.ScreenCaptureHider.FormsHiddenFromScreenCapture = chkHideFromScreenCapture.Checked;
             ScreenCaptureHider.ScreenCaptureHider.Refresh();
+        }
+
+        private void chkDarkMode_CheckedChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void chkAutoListen_CheckedChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }

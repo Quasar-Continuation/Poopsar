@@ -58,5 +58,6 @@ namespace Pulsar.Server.Models
 
         [JsonProperty("showCountryGroups")]
         public bool ShowCountryGroups { get; set; } = true;
+
     }
 }
