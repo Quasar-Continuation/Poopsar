@@ -191,7 +191,7 @@ namespace Pulsar.Server.Forms
                     {
                         int selected = lstClients.SelectedItems.Count;
                         int connected = ListenServer?.ConnectedClients?.Length ?? 0;
-                        string baseTitle = $"Pulsar Premium - {ServerVersion.Display}";
+                        string baseTitle = $"Pulsar - {ServerVersion.Display}";
                         this.Text = (selected > 0)
                             ? $"{baseTitle} - Connected: {connected} [Selected: {selected}]"
                             : $"{baseTitle} - Connected: {connected}";
@@ -346,6 +346,229 @@ namespace Pulsar.Server.Forms
             InitializeAutoTasksMenu();
             ScheduleOfflineListRefresh();
             ScheduleStatsRefresh();
+            string lang = "English [EN]";
+            if (File.Exists("langconfig.json"))
+            {
+                try
+                {
+                    string json = File.ReadAllText("langconfig.json");
+                    var config = JsonConvert.DeserializeObject<LangConfig>(json);
+                    if (config != null && !string.IsNullOrEmpty(config.SelectedLanguage))
+                        lang = config.SelectedLanguage;
+                }
+                catch
+                {
+
+                }
+            }
+            switch (lang)
+            {
+                case "English [EN]":
+                    aboutToolStripMenuItem.Text = "About";
+                    clientsToolStripMenuItem.Text = "Clients";
+                    offlineClientsToolStripMenuItem.Text = "Offline Clients";
+                    clearOfflineClientsToolStripMenuItem.Text = "Clear List";
+                    statsToolStripMenuItem.Text = "Stats";
+                    mapToolStripMenuItem.Text = "Map";
+                    autoTasksToolStripMenuItem.Text = "Auto Tasks";
+                    cryptoClipperToolStripMenuItem.Text = "Crypto Clipper";
+                    notificationCentreToolStripMenuItem.Text = "Notification Centre";
+                    builderToolStripMenuItem.Text = "Builder";
+                    settingsToolStripMenuItem.Text = "Settings";
+                    listenToolStripStatusLabel.Text = "Listening: False";
+                    connectedToolStripStatusLabel.Text = "Connected: 0";
+                    hIP.Text = "IP Address";
+                    hNick.Text = "Nickname";
+                    hTag.Text = "Tag";
+                    hUserPC.Text = "User@PC";
+                    hVersion.Text = "Version";
+                    hStatus.Text = "Status";
+                    hCurrentWindow.Text = "Current Window";
+                    hUserStatus.Text = "User Status";
+                    hCountry.Text = "Country";
+                    hOS.Text = "Operating System";
+                    hAccountType.Text = "Account Type";
+                    columnHeader4.Text = "Task";
+                    columnHeader5.Text = "Host";
+                    columnHeader8.Text = "Arguments";
+                    hOfflineIP.Text = "IP Address";
+                    hOfflineNickname.Text = "Nickname";
+                    hOfflineTag.Text = "Tag";
+                    hOfflineUserPC.Text = "User@PC";
+                    hOfflineVersion.Text = "Version";
+                    hOfflineLastSeen.Text = "Last Seen";
+                    hOfflineFirstSeen.Text = "First Seen";
+                    hOfflineCountry.Text = "Country";
+                    hOfflineOS.Text = "Operating System";
+                    hOfflineAccountType.Text = "Account Type";
+                    break;
+
+                case "Chinese [CN]":
+                    aboutToolStripMenuItem.Text = "关于";
+                    clientsToolStripMenuItem.Text = "客户";
+                    offlineClientsToolStripMenuItem.Text = "离线用户";
+                    clearOfflineClientsToolStripMenuItem.Text = "清除列表";
+                    statsToolStripMenuItem.Text = "统计";
+                    mapToolStripMenuItem.Text = "地图";
+                    autoTasksToolStripMenuItem.Text = "自动任务";
+                    cryptoClipperToolStripMenuItem.Text = "加密货币剪切器";
+                    notificationCentreToolStripMenuItem.Text = "通知中心";
+                    builderToolStripMenuItem.Text = "构建器";
+                    settingsToolStripMenuItem.Text = "设置";
+                    listenToolStripStatusLabel.Text = "监听: 停止";
+                    connectedToolStripStatusLabel.Text = "已连接: 0";
+                    hIP.Text = "IP 地址";
+                    hNick.Text = "主机名称";
+                    hTag.Text = "标签";
+                    hUserPC.Text = "用户@PC";
+                    hVersion.Text = "版本";
+                    hStatus.Text = "状态";
+                    hCurrentWindow.Text = "当前窗口";
+                    hUserStatus.Text = "用户状态";
+                    hCountry.Text = "国家";
+                    hOS.Text = "操作系统";
+                    hAccountType.Text = "帐户类型";
+                    columnHeader4.Text = "任务";
+                    columnHeader5.Text = "主机";
+                    columnHeader8.Text = "参数";
+                    hOfflineIP.Text = "IP 地址";
+                    hOfflineNickname.Text = "主机名称";
+                    hOfflineTag.Text = "标签";
+                    hOfflineUserPC.Text = "用户@PC";
+                    hOfflineVersion.Text = "版本";
+                    hOfflineLastSeen.Text = "最后在线";
+                    hOfflineFirstSeen.Text = "首次在线";
+                    hOfflineCountry.Text = "国家";
+                    hOfflineOS.Text = "操作系统";
+                    hOfflineAccountType.Text = "帐户类型";
+                    break;
+
+                case "Russian [RU]":
+                    aboutToolStripMenuItem.Text = "О";
+                    clientsToolStripMenuItem.Text = "Клиенты";
+                    offlineClientsToolStripMenuItem.Text = "Офлайн-клиенты";
+                    clearOfflineClientsToolStripMenuItem.Text = "Очистить список";
+                    statsToolStripMenuItem.Text = "Статистика";
+                    mapToolStripMenuItem.Text = "Карта";
+                    autoTasksToolStripMenuItem.Text = "Автозадачи";
+                    cryptoClipperToolStripMenuItem.Text = "Крипто-клеппер";
+                    notificationCentreToolStripMenuItem.Text = "Центр уведомлений";
+                    builderToolStripMenuItem.Text = "Строитель";
+                    settingsToolStripMenuItem.Text = "Настройки";
+                    listenToolStripStatusLabel.Text = "Слушаем: Нет";
+                    connectedToolStripStatusLabel.Text = "Подключено: 0";
+                    hIP.Text = "IP Адрес";
+                    hNick.Text = "Никнейм";
+                    hTag.Text = "Тег";
+                    hUserPC.Text = "Пользователь@ПК";
+                    hVersion.Text = "Версия";
+                    hStatus.Text = "Статус";
+                    hCurrentWindow.Text = "Текущее окно";
+                    hUserStatus.Text = "Статус пользователя";
+                    hCountry.Text = "Страна";
+                    hOS.Text = "ОС";
+                    hAccountType.Text = "Тип учетной записи";
+                    columnHeader4.Text = "Задача";
+                    columnHeader5.Text = "Хост";
+                    columnHeader8.Text = "Аргументы";
+                    hOfflineIP.Text = "IP Адрес";
+                    hOfflineNickname.Text = "Никнейм";
+                    hOfflineTag.Text = "Тег";
+                    hOfflineUserPC.Text = "Пользователь@ПК";
+                    hOfflineVersion.Text = "Версия";
+                    hOfflineLastSeen.Text = "Последнее посещение";
+                    hOfflineFirstSeen.Text = "Первое посещение";
+                    hOfflineCountry.Text = "Страна";
+                    hOfflineOS.Text = "ОС";
+                    hOfflineAccountType.Text = "Тип учетной записи";
+                    break;
+
+                case "Spanish [ES]":
+                    aboutToolStripMenuItem.Text = "Acerca de";
+                    clientsToolStripMenuItem.Text = "Clientes";
+                    offlineClientsToolStripMenuItem.Text = "Clientes sin conexión";
+                    clearOfflineClientsToolStripMenuItem.Text = "Borrar lista";
+                    statsToolStripMenuItem.Text = "Estadísticas";
+                    mapToolStripMenuItem.Text = "Mapa";
+                    autoTasksToolStripMenuItem.Text = "Tareas Automáticas";
+                    cryptoClipperToolStripMenuItem.Text = "Recortador de Cripto";
+                    notificationCentreToolStripMenuItem.Text = "Centro de Notificaciones";
+                    builderToolStripMenuItem.Text = "Constructor";
+                    settingsToolStripMenuItem.Text = "Configuración";
+                    listenToolStripStatusLabel.Text = "Escuchando: Falso";
+                    connectedToolStripStatusLabel.Text = "Conectados: 0";
+                    hIP.Text = "Dirección IP";
+                    hNick.Text = "Apodo";
+                    hTag.Text = "Etiqueta";
+                    hUserPC.Text = "Usuario@PC";
+                    hVersion.Text = "Versión";
+                    hStatus.Text = "Estado";
+                    hCurrentWindow.Text = "Ventana Actual";
+                    hUserStatus.Text = "Estado del Usuario";
+                    hCountry.Text = "País";
+                    hOS.Text = "Sistema Operativo";
+                    hAccountType.Text = "Tipo de Cuenta";
+                    columnHeader4.Text = "Tarea";
+                    columnHeader5.Text = "Host";
+                    columnHeader8.Text = "Argumentos";
+                    hOfflineIP.Text = "Dirección IP";
+                    hOfflineNickname.Text = "Apodo";
+                    hOfflineTag.Text = "Etiqueta";
+                    hOfflineUserPC.Text = "Usuario@PC";
+                    hOfflineVersion.Text = "Versión";
+                    hOfflineLastSeen.Text = "Visto Por Última Vez";
+                    hOfflineFirstSeen.Text = "Visto Por Primera Vez";
+                    hOfflineCountry.Text = "País";
+                    hOfflineOS.Text = "Sistema Operativo";
+                    hOfflineAccountType.Text = "Tipo de Cuenta";
+                    break;
+
+                default:
+                    aboutToolStripMenuItem.Text = "About";
+                    clientsToolStripMenuItem.Text = "Clients";
+                    offlineClientsToolStripMenuItem.Text = "Offline Clients";
+                    clearOfflineClientsToolStripMenuItem.Text = "Clear List";
+                    statsToolStripMenuItem.Text = "Stats";
+                    mapToolStripMenuItem.Text = "Map";
+                    autoTasksToolStripMenuItem.Text = "Auto Tasks";
+                    cryptoClipperToolStripMenuItem.Text = "Crypto Clipper";
+                    notificationCentreToolStripMenuItem.Text = "Notification Centre";
+                    builderToolStripMenuItem.Text = "Builder";
+                    settingsToolStripMenuItem.Text = "Settings";
+                    listenToolStripStatusLabel.Text = "Listening: False";
+                    connectedToolStripStatusLabel.Text = "Connected: 0";
+                    hIP.Text = "IP Address";
+                    hNick.Text = "Nickname";
+                    hTag.Text = "Tag";
+                    hUserPC.Text = "User@PC";
+                    hVersion.Text = "Version";
+                    hStatus.Text = "Status";
+                    hCurrentWindow.Text = "Current Window";
+                    hUserStatus.Text = "User Status";
+                    hCountry.Text = "Country";
+                    hOS.Text = "Operating System";
+                    hAccountType.Text = "Account Type";
+                    columnHeader4.Text = "Task";
+                    columnHeader5.Text = "Host";
+                    columnHeader8.Text = "Arguments";
+                    hOfflineIP.Text = "IP Address";
+                    hOfflineNickname.Text = "Nickname";
+                    hOfflineTag.Text = "Tag";
+                    hOfflineUserPC.Text = "User@PC";
+                    hOfflineVersion.Text = "Version";
+                    hOfflineLastSeen.Text = "Last Seen";
+                    hOfflineFirstSeen.Text = "First Seen";
+                    hOfflineCountry.Text = "Country";
+                    hOfflineOS.Text = "Operating System";
+                    hOfflineAccountType.Text = "Account Type";
+                    break;
+            }
+
+        }
+
+        private class LangConfig
+        {
+            public string SelectedLanguage { get; set; }
         }
 
         private void InitializeAutoTasksMenu()
@@ -589,28 +812,73 @@ namespace Pulsar.Server.Forms
                     }
 
                     string statusText;
+                    string lang = "English [EN]";
                     var ports = (ListenServer?.GetListeningPorts() ?? Array.Empty<ushort>()).Distinct().ToList();
 
                     if (listening)
                     {
                         if (ports.Count <= 3)
                         {
-                            statusText = $"Listening on ports {string.Join(", ", ports)}.";
+                            switch (lang) 
+                            {
+                                case "Spanish [ES]":
+                                    statusText = $"Escuchando en los puertos {string.Join(", ", ports)}.";
+                                    break;
+                                case "Chinese [CN]":
+                                    statusText = $"监听端口 {string.Join(", ", ports)}。";
+                                    break;
+                                case "Russian [RU]":
+                                    statusText = $"Слушаем порты {string.Join(", ", ports)}.";
+                                    break;
+                                default: 
+                                    statusText = $"Listening on ports {string.Join(", ", ports)}.";
+                                    break;
+                            }
                         }
                         else
                         {
                             var firstThree = ports.Take(3);
                             var remaining = ports.Count - 3;
-                            statusText = $"Listening on ports {string.Join(", ", firstThree)} and {remaining} more ports.";
+
+                            switch (lang)
+                            {
+                                case "Spanish [ES]":
+                                    statusText = $"Escuchando en los puertos {string.Join(", ", firstThree)} y {remaining} más.";
+                                    break;
+                                case "Chinese [CN]":
+                                    statusText = $"监听端口 {string.Join(", ", firstThree)}，还有 {remaining} 个端口。";
+                                    break;
+                                case "Russian [RU]":
+                                    statusText = $"Слушаем порты {string.Join(", ", firstThree)} и еще {remaining} портов.";
+                                    break;
+                                default: 
+                                    statusText = $"Listening on ports {string.Join(", ", firstThree)} and {remaining} more ports.";
+                                    break;
+                            }
                         }
                     }
                     else
                     {
-                        statusText = "Not listening.";
+                        switch (lang)
+                        {
+                            case "Spanish [ES]":
+                                statusText = "No se está escuchando.";
+                                break;
+                            case "Chinese [CN]":
+                                statusText = "未监听。";
+                                break;
+                            case "Russian [RU]":
+                                statusText = "Не слушаем.";
+                                break;
+                            default: 
+                                statusText = "Not listening.";
+                                break;
+                        }
                     }
 
                     listenToolStripStatusLabel.Text = statusText;
                 });
+
                 UpdateWindowTitle();
             }
             catch (InvalidOperationException)
