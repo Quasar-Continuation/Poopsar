@@ -46,15 +46,6 @@ namespace Pulsar.Server.Forms
         {
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FrmMain));
-            ListViewItem listViewItem1 = new ListViewItem("CPU");
-            ListViewItem listViewItem2 = new ListViewItem("GPU");
-            ListViewItem listViewItem3 = new ListViewItem("RAM");
-            ListViewItem listViewItem4 = new ListViewItem("Uptime");
-            ListViewItem listViewItem5 = new ListViewItem("Antivirus");
-            ListViewItem listViewItem6 = new ListViewItem("Default Browser");
-            ListViewItem listViewItem7 = new ListViewItem("Ping");
-            ListViewItem listViewItem8 = new ListViewItem("Webcam");
-            ListViewItem listViewItem9 = new ListViewItem("AFK Time");
             contextMenuStrip = new ContextMenuStrip(components);
             systemToolStripMenuItem = new ToolStripMenuItem();
             systemInformationToolStripMenuItem = new ToolStripMenuItem();
@@ -120,9 +111,22 @@ namespace Pulsar.Server.Forms
             imgFlags = new ImageList(components);
             notifyIcon = new NotifyIcon(components);
             tableLayoutPanel = new TableLayoutPanel();
-            MainTabControl = new NoButtonTabControl();
+            statusStrip = new StatusStrip();
+            listenToolStripStatusLabel = new ToolStripStatusLabel();
+            connectedToolStripStatusLabel = new ToolStripStatusLabel();
+            menuStrip = new MenuStrip();
+            clientsToolStripMenuItem = new ToolStripMenuItem();
+            offlineClientsToolStripMenuItem = new ToolStripMenuItem();
+            clearOfflineClientsToolStripMenuItem = new ToolStripMenuItem();
+            statsToolStripMenuItem = new ToolStripMenuItem();
+            mapToolStripMenuItem = new ToolStripMenuItem();
+            autoTasksToolStripMenuItem = new ToolStripMenuItem();
+            cryptoClipperToolStripMenuItem = new ToolStripMenuItem();
+            notificationCentreToolStripMenuItem = new ToolStripMenuItem();
+            aboutToolStripMenuItem = new ToolStripMenuItem();
+            settingsToolStripMenuItem = new ToolStripMenuItem();
+            builderToolStripMenuItem = new ToolStripMenuItem();
             tabOfflineClients = new TabPage();
-            lstOfflineClients = new AeroListView();
             OfflineClientsContextMenuStrip = new ContextMenuStrip(components);
             removeOfflineClientsToolStripMenuItem = new ToolStripMenuItem();
             hOfflineIP = new ColumnHeader();
@@ -136,21 +140,7 @@ namespace Pulsar.Server.Forms
             hOfflineOS = new ColumnHeader();
             hOfflineAccountType = new ColumnHeader();
             tabStats = new TabPage();
-            statsElementHost = new StatsElementHost();
             tabPage1 = new TabPage();
-            wpfClientsHost = new ClientsListElementHost();
-            lstClients = new AeroListView();
-            hIP = new ColumnHeader();
-            hNick = new ColumnHeader();
-            hTag = new ColumnHeader();
-            hUserPC = new ColumnHeader();
-            hVersion = new ColumnHeader();
-            hStatus = new ColumnHeader();
-            hCurrentWindow = new ColumnHeader();
-            hUserStatus = new ColumnHeader();
-            hCountry = new ColumnHeader();
-            hOS = new ColumnHeader();
-            hAccountType = new ColumnHeader();
             tableLayoutPanel1 = new TableLayoutPanel();
             label1 = new Label();
             pictureBoxMain = new PictureBox();
@@ -164,9 +154,6 @@ namespace Pulsar.Server.Forms
             btnQuickFileExplorer = new Button();
             chkDisablePreview = new CheckBox();
             gBoxClientInfo = new GroupBox();
-            clientInfoListView = new AeroListView();
-            Names = new ColumnHeader();
-            Stats = new ColumnHeader();
             DebugLogRichBox = new RichTextBox();
             DebugContextMenuStrip = new ContextMenuStrip(components);
             saveLogsToolStripMenuItem = new ToolStripMenuItem();
@@ -174,16 +161,27 @@ namespace Pulsar.Server.Forms
             toolStripSeparator1 = new ToolStripSeparator();
             clearLogsToolStripMenuItem = new ToolStripMenuItem();
             splitter1 = new Splitter();
+            hIP = new ColumnHeader();
+            hNick = new ColumnHeader();
+            hTag = new ColumnHeader();
+            hUserPC = new ColumnHeader();
+            hVersion = new ColumnHeader();
+            hStatus = new ColumnHeader();
+            hCurrentWindow = new ColumnHeader();
+            hUserStatus = new ColumnHeader();
+            hCountry = new ColumnHeader();
+            hOS = new ColumnHeader();
+            hAccountType = new ColumnHeader();
+            Names = new ColumnHeader();
+            Stats = new ColumnHeader();
             tabHeatMap = new TabPage();
-            heatMapElementHost = new HeatMapElementHost();
             tabPage2 = new TabPage();
-            lstNoti = new AeroListView();
+            notificationStatusPanel = new Panel();
+            lblNotificationStatus = new Label();
             columnHeader1 = new ColumnHeader();
             columnHeader2 = new ColumnHeader();
             columnHeader3 = new ColumnHeader();
             columnHeader11 = new ColumnHeader();
-            notificationStatusPanel = new Panel();
-            lblNotificationStatus = new Label();
             NotificationContextMenuStrip = new ContextMenuStrip(components);
             addKeywordsToolStripMenuItem = new ToolStripMenuItem();
             clearSelectedToolStripMenuItem = new ToolStripMenuItem();
@@ -209,7 +207,6 @@ namespace Pulsar.Server.Forms
             label2 = new Label();
             ClipperCheckbox = new CheckBox();
             tabPage4 = new TabPage();
-            lstTasks = new AeroListView();
             columnHeader4 = new ColumnHeader();
             columnHeader5 = new ColumnHeader();
             columnHeader8 = new ColumnHeader();
@@ -224,88 +221,55 @@ namespace Pulsar.Server.Forms
             deleteTasksToolStripMenuItem = new ToolStripMenuItem();
             tabPage5 = new TabPage();
             splitter2 = new Splitter();
-            dotNetBarTabControl1 = new DotNetBarTabControl();
             Passwords = new TabPage();
-            aeroListView2 = new AeroListView();
             columnHeader9 = new ColumnHeader();
             columnHeader10 = new ColumnHeader();
             columnHeader12 = new ColumnHeader();
             Cookies = new TabPage();
-            aeroListView3 = new AeroListView();
             columnHeader14 = new ColumnHeader();
             columnHeader16 = new ColumnHeader();
             Communication = new TabPage();
-            aeroListView4 = new AeroListView();
             columnHeader15 = new ColumnHeader();
             columnHeader17 = new ColumnHeader();
             Games = new TabPage();
-            aeroListView5 = new AeroListView();
             columnHeader7 = new ColumnHeader();
             tabPage6 = new TabPage();
-            aeroListView6 = new AeroListView();
             columnHeader13 = new ColumnHeader();
             tabPage7 = new TabPage();
-            aeroListView1 = new AeroListView();
             columnHeader6 = new ColumnHeader();
-            statusStrip = new StatusStrip();
-            listenToolStripStatusLabel = new ToolStripStatusLabel();
-            connectedToolStripStatusLabel = new ToolStripStatusLabel();
-            menuStrip = new MenuStrip();
-            clientsToolStripMenuItem = new ToolStripMenuItem();
-            offlineClientsToolStripMenuItem = new ToolStripMenuItem();
-            clearOfflineClientsToolStripMenuItem = new ToolStripMenuItem();
-            statsToolStripMenuItem = new ToolStripMenuItem();
-            autoTasksToolStripMenuItem = new ToolStripMenuItem();
-            cryptoClipperToolStripMenuItem = new ToolStripMenuItem();
-            notificationCentreToolStripMenuItem = new ToolStripMenuItem();
-            aboutToolStripMenuItem = new ToolStripMenuItem();
-            settingsToolStripMenuItem = new ToolStripMenuItem();
-            builderToolStripMenuItem = new ToolStripMenuItem();
-            mapToolStripMenuItem = new ToolStripMenuItem();
+            runPEToolStripMenuItem = new ToolStripMenuItem();
             contextMenuStrip.SuspendLayout();
             tableLayoutPanel.SuspendLayout();
-            MainTabControl.SuspendLayout();
-            tabOfflineClients.SuspendLayout();
+            statusStrip.SuspendLayout();
+            menuStrip.SuspendLayout();
             OfflineClientsContextMenuStrip.SuspendLayout();
-            tabStats.SuspendLayout();
             tabPage1.SuspendLayout();
             tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBoxMain).BeginInit();
             tblLayoutQuickButtons.SuspendLayout();
-            gBoxClientInfo.SuspendLayout();
             DebugContextMenuStrip.SuspendLayout();
-            tabHeatMap.SuspendLayout();
             tabPage2.SuspendLayout();
             notificationStatusPanel.SuspendLayout();
             NotificationContextMenuStrip.SuspendLayout();
             tabPage3.SuspendLayout();
             cryptoGroupBox.SuspendLayout();
-            tabPage4.SuspendLayout();
             TasksContextMenuStrip.SuspendLayout();
             tabPage5.SuspendLayout();
-            dotNetBarTabControl1.SuspendLayout();
-            Passwords.SuspendLayout();
-            Cookies.SuspendLayout();
-            Communication.SuspendLayout();
-            Games.SuspendLayout();
-            tabPage6.SuspendLayout();
-            statusStrip.SuspendLayout();
-            menuStrip.SuspendLayout();
             SuspendLayout();
             // 
             // contextMenuStrip
             // 
             contextMenuStrip.Items.AddRange(new ToolStripItem[] { systemToolStripMenuItem, surveillanceToolStripMenuItem, userSupportToolStripMenuItem, quickCommandsToolStripMenuItem, funMethodsToolStripMenuItem, connectionToolStripMenuItem, lineToolStripMenuItem, selectAllToolStripMenuItem });
             contextMenuStrip.Name = "ctxtMenu";
-            contextMenuStrip.Size = new Size(180, 164);
+            contextMenuStrip.Size = new Size(181, 186);
             contextMenuStrip.Opening += contextMenuStrip_Opening;
             // 
             // systemToolStripMenuItem
             // 
-            systemToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { systemInformationToolStripMenuItem, fileManagerToolStripMenuItem, startupManagerToolStripMenuItem, taskManagerToolStripMenuItem, remoteShellToolStripMenuItem, connectionsToolStripMenuItem, reverseProxyToolStripMenuItem, registryEditorToolStripMenuItem, remoteExecuteToolStripMenuItem, ctxtLine, actionsToolStripMenuItem });
+            systemToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { systemInformationToolStripMenuItem, fileManagerToolStripMenuItem, startupManagerToolStripMenuItem, taskManagerToolStripMenuItem, remoteShellToolStripMenuItem, connectionsToolStripMenuItem, reverseProxyToolStripMenuItem, registryEditorToolStripMenuItem, remoteExecuteToolStripMenuItem, runPEToolStripMenuItem, ctxtLine, actionsToolStripMenuItem });
             systemToolStripMenuItem.Image = Properties.Resources.cog;
             systemToolStripMenuItem.Name = "systemToolStripMenuItem";
-            systemToolStripMenuItem.Size = new Size(179, 22);
+            systemToolStripMenuItem.Size = new Size(180, 22);
             systemToolStripMenuItem.Text = "Administration";
             systemToolStripMenuItem.Click += systemToolStripMenuItem_Click;
             // 
@@ -313,7 +277,7 @@ namespace Pulsar.Server.Forms
             // 
             systemInformationToolStripMenuItem.Image = (Image)resources.GetObject("systemInformationToolStripMenuItem.Image");
             systemInformationToolStripMenuItem.Name = "systemInformationToolStripMenuItem";
-            systemInformationToolStripMenuItem.Size = new Size(178, 22);
+            systemInformationToolStripMenuItem.Size = new Size(180, 22);
             systemInformationToolStripMenuItem.Text = "System Information";
             systemInformationToolStripMenuItem.Click += systemInformationToolStripMenuItem_Click;
             // 
@@ -321,7 +285,7 @@ namespace Pulsar.Server.Forms
             // 
             fileManagerToolStripMenuItem.Image = (Image)resources.GetObject("fileManagerToolStripMenuItem.Image");
             fileManagerToolStripMenuItem.Name = "fileManagerToolStripMenuItem";
-            fileManagerToolStripMenuItem.Size = new Size(178, 22);
+            fileManagerToolStripMenuItem.Size = new Size(180, 22);
             fileManagerToolStripMenuItem.Text = "File Manager";
             fileManagerToolStripMenuItem.Click += fileManagerToolStripMenuItem_Click;
             // 
@@ -329,7 +293,7 @@ namespace Pulsar.Server.Forms
             // 
             startupManagerToolStripMenuItem.Image = Properties.Resources.application_edit;
             startupManagerToolStripMenuItem.Name = "startupManagerToolStripMenuItem";
-            startupManagerToolStripMenuItem.Size = new Size(178, 22);
+            startupManagerToolStripMenuItem.Size = new Size(180, 22);
             startupManagerToolStripMenuItem.Text = "Startup Manager";
             startupManagerToolStripMenuItem.Click += startupManagerToolStripMenuItem_Click;
             // 
@@ -337,7 +301,7 @@ namespace Pulsar.Server.Forms
             // 
             taskManagerToolStripMenuItem.Image = Properties.Resources.application_cascade;
             taskManagerToolStripMenuItem.Name = "taskManagerToolStripMenuItem";
-            taskManagerToolStripMenuItem.Size = new Size(178, 22);
+            taskManagerToolStripMenuItem.Size = new Size(180, 22);
             taskManagerToolStripMenuItem.Text = "Task Manager";
             taskManagerToolStripMenuItem.Click += taskManagerToolStripMenuItem_Click;
             // 
@@ -345,7 +309,7 @@ namespace Pulsar.Server.Forms
             // 
             remoteShellToolStripMenuItem.Image = (Image)resources.GetObject("remoteShellToolStripMenuItem.Image");
             remoteShellToolStripMenuItem.Name = "remoteShellToolStripMenuItem";
-            remoteShellToolStripMenuItem.Size = new Size(178, 22);
+            remoteShellToolStripMenuItem.Size = new Size(180, 22);
             remoteShellToolStripMenuItem.Text = "Remote Shell";
             remoteShellToolStripMenuItem.Click += remoteShellToolStripMenuItem_Click;
             // 
@@ -353,7 +317,7 @@ namespace Pulsar.Server.Forms
             // 
             connectionsToolStripMenuItem.Image = Properties.Resources.transmit_blue;
             connectionsToolStripMenuItem.Name = "connectionsToolStripMenuItem";
-            connectionsToolStripMenuItem.Size = new Size(178, 22);
+            connectionsToolStripMenuItem.Size = new Size(180, 22);
             connectionsToolStripMenuItem.Text = "TCP Connections";
             connectionsToolStripMenuItem.Click += connectionsToolStripMenuItem_Click;
             // 
@@ -361,7 +325,7 @@ namespace Pulsar.Server.Forms
             // 
             reverseProxyToolStripMenuItem.Image = Properties.Resources.server_link;
             reverseProxyToolStripMenuItem.Name = "reverseProxyToolStripMenuItem";
-            reverseProxyToolStripMenuItem.Size = new Size(178, 22);
+            reverseProxyToolStripMenuItem.Size = new Size(180, 22);
             reverseProxyToolStripMenuItem.Text = "Reverse Proxy";
             reverseProxyToolStripMenuItem.Click += reverseProxyToolStripMenuItem_Click;
             // 
@@ -369,7 +333,7 @@ namespace Pulsar.Server.Forms
             // 
             registryEditorToolStripMenuItem.Image = Properties.Resources.registry;
             registryEditorToolStripMenuItem.Name = "registryEditorToolStripMenuItem";
-            registryEditorToolStripMenuItem.Size = new Size(178, 22);
+            registryEditorToolStripMenuItem.Size = new Size(180, 22);
             registryEditorToolStripMenuItem.Text = "Registry Editor";
             registryEditorToolStripMenuItem.Click += registryEditorToolStripMenuItem_Click;
             // 
@@ -378,7 +342,7 @@ namespace Pulsar.Server.Forms
             remoteExecuteToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { localFileToolStripMenuItem, webFileToolStripMenuItem });
             remoteExecuteToolStripMenuItem.Image = Properties.Resources.lightning;
             remoteExecuteToolStripMenuItem.Name = "remoteExecuteToolStripMenuItem";
-            remoteExecuteToolStripMenuItem.Size = new Size(178, 22);
+            remoteExecuteToolStripMenuItem.Size = new Size(180, 22);
             remoteExecuteToolStripMenuItem.Text = "Remote Execute";
             // 
             // localFileToolStripMenuItem
@@ -400,14 +364,14 @@ namespace Pulsar.Server.Forms
             // ctxtLine
             // 
             ctxtLine.Name = "ctxtLine";
-            ctxtLine.Size = new Size(175, 6);
+            ctxtLine.Size = new Size(177, 6);
             // 
             // actionsToolStripMenuItem
             // 
             actionsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { shutdownToolStripMenuItem, restartToolStripMenuItem, standbyToolStripMenuItem });
             actionsToolStripMenuItem.Image = Properties.Resources.actions;
             actionsToolStripMenuItem.Name = "actionsToolStripMenuItem";
-            actionsToolStripMenuItem.Size = new Size(178, 22);
+            actionsToolStripMenuItem.Size = new Size(180, 22);
             actionsToolStripMenuItem.Text = "Actions";
             // 
             // shutdownToolStripMenuItem
@@ -439,7 +403,7 @@ namespace Pulsar.Server.Forms
             surveillanceToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { remoteDesktopToolStripMenuItem2, webcamToolStripMenuItem, remoteSystemAudioToolStripMenuItem, audioToolStripMenuItem, hVNCToolStripMenuItem, keyloggerToolStripMenuItem, passwordRecoveryToolStripMenuItem, virtualMonitorToolStripMenuItem });
             surveillanceToolStripMenuItem.Image = Properties.Resources.monitoring;
             surveillanceToolStripMenuItem.Name = "surveillanceToolStripMenuItem";
-            surveillanceToolStripMenuItem.Size = new Size(179, 22);
+            surveillanceToolStripMenuItem.Size = new Size(180, 22);
             surveillanceToolStripMenuItem.Text = "Monitoring";
             // 
             // remoteDesktopToolStripMenuItem2
@@ -527,14 +491,14 @@ namespace Pulsar.Server.Forms
             userSupportToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { remoteChatToolStripMenuItem, remoteScriptingToolStripMenuItem, showMessageboxToolStripMenuItem, visitWebsiteToolStripMenuItem });
             userSupportToolStripMenuItem.Image = Properties.Resources.user;
             userSupportToolStripMenuItem.Name = "userSupportToolStripMenuItem";
-            userSupportToolStripMenuItem.Size = new Size(179, 22);
+            userSupportToolStripMenuItem.Size = new Size(180, 22);
             userSupportToolStripMenuItem.Text = "User Support";
             // 
             // remoteChatToolStripMenuItem
             // 
             remoteChatToolStripMenuItem.Image = Properties.Resources.phone;
             remoteChatToolStripMenuItem.Name = "remoteChatToolStripMenuItem";
-            remoteChatToolStripMenuItem.Size = new Size(172, 22);
+            remoteChatToolStripMenuItem.Size = new Size(180, 22);
             remoteChatToolStripMenuItem.Text = "Remote Chat";
             remoteChatToolStripMenuItem.Click += remoteChatToolStripMenuItem_Click;
             // 
@@ -542,7 +506,7 @@ namespace Pulsar.Server.Forms
             // 
             remoteScriptingToolStripMenuItem.Image = Properties.Resources.script_code;
             remoteScriptingToolStripMenuItem.Name = "remoteScriptingToolStripMenuItem";
-            remoteScriptingToolStripMenuItem.Size = new Size(172, 22);
+            remoteScriptingToolStripMenuItem.Size = new Size(180, 22);
             remoteScriptingToolStripMenuItem.Text = "Remote Scripting";
             remoteScriptingToolStripMenuItem.Click += remoteScriptingToolStripMenuItem_Click;
             // 
@@ -550,7 +514,7 @@ namespace Pulsar.Server.Forms
             // 
             showMessageboxToolStripMenuItem.Image = (Image)resources.GetObject("showMessageboxToolStripMenuItem.Image");
             showMessageboxToolStripMenuItem.Name = "showMessageboxToolStripMenuItem";
-            showMessageboxToolStripMenuItem.Size = new Size(172, 22);
+            showMessageboxToolStripMenuItem.Size = new Size(180, 22);
             showMessageboxToolStripMenuItem.Text = "Show Messagebox";
             showMessageboxToolStripMenuItem.Click += showMessageboxToolStripMenuItem_Click;
             // 
@@ -558,7 +522,7 @@ namespace Pulsar.Server.Forms
             // 
             visitWebsiteToolStripMenuItem.Image = (Image)resources.GetObject("visitWebsiteToolStripMenuItem.Image");
             visitWebsiteToolStripMenuItem.Name = "visitWebsiteToolStripMenuItem";
-            visitWebsiteToolStripMenuItem.Size = new Size(172, 22);
+            visitWebsiteToolStripMenuItem.Size = new Size(180, 22);
             visitWebsiteToolStripMenuItem.Text = "Send to Website";
             visitWebsiteToolStripMenuItem.Click += visitWebsiteToolStripMenuItem_Click;
             // 
@@ -567,14 +531,14 @@ namespace Pulsar.Server.Forms
             quickCommandsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { addCDriveExceptionToolStripMenuItem, taskManagerToolStripMenuItem1 });
             quickCommandsToolStripMenuItem.Image = Properties.Resources.wrench;
             quickCommandsToolStripMenuItem.Name = "quickCommandsToolStripMenuItem";
-            quickCommandsToolStripMenuItem.Size = new Size(179, 22);
+            quickCommandsToolStripMenuItem.Size = new Size(180, 22);
             quickCommandsToolStripMenuItem.Text = "Miscellaneous";
             // 
             // addCDriveExceptionToolStripMenuItem
             // 
             addCDriveExceptionToolStripMenuItem.Image = Properties.Resources.application_view_xp_terminal;
             addCDriveExceptionToolStripMenuItem.Name = "addCDriveExceptionToolStripMenuItem";
-            addCDriveExceptionToolStripMenuItem.Size = new Size(195, 22);
+            addCDriveExceptionToolStripMenuItem.Size = new Size(194, 22);
             addCDriveExceptionToolStripMenuItem.Text = "Add C: Drive Exception";
             addCDriveExceptionToolStripMenuItem.Click += addCDriveExceptionToolStripMenuItem_Click;
             // 
@@ -583,14 +547,14 @@ namespace Pulsar.Server.Forms
             taskManagerToolStripMenuItem1.DropDownItems.AddRange(new ToolStripItem[] { enableToolStripMenuItem, disableTaskManagerToolStripMenuItem });
             taskManagerToolStripMenuItem1.Image = Properties.Resources.cog;
             taskManagerToolStripMenuItem1.Name = "taskManagerToolStripMenuItem1";
-            taskManagerToolStripMenuItem1.Size = new Size(195, 22);
+            taskManagerToolStripMenuItem1.Size = new Size(194, 22);
             taskManagerToolStripMenuItem1.Text = "Task Manager";
             // 
             // enableToolStripMenuItem
             // 
             enableToolStripMenuItem.Image = Properties.Resources.cog_add;
             enableToolStripMenuItem.Name = "enableToolStripMenuItem";
-            enableToolStripMenuItem.Size = new Size(187, 22);
+            enableToolStripMenuItem.Size = new Size(188, 22);
             enableToolStripMenuItem.Text = "Enable Task Manager";
             enableToolStripMenuItem.Click += enableToolStripMenuItem_Click;
             // 
@@ -598,7 +562,7 @@ namespace Pulsar.Server.Forms
             // 
             disableTaskManagerToolStripMenuItem.Image = Properties.Resources.cog_delete;
             disableTaskManagerToolStripMenuItem.Name = "disableTaskManagerToolStripMenuItem";
-            disableTaskManagerToolStripMenuItem.Size = new Size(187, 22);
+            disableTaskManagerToolStripMenuItem.Size = new Size(188, 22);
             disableTaskManagerToolStripMenuItem.Text = "Disable Task Manager";
             disableTaskManagerToolStripMenuItem.Click += disableTaskManagerToolStripMenuItem_Click;
             // 
@@ -607,7 +571,7 @@ namespace Pulsar.Server.Forms
             funMethodsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { bSODToolStripMenuItem, cWToolStripMenuItem, swapMouseButtonsToolStripMenuItem, hideTaskBarToolStripMenuItem });
             funMethodsToolStripMenuItem.Image = Properties.Resources.emoticon_evilgrin;
             funMethodsToolStripMenuItem.Name = "funMethodsToolStripMenuItem";
-            funMethodsToolStripMenuItem.Size = new Size(179, 22);
+            funMethodsToolStripMenuItem.Size = new Size(180, 22);
             funMethodsToolStripMenuItem.Text = "Fun Stuff";
             // 
             // bSODToolStripMenuItem
@@ -647,7 +611,7 @@ namespace Pulsar.Server.Forms
             connectionToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { elevatedToolStripMenuItem, winREToolStripMenuItem, nicknameToolStripMenuItem, blockIPToolStripMenuItem, updateToolStripMenuItem, reconnectToolStripMenuItem, disconnectToolStripMenuItem, uninstallToolStripMenuItem });
             connectionToolStripMenuItem.Image = (Image)resources.GetObject("connectionToolStripMenuItem.Image");
             connectionToolStripMenuItem.Name = "connectionToolStripMenuItem";
-            connectionToolStripMenuItem.Size = new Size(179, 22);
+            connectionToolStripMenuItem.Size = new Size(180, 22);
             connectionToolStripMenuItem.Text = "Client Management";
             // 
             // elevatedToolStripMenuItem
@@ -773,12 +737,12 @@ namespace Pulsar.Server.Forms
             // lineToolStripMenuItem
             // 
             lineToolStripMenuItem.Name = "lineToolStripMenuItem";
-            lineToolStripMenuItem.Size = new Size(176, 6);
+            lineToolStripMenuItem.Size = new Size(177, 6);
             // 
             // selectAllToolStripMenuItem
             // 
             selectAllToolStripMenuItem.Name = "selectAllToolStripMenuItem";
-            selectAllToolStripMenuItem.Size = new Size(179, 22);
+            selectAllToolStripMenuItem.Size = new Size(180, 22);
             selectAllToolStripMenuItem.Text = "Select All";
             selectAllToolStripMenuItem.Click += selectAllToolStripMenuItem_Click;
             // 
@@ -1047,7 +1011,6 @@ namespace Pulsar.Server.Forms
             // 
             tableLayoutPanel.ColumnCount = 1;
             tableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            tableLayoutPanel.Controls.Add(MainTabControl, 0, 1);
             tableLayoutPanel.Controls.Add(statusStrip, 0, 2);
             tableLayoutPanel.Controls.Add(menuStrip, 0, 0);
             tableLayoutPanel.Dock = DockStyle.Fill;
@@ -1061,42 +1024,155 @@ namespace Pulsar.Server.Forms
             tableLayoutPanel.Size = new Size(1144, 538);
             tableLayoutPanel.TabIndex = 6;
             // 
-            // MainTabControl
+            // statusStrip
             // 
-            MainTabControl.Controls.Add(tabOfflineClients);
-            MainTabControl.Controls.Add(tabStats);
-            MainTabControl.Controls.Add(tabPage1);
-            MainTabControl.Controls.Add(tabHeatMap);
-            MainTabControl.Controls.Add(tabPage2);
-            MainTabControl.Controls.Add(tabPage3);
-            MainTabControl.Controls.Add(tabPage4);
-            MainTabControl.Controls.Add(tabPage5);
-            MainTabControl.Dock = DockStyle.Fill;
-            MainTabControl.Location = new Point(0, 25);
-            MainTabControl.Margin = new Padding(0);
-            MainTabControl.Name = "MainTabControl";
-            MainTabControl.SelectedIndex = 2;
-            MainTabControl.Size = new Size(1144, 491);
-            MainTabControl.TabIndex = 7;
-            MainTabControl.SelectedIndexChanged += MainTabControl_SelectedIndexChanged;
+            statusStrip.Dock = DockStyle.Fill;
+            statusStrip.ImageScalingSize = new Size(24, 24);
+            statusStrip.Items.AddRange(new ToolStripItem[] { listenToolStripStatusLabel, connectedToolStripStatusLabel });
+            statusStrip.Location = new Point(0, 516);
+            statusStrip.Name = "statusStrip";
+            statusStrip.Size = new Size(1144, 22);
+            statusStrip.SizingGrip = false;
+            statusStrip.TabIndex = 3;
+            statusStrip.Text = "statusStrip1";
             // 
-            // OfflineClientsContextMenuStrip
+            // listenToolStripStatusLabel
             // 
-            OfflineClientsContextMenuStrip.Items.AddRange(new ToolStripItem[] { removeOfflineClientsToolStripMenuItem });
-            OfflineClientsContextMenuStrip.Name = "OfflineClientsContextMenuStrip";
-            OfflineClientsContextMenuStrip.Size = new Size(180, 26);
+            listenToolStripStatusLabel.Image = Properties.Resources.bullet_red;
+            listenToolStripStatusLabel.ImageScaling = ToolStripItemImageScaling.None;
+            listenToolStripStatusLabel.ImageTransparentColor = Color.White;
+            listenToolStripStatusLabel.Name = "listenToolStripStatusLabel";
+            listenToolStripStatusLabel.Size = new Size(103, 17);
+            listenToolStripStatusLabel.Text = "Listening: False";
             // 
-            // removeOfflineClientsToolStripMenuItem
+            // connectedToolStripStatusLabel
             // 
-            removeOfflineClientsToolStripMenuItem.Name = "removeOfflineClientsToolStripMenuItem";
-            removeOfflineClientsToolStripMenuItem.Size = new Size(179, 22);
-            removeOfflineClientsToolStripMenuItem.ShortcutKeys = Keys.Delete;
-            removeOfflineClientsToolStripMenuItem.Text = "Remove Selected";
-            removeOfflineClientsToolStripMenuItem.Click += removeOfflineClientsToolStripMenuItem_Click;
+            connectedToolStripStatusLabel.ForeColor = Color.Black;
+            connectedToolStripStatusLabel.Image = Properties.Resources.status_online;
+            connectedToolStripStatusLabel.ImageScaling = ToolStripItemImageScaling.None;
+            connectedToolStripStatusLabel.ImageTransparentColor = Color.White;
+            connectedToolStripStatusLabel.Name = "connectedToolStripStatusLabel";
+            connectedToolStripStatusLabel.Size = new Size(93, 17);
+            connectedToolStripStatusLabel.Text = "Connected: 0";
+            // 
+            // menuStrip
+            // 
+            menuStrip.BackColor = SystemColors.ButtonFace;
+            menuStrip.Dock = DockStyle.Fill;
+            menuStrip.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            menuStrip.ImageScalingSize = new Size(24, 24);
+            menuStrip.Items.AddRange(new ToolStripItem[] { clientsToolStripMenuItem, offlineClientsToolStripMenuItem, statsToolStripMenuItem, mapToolStripMenuItem, autoTasksToolStripMenuItem, cryptoClipperToolStripMenuItem, notificationCentreToolStripMenuItem, aboutToolStripMenuItem, settingsToolStripMenuItem, builderToolStripMenuItem });
+            menuStrip.Location = new Point(0, 0);
+            menuStrip.Name = "menuStrip";
+            menuStrip.Size = new Size(1144, 25);
+            menuStrip.TabIndex = 2;
+            // 
+            // clientsToolStripMenuItem
+            // 
+            clientsToolStripMenuItem.Image = Properties.Resources.user;
+            clientsToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
+            clientsToolStripMenuItem.Name = "clientsToolStripMenuItem";
+            clientsToolStripMenuItem.Size = new Size(71, 21);
+            clientsToolStripMenuItem.Text = "Clients";
+            clientsToolStripMenuItem.Click += clientsToolStripMenuItem_Click;
+            // 
+            // offlineClientsToolStripMenuItem
+            // 
+            offlineClientsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { clearOfflineClientsToolStripMenuItem });
+            offlineClientsToolStripMenuItem.Image = Properties.Resources.disconnect;
+            offlineClientsToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
+            offlineClientsToolStripMenuItem.Name = "offlineClientsToolStripMenuItem";
+            offlineClientsToolStripMenuItem.Size = new Size(110, 21);
+            offlineClientsToolStripMenuItem.Text = "Offline Clients";
+            offlineClientsToolStripMenuItem.Click += offlineClientsToolStripMenuItem_Click;
+            // 
+            // clearOfflineClientsToolStripMenuItem
+            // 
+            clearOfflineClientsToolStripMenuItem.Name = "clearOfflineClientsToolStripMenuItem";
+            clearOfflineClientsToolStripMenuItem.Size = new Size(122, 22);
+            clearOfflineClientsToolStripMenuItem.Text = "Clear List";
+            clearOfflineClientsToolStripMenuItem.Click += clearOfflineClientsToolStripMenuItem_Click;
+            // 
+            // statsToolStripMenuItem
+            // 
+            statsToolStripMenuItem.Image = Properties.Resources.chart_curve;
+            statsToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
+            statsToolStripMenuItem.Name = "statsToolStripMenuItem";
+            statsToolStripMenuItem.Size = new Size(60, 21);
+            statsToolStripMenuItem.Text = "Stats";
+            statsToolStripMenuItem.Click += statsToolStripMenuItem_Click;
+            // 
+            // mapToolStripMenuItem
+            // 
+            mapToolStripMenuItem.Image = Properties.Resources.map;
+            mapToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
+            mapToolStripMenuItem.Name = "mapToolStripMenuItem";
+            mapToolStripMenuItem.Size = new Size(59, 21);
+            mapToolStripMenuItem.Text = "Map";
+            mapToolStripMenuItem.Click += mapToolStripMenuItem_Click;
+            // 
+            // autoTasksToolStripMenuItem
+            // 
+            autoTasksToolStripMenuItem.Image = Properties.Resources.server;
+            autoTasksToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
+            autoTasksToolStripMenuItem.Name = "autoTasksToolStripMenuItem";
+            autoTasksToolStripMenuItem.Size = new Size(92, 21);
+            autoTasksToolStripMenuItem.Text = "Auto Tasks";
+            autoTasksToolStripMenuItem.Click += autoTasksToolStripMenuItem_Click;
+            // 
+            // cryptoClipperToolStripMenuItem
+            // 
+            cryptoClipperToolStripMenuItem.Image = Properties.Resources.money_dollar;
+            cryptoClipperToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
+            cryptoClipperToolStripMenuItem.Name = "cryptoClipperToolStripMenuItem";
+            cryptoClipperToolStripMenuItem.Size = new Size(112, 21);
+            cryptoClipperToolStripMenuItem.Text = "Crypto Clipper";
+            cryptoClipperToolStripMenuItem.Click += cryptoClipperToolStripMenuItem_Click;
+            // 
+            // notificationCentreToolStripMenuItem
+            // 
+            notificationCentreToolStripMenuItem.Image = Properties.Resources.bell;
+            notificationCentreToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
+            notificationCentreToolStripMenuItem.Name = "notificationCentreToolStripMenuItem";
+            notificationCentreToolStripMenuItem.Size = new Size(136, 21);
+            notificationCentreToolStripMenuItem.Text = "Notification Center";
+            notificationCentreToolStripMenuItem.Click += notificationCentreToolStripMenuItem_Click;
+            // 
+            // aboutToolStripMenuItem
+            // 
+            aboutToolStripMenuItem.Alignment = ToolStripItemAlignment.Right;
+            aboutToolStripMenuItem.ForeColor = Color.Black;
+            aboutToolStripMenuItem.Image = Properties.Resources.information;
+            aboutToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
+            aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
+            aboutToolStripMenuItem.Size = new Size(68, 21);
+            aboutToolStripMenuItem.Text = "About";
+            aboutToolStripMenuItem.Click += aboutToolStripMenuItem_Click;
+            // 
+            // settingsToolStripMenuItem
+            // 
+            settingsToolStripMenuItem.Alignment = ToolStripItemAlignment.Right;
+            settingsToolStripMenuItem.ForeColor = Color.Black;
+            settingsToolStripMenuItem.Image = Properties.Resources.cog;
+            settingsToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
+            settingsToolStripMenuItem.Name = "settingsToolStripMenuItem";
+            settingsToolStripMenuItem.Size = new Size(77, 21);
+            settingsToolStripMenuItem.Text = "Settings";
+            settingsToolStripMenuItem.Click += settingsToolStripMenuItem_Click;
+            // 
+            // builderToolStripMenuItem
+            // 
+            builderToolStripMenuItem.Alignment = ToolStripItemAlignment.Right;
+            builderToolStripMenuItem.ForeColor = Color.Black;
+            builderToolStripMenuItem.Image = Properties.Resources.bricks;
+            builderToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
+            builderToolStripMenuItem.Name = "builderToolStripMenuItem";
+            builderToolStripMenuItem.Size = new Size(72, 21);
+            builderToolStripMenuItem.Text = "Builder";
+            builderToolStripMenuItem.Click += builderToolStripMenuItem_Click;
             // 
             // tabOfflineClients
             // 
-            tabOfflineClients.Controls.Add(lstOfflineClients);
             tabOfflineClients.Location = new Point(4, 22);
             tabOfflineClients.Margin = new Padding(0);
             tabOfflineClients.Name = "tabOfflineClients";
@@ -1105,21 +1181,19 @@ namespace Pulsar.Server.Forms
             tabOfflineClients.Text = "Offline";
             tabOfflineClients.UseVisualStyleBackColor = true;
             // 
-            // lstOfflineClients
+            // OfflineClientsContextMenuStrip
             // 
-            lstOfflineClients.Columns.AddRange(new ColumnHeader[] { hOfflineIP, hOfflineNickname, hOfflineTag, hOfflineUserPC, hOfflineVersion, hOfflineLastSeen, hOfflineFirstSeen, hOfflineCountry, hOfflineOS, hOfflineAccountType });
-            lstOfflineClients.Dock = DockStyle.Fill;
-            lstOfflineClients.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            lstOfflineClients.FullRowSelect = true;
-            lstOfflineClients.Location = new Point(0, 0);
-            lstOfflineClients.Name = "lstOfflineClients";
-            lstOfflineClients.ContextMenuStrip = OfflineClientsContextMenuStrip;
-            lstOfflineClients.ShowItemToolTips = true;
-            lstOfflineClients.Size = new Size(1136, 465);
-            lstOfflineClients.SmallImageList = imgFlags;
-            lstOfflineClients.TabIndex = 0;
-            lstOfflineClients.UseCompatibleStateImageBehavior = false;
-            lstOfflineClients.View = View.Details;
+            OfflineClientsContextMenuStrip.Items.AddRange(new ToolStripItem[] { removeOfflineClientsToolStripMenuItem });
+            OfflineClientsContextMenuStrip.Name = "OfflineClientsContextMenuStrip";
+            OfflineClientsContextMenuStrip.Size = new Size(189, 26);
+            // 
+            // removeOfflineClientsToolStripMenuItem
+            // 
+            removeOfflineClientsToolStripMenuItem.Name = "removeOfflineClientsToolStripMenuItem";
+            removeOfflineClientsToolStripMenuItem.ShortcutKeys = Keys.Delete;
+            removeOfflineClientsToolStripMenuItem.Size = new Size(188, 22);
+            removeOfflineClientsToolStripMenuItem.Text = "Remove Selected";
+            removeOfflineClientsToolStripMenuItem.Click += removeOfflineClientsToolStripMenuItem_Click;
             // 
             // hOfflineIP
             // 
@@ -1173,7 +1247,6 @@ namespace Pulsar.Server.Forms
             // 
             // tabStats
             // 
-            tabStats.Controls.Add(statsElementHost);
             tabStats.Location = new Point(4, 24);
             tabStats.Margin = new Padding(0);
             tabStats.Name = "tabStats";
@@ -1182,18 +1255,8 @@ namespace Pulsar.Server.Forms
             tabStats.Text = "Stats";
             tabStats.UseVisualStyleBackColor = true;
             // 
-            // statsElementHost
-            // 
-            statsElementHost.Dock = DockStyle.Fill;
-            statsElementHost.Location = new Point(0, 0);
-            statsElementHost.Name = "statsElementHost";
-            statsElementHost.Size = new Size(1136, 463);
-            statsElementHost.TabIndex = 0;
-            // 
             // tabPage1
             // 
-            tabPage1.Controls.Add(wpfClientsHost);
-            tabPage1.Controls.Add(lstClients);
             tabPage1.Controls.Add(tableLayoutPanel1);
             tabPage1.Controls.Add(DebugLogRichBox);
             tabPage1.Controls.Add(splitter1);
@@ -1204,88 +1267,6 @@ namespace Pulsar.Server.Forms
             tabPage1.TabIndex = 1;
             tabPage1.Text = "Clients";
             tabPage1.UseVisualStyleBackColor = true;
-            // 
-            // wpfClientsHost
-            // 
-            wpfClientsHost.ContextMenuStrip = contextMenuStrip;
-            wpfClientsHost.Dock = DockStyle.Fill;
-            wpfClientsHost.Location = new Point(0, 0);
-            wpfClientsHost.Name = "wpfClientsHost";
-            wpfClientsHost.Size = new Size(849, 349);
-            wpfClientsHost.TabIndex = 22;
-            // lstClients
-            // 
-            lstClients.Columns.AddRange(new ColumnHeader[] { hIP, hNick, hTag, hUserPC, hVersion, hStatus, hCurrentWindow, hUserStatus, hCountry, hOS, hAccountType });
-            lstClients.Dock = DockStyle.Fill;
-            lstClients.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            lstClients.FullRowSelect = true;
-            lstClients.Location = new Point(0, 0);
-            lstClients.Name = "lstClients";
-            lstClients.ShowItemToolTips = true;
-            lstClients.Size = new Size(849, 349);
-            lstClients.SmallImageList = imgFlags;
-            lstClients.TabIndex = 1;
-            lstClients.UseCompatibleStateImageBehavior = false;
-            lstClients.View = View.Details;
-            lstClients.ColumnWidthChanged += lstClients_ColumnWidthChanged;
-            lstClients.DrawItem += lstClients_DrawItem;
-            lstClients.SelectedIndexChanged += lstClients_SelectedIndexChanged;
-            lstClients.MouseWheel += lstClients_MouseWheel;
-            lstClients.Resize += lstClients_Resize;
-            // 
-            // hIP
-            // 
-            hIP.Text = "IP Address";
-            hIP.Width = 112;
-            // 
-            // hNick
-            // 
-            hNick.Text = "Nickname";
-            hNick.Width = 112;
-            // 
-            // hTag
-            // 
-            hTag.Text = "Tag";
-            // 
-            // hUserPC
-            // 
-            hUserPC.Text = "User@PC";
-            hUserPC.Width = 175;
-            // 
-            // hVersion
-            // 
-            hVersion.Text = "Version";
-            hVersion.Width = 66;
-            // 
-            // hStatus
-            // 
-            hStatus.Text = "Status";
-            hStatus.Width = 78;
-            // 
-            // hCurrentWindow
-            // 
-            hCurrentWindow.Text = "Current Window";
-            hCurrentWindow.Width = 200;
-            // 
-            // hUserStatus
-            // 
-            hUserStatus.Text = "User Status";
-            hUserStatus.Width = 72;
-            // 
-            // hCountry
-            // 
-            hCountry.Text = "Country";
-            hCountry.Width = 117;
-            // 
-            // hOS
-            // 
-            hOS.Text = "Operating System";
-            hOS.Width = 222;
-            // 
-            // hAccountType
-            // 
-            hAccountType.Text = "Account Type";
-            hAccountType.Width = 82;
             // 
             // tableLayoutPanel1
             // 
@@ -1313,7 +1294,7 @@ namespace Pulsar.Server.Forms
             label1.AutoSize = true;
             label1.Location = new Point(3, 0);
             label1.Name = "label1";
-            label1.Size = new Size(79, 13);
+            label1.Size = new Size(82, 14);
             label1.TabIndex = 8;
             label1.Text = "Client Preview";
             // 
@@ -1431,16 +1412,15 @@ namespace Pulsar.Server.Forms
             // 
             chkDisablePreview.Anchor = AnchorStyles.None;
             chkDisablePreview.AutoSize = true;
-            chkDisablePreview.Location = new Point(213, 6);
+            chkDisablePreview.Location = new Point(213, 5);
             chkDisablePreview.Name = "chkDisablePreview";
-            chkDisablePreview.Size = new Size(71, 17);
+            chkDisablePreview.Size = new Size(71, 19);
             chkDisablePreview.TabIndex = 10;
             chkDisablePreview.Text = "Disable Preview";
             chkDisablePreview.UseVisualStyleBackColor = true;
             // 
             // gBoxClientInfo
             // 
-            gBoxClientInfo.Controls.Add(clientInfoListView);
             gBoxClientInfo.Dock = DockStyle.Fill;
             gBoxClientInfo.Location = new Point(2, 212);
             gBoxClientInfo.Margin = new Padding(2);
@@ -1449,30 +1429,6 @@ namespace Pulsar.Server.Forms
             gBoxClientInfo.TabIndex = 9;
             gBoxClientInfo.TabStop = false;
             gBoxClientInfo.Text = "Client Info";
-            // 
-            // clientInfoListView
-            // 
-            clientInfoListView.Columns.AddRange(new ColumnHeader[] { Names, Stats });
-            clientInfoListView.Dock = DockStyle.Fill;
-            clientInfoListView.FullRowSelect = true;
-            clientInfoListView.HeaderStyle = ColumnHeaderStyle.None;
-            clientInfoListView.Items.AddRange(new ListViewItem[] { listViewItem1, listViewItem2, listViewItem3, listViewItem4, listViewItem5, listViewItem6, listViewItem7, listViewItem8, listViewItem9 });
-            clientInfoListView.Location = new Point(3, 18);
-            clientInfoListView.Name = "clientInfoListView";
-            clientInfoListView.Size = new Size(277, 116);
-            clientInfoListView.TabIndex = 0;
-            clientInfoListView.UseCompatibleStateImageBehavior = false;
-            clientInfoListView.View = View.Details;
-            // 
-            // Names
-            // 
-            Names.Text = "Names";
-            Names.Width = 122;
-            // 
-            // Stats
-            // 
-            Stats.Text = "Stats";
-            Stats.Width = 134;
             // 
             // DebugLogRichBox
             // 
@@ -1531,9 +1487,72 @@ namespace Pulsar.Server.Forms
             splitter1.TabStop = false;
             splitter1.Visible = false;
             // 
+            // hIP
+            // 
+            hIP.Text = "IP Address";
+            hIP.Width = 112;
+            // 
+            // hNick
+            // 
+            hNick.Text = "Nickname";
+            hNick.Width = 112;
+            // 
+            // hTag
+            // 
+            hTag.Text = "Tag";
+            // 
+            // hUserPC
+            // 
+            hUserPC.Text = "User@PC";
+            hUserPC.Width = 175;
+            // 
+            // hVersion
+            // 
+            hVersion.Text = "Version";
+            hVersion.Width = 66;
+            // 
+            // hStatus
+            // 
+            hStatus.Text = "Status";
+            hStatus.Width = 78;
+            // 
+            // hCurrentWindow
+            // 
+            hCurrentWindow.Text = "Current Window";
+            hCurrentWindow.Width = 200;
+            // 
+            // hUserStatus
+            // 
+            hUserStatus.Text = "User Status";
+            hUserStatus.Width = 72;
+            // 
+            // hCountry
+            // 
+            hCountry.Text = "Country";
+            hCountry.Width = 117;
+            // 
+            // hOS
+            // 
+            hOS.Text = "Operating System";
+            hOS.Width = 222;
+            // 
+            // hAccountType
+            // 
+            hAccountType.Text = "Account Type";
+            hAccountType.Width = 82;
+            // 
+            // Names
+            // 
+            Names.Text = "Names";
+            Names.Width = 122;
+            // 
+            // Stats
+            // 
+            Stats.Text = "Stats";
+            Stats.Width = 134;
+            // 
             // tabHeatMap
             // 
-            tabHeatMap.Controls.Add(heatMapElementHost);
             tabHeatMap.Location = new Point(4, 24);
             tabHeatMap.Margin = new Padding(0);
             tabHeatMap.Name = "tabHeatMap";
@@ -1542,17 +1561,8 @@ namespace Pulsar.Server.Forms
             tabHeatMap.Text = "Heat Map";
             tabHeatMap.UseVisualStyleBackColor = true;
             // 
-            // heatMapElementHost
-            // 
-            heatMapElementHost.Dock = DockStyle.Fill;
-            heatMapElementHost.Location = new Point(0, 0);
-            heatMapElementHost.Name = "heatMapElementHost";
-            heatMapElementHost.Size = new Size(1136, 463);
-            heatMapElementHost.TabIndex = 0;
-            // 
             // tabPage2
             // 
-            tabPage2.Controls.Add(lstNoti);
             tabPage2.Controls.Add(notificationStatusPanel);
             tabPage2.Location = new Point(4, 24);
             tabPage2.Margin = new Padding(0);
@@ -1562,22 +1572,27 @@ namespace Pulsar.Server.Forms
             tabPage2.Text = "Notifications";
             tabPage2.UseVisualStyleBackColor = true;
             // 
-            // lstNoti
+            // notificationStatusPanel
             // 
-            lstNoti.Columns.AddRange(new ColumnHeader[] { columnHeader1, columnHeader2, columnHeader3, columnHeader11 });
-            lstNoti.ContextMenuStrip = NotificationContextMenuStrip;
-            lstNoti.Dock = DockStyle.Fill;
-            lstNoti.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            lstNoti.FullRowSelect = true;
-            lstNoti.Location = new Point(0, 32);
-            lstNoti.Margin = new Padding(0);
-            lstNoti.Name = "lstNoti";
-            lstNoti.ShowItemToolTips = true;
-            lstNoti.Size = new Size(1136, 431);
-            lstNoti.SmallImageList = imgFlags;
-            lstNoti.TabIndex = 2;
-            lstNoti.UseCompatibleStateImageBehavior = false;
-            lstNoti.View = View.Details;
+            notificationStatusPanel.Controls.Add(lblNotificationStatus);
+            notificationStatusPanel.Dock = DockStyle.Top;
+            notificationStatusPanel.Location = new Point(0, 0);
+            notificationStatusPanel.Name = "notificationStatusPanel";
+            notificationStatusPanel.Padding = new Padding(12, 6, 12, 6);
+            notificationStatusPanel.Size = new Size(1136, 32);
+            notificationStatusPanel.TabIndex = 3;
+            // 
+            // lblNotificationStatus
+            // 
+            lblNotificationStatus.AutoSize = true;
+            lblNotificationStatus.Dock = DockStyle.Fill;
+            lblNotificationStatus.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            lblNotificationStatus.Location = new Point(12, 6);
+            lblNotificationStatus.Name = "lblNotificationStatus";
+            lblNotificationStatus.Size = new Size(132, 15);
+            lblNotificationStatus.TabIndex = 0;
+            lblNotificationStatus.Text = "Pending notifications: 0";
+            lblNotificationStatus.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // columnHeader1
             // 
@@ -1598,28 +1613,6 @@ namespace Pulsar.Server.Forms
             // 
             columnHeader11.Text = "Parameter";
             columnHeader11.Width = 642;
-            // 
-            // notificationStatusPanel
-            // 
-            notificationStatusPanel.Controls.Add(lblNotificationStatus);
-            notificationStatusPanel.Dock = DockStyle.Top;
-            notificationStatusPanel.Location = new Point(0, 0);
-            notificationStatusPanel.Name = "notificationStatusPanel";
-            notificationStatusPanel.Padding = new Padding(12, 6, 12, 6);
-            notificationStatusPanel.Size = new Size(1136, 32);
-            notificationStatusPanel.TabIndex = 3;
-            // 
-            // lblNotificationStatus
-            // 
-            lblNotificationStatus.AutoSize = true;
-            lblNotificationStatus.Dock = DockStyle.Fill;
-            lblNotificationStatus.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            lblNotificationStatus.Location = new Point(12, 6);
-            lblNotificationStatus.Name = "lblNotificationStatus";
-            lblNotificationStatus.Size = new Size(1112, 20);
-            lblNotificationStatus.TabIndex = 0;
-            lblNotificationStatus.Text = "Pending notifications: 0";
-            lblNotificationStatus.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // NotificationContextMenuStrip
             // 
@@ -1689,7 +1682,7 @@ namespace Pulsar.Server.Forms
             BCHTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             BCHTextBox.Location = new Point(50, 245);
             BCHTextBox.Name = "BCHTextBox";
-            BCHTextBox.Size = new Size(1048, 22);
+            BCHTextBox.Size = new Size(1048, 23);
             BCHTextBox.TabIndex = 17;
             // 
             // label10
@@ -1697,7 +1690,7 @@ namespace Pulsar.Server.Forms
             label10.AutoSize = true;
             label10.Location = new Point(6, 250);
             label10.Name = "label10";
-            label10.Size = new Size(31, 13);
+            label10.Size = new Size(34, 15);
             label10.TabIndex = 16;
             label10.Text = "BCH:";
             // 
@@ -1706,7 +1699,7 @@ namespace Pulsar.Server.Forms
             TRXTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             TRXTextBox.Location = new Point(50, 217);
             TRXTextBox.Name = "TRXTextBox";
-            TRXTextBox.Size = new Size(1048, 22);
+            TRXTextBox.Size = new Size(1048, 23);
             TRXTextBox.TabIndex = 15;
             // 
             // label9
@@ -1714,7 +1707,7 @@ namespace Pulsar.Server.Forms
             label9.AutoSize = true;
             label9.Location = new Point(6, 222);
             label9.Name = "label9";
-            label9.Size = new Size(29, 13);
+            label9.Size = new Size(31, 15);
             label9.TabIndex = 14;
             label9.Text = "TRX:";
             // 
@@ -1723,7 +1716,7 @@ namespace Pulsar.Server.Forms
             XRPTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             XRPTextBox.Location = new Point(50, 189);
             XRPTextBox.Name = "XRPTextBox";
-            XRPTextBox.Size = new Size(1048, 22);
+            XRPTextBox.Size = new Size(1048, 23);
             XRPTextBox.TabIndex = 13;
             // 
             // label8
@@ -1731,7 +1724,7 @@ namespace Pulsar.Server.Forms
             label8.AutoSize = true;
             label8.Location = new Point(6, 194);
             label8.Name = "label8";
-            label8.Size = new Size(29, 13);
+            label8.Size = new Size(31, 15);
             label8.TabIndex = 12;
             label8.Text = "XRP:";
             // 
@@ -1740,7 +1733,7 @@ namespace Pulsar.Server.Forms
             DASHTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             DASHTextBox.Location = new Point(50, 161);
             DASHTextBox.Name = "DASHTextBox";
-            DASHTextBox.Size = new Size(1048, 22);
+            DASHTextBox.Size = new Size(1048, 23);
             DASHTextBox.TabIndex = 11;
             // 
             // label7
@@ -1748,7 +1741,7 @@ namespace Pulsar.Server.Forms
             label7.AutoSize = true;
             label7.Location = new Point(6, 166);
             label7.Name = "label7";
-            label7.Size = new Size(39, 13);
+            label7.Size = new Size(41, 15);
             label7.TabIndex = 10;
             label7.Text = "DASH:";
             // 
@@ -1757,7 +1750,7 @@ namespace Pulsar.Server.Forms
             SOLTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             SOLTextBox.Location = new Point(50, 133);
             SOLTextBox.Name = "SOLTextBox";
-            SOLTextBox.Size = new Size(1048, 22);
+            SOLTextBox.Size = new Size(1048, 23);
             SOLTextBox.TabIndex = 9;
             // 
             // label6
@@ -1765,7 +1758,7 @@ namespace Pulsar.Server.Forms
             label6.AutoSize = true;
             label6.Location = new Point(6, 138);
             label6.Name = "label6";
-            label6.Size = new Size(30, 13);
+            label6.Size = new Size(31, 15);
             label6.TabIndex = 8;
             label6.Text = "SOL:";
             // 
@@ -1774,7 +1767,7 @@ namespace Pulsar.Server.Forms
             XMRTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             XMRTextBox.Location = new Point(50, 105);
             XMRTextBox.Name = "XMRTextBox";
-            XMRTextBox.Size = new Size(1048, 22);
+            XMRTextBox.Size = new Size(1048, 23);
             XMRTextBox.TabIndex = 7;
             // 
             // label5
@@ -1782,7 +1775,7 @@ namespace Pulsar.Server.Forms
             label5.AutoSize = true;
             label5.Location = new Point(6, 110);
             label5.Name = "label5";
-            label5.Size = new Size(33, 13);
+            label5.Size = new Size(35, 15);
             label5.TabIndex = 6;
             label5.Text = "XMR:";
             // 
@@ -1791,7 +1784,7 @@ namespace Pulsar.Server.Forms
             LTCTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             LTCTextBox.Location = new Point(50, 77);
             LTCTextBox.Name = "LTCTextBox";
-            LTCTextBox.Size = new Size(1048, 22);
+            LTCTextBox.Size = new Size(1048, 23);
             LTCTextBox.TabIndex = 5;
             // 
             // label4
@@ -1799,7 +1792,7 @@ namespace Pulsar.Server.Forms
             label4.AutoSize = true;
             label4.Location = new Point(6, 82);
             label4.Name = "label4";
-            label4.Size = new Size(26, 13);
+            label4.Size = new Size(29, 15);
             label4.TabIndex = 4;
             label4.Text = "LTC:";
             // 
@@ -1808,7 +1801,7 @@ namespace Pulsar.Server.Forms
             ETHTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             ETHTextBox.Location = new Point(50, 49);
             ETHTextBox.Name = "ETHTextBox";
-            ETHTextBox.Size = new Size(1048, 22);
+            ETHTextBox.Size = new Size(1048, 23);
             ETHTextBox.TabIndex = 3;
             // 
             // label3
@@ -1816,7 +1809,7 @@ namespace Pulsar.Server.Forms
             label3.AutoSize = true;
             label3.Location = new Point(6, 54);
             label3.Name = "label3";
-            label3.Size = new Size(30, 13);
+            label3.Size = new Size(32, 15);
             label3.TabIndex = 2;
             label3.Text = "ETH:";
             // 
@@ -1825,7 +1818,7 @@ namespace Pulsar.Server.Forms
             BTCTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             BTCTextBox.Location = new Point(50, 21);
             BTCTextBox.Name = "BTCTextBox";
-            BTCTextBox.Size = new Size(1048, 22);
+            BTCTextBox.Size = new Size(1048, 23);
             BTCTextBox.TabIndex = 1;
             // 
             // label2
@@ -1833,7 +1826,7 @@ namespace Pulsar.Server.Forms
             label2.AutoSize = true;
             label2.Location = new Point(6, 26);
             label2.Name = "label2";
-            label2.Size = new Size(28, 13);
+            label2.Size = new Size(30, 15);
             label2.TabIndex = 0;
             label2.Text = "BTC:";
             // 
@@ -1842,7 +1835,7 @@ namespace Pulsar.Server.Forms
             ClipperCheckbox.AutoSize = true;
             ClipperCheckbox.Location = new Point(8, 6);
             ClipperCheckbox.Name = "ClipperCheckbox";
-            ClipperCheckbox.Size = new Size(50, 17);
+            ClipperCheckbox.Size = new Size(50, 19);
             ClipperCheckbox.TabIndex = 0;
             ClipperCheckbox.Text = "Start";
             ClipperCheckbox.UseVisualStyleBackColor = true;
@@ -1850,7 +1843,6 @@ namespace Pulsar.Server.Forms
             // 
             // tabPage4
             // 
-            tabPage4.Controls.Add(lstTasks);
             tabPage4.Location = new Point(4, 24);
             tabPage4.Margin = new Padding(0);
             tabPage4.Name = "tabPage4";
@@ -1858,23 +1850,6 @@ namespace Pulsar.Server.Forms
             tabPage4.TabIndex = 4;
             tabPage4.Text = "AutoTasksTabPage";
             tabPage4.UseVisualStyleBackColor = true;
-            // 
-            // lstTasks
-            // 
-            lstTasks.Columns.AddRange(new ColumnHeader[] { columnHeader4, columnHeader5, columnHeader8 });
-            lstTasks.ContextMenuStrip = TasksContextMenuStrip;
-            lstTasks.Dock = DockStyle.Fill;
-            lstTasks.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            lstTasks.FullRowSelect = true;
-            lstTasks.Location = new Point(0, 0);
-            lstTasks.Margin = new Padding(0);
-            lstTasks.Name = "lstTasks";
-            lstTasks.ShowItemToolTips = true;
-            lstTasks.Size = new Size(1136, 463);
-            lstTasks.SmallImageList = imgFlags;
-            lstTasks.TabIndex = 3;
-            lstTasks.UseCompatibleStateImageBehavior = false;
-            lstTasks.View = View.Details;
             // 
             // columnHeader4
             // 
@@ -1895,21 +1870,21 @@ namespace Pulsar.Server.Forms
             // 
             TasksContextMenuStrip.Items.AddRange(new ToolStripItem[] { addTaskToolStripMenuItem, deleteTasksToolStripMenuItem });
             TasksContextMenuStrip.Name = "TasksContextMenuStrip";
-            TasksContextMenuStrip.Size = new Size(138, 48);
+            TasksContextMenuStrip.Size = new Size(139, 48);
             // 
             // addTaskToolStripMenuItem
             // 
             addTaskToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { remoteExecuteToolStripMenuItem1, shellCommandToolStripMenuItem, kematianToolStripMenuItem, showMessageBoxToolStripMenuItem1, excludeSystemDriveToolStripMenuItem, winREToolStripMenuItem1 });
             addTaskToolStripMenuItem.Image = Properties.Resources.add;
             addTaskToolStripMenuItem.Name = "addTaskToolStripMenuItem";
-            addTaskToolStripMenuItem.Size = new Size(137, 22);
+            addTaskToolStripMenuItem.Size = new Size(138, 22);
             addTaskToolStripMenuItem.Text = "Add Task";
             // 
             // remoteExecuteToolStripMenuItem1
             // 
             remoteExecuteToolStripMenuItem1.Image = Properties.Resources.drive_go;
             remoteExecuteToolStripMenuItem1.Name = "remoteExecuteToolStripMenuItem1";
-            remoteExecuteToolStripMenuItem1.Size = new Size(186, 22);
+            remoteExecuteToolStripMenuItem1.Size = new Size(185, 22);
             remoteExecuteToolStripMenuItem1.Text = "Remote Execute";
             remoteExecuteToolStripMenuItem1.Click += remoteExecuteToolStripMenuItem1_Click;
             // 
@@ -1917,20 +1892,20 @@ namespace Pulsar.Server.Forms
             // 
             shellCommandToolStripMenuItem.Image = Properties.Resources.terminal;
             shellCommandToolStripMenuItem.Name = "shellCommandToolStripMenuItem";
-            shellCommandToolStripMenuItem.Size = new Size(186, 22);
+            shellCommandToolStripMenuItem.Size = new Size(185, 22);
             shellCommandToolStripMenuItem.Text = "Shell Command";
             shellCommandToolStripMenuItem.Click += shellCommandToolStripMenuItem_Click;
             // 
             // kematianToolStripMenuItem
             // 
             kematianToolStripMenuItem.Name = "kematianToolStripMenuItem";
-            kematianToolStripMenuItem.Size = new Size(186, 22);
+            kematianToolStripMenuItem.Size = new Size(185, 22);
             // 
             // showMessageBoxToolStripMenuItem1
             // 
             showMessageBoxToolStripMenuItem1.Image = Properties.Resources.information;
             showMessageBoxToolStripMenuItem1.Name = "showMessageBoxToolStripMenuItem1";
-            showMessageBoxToolStripMenuItem1.Size = new Size(186, 22);
+            showMessageBoxToolStripMenuItem1.Size = new Size(185, 22);
             showMessageBoxToolStripMenuItem1.Text = "Show Message Box";
             showMessageBoxToolStripMenuItem1.Click += showMessageBoxToolStripMenuItem1_Click;
             // 
@@ -1938,7 +1913,7 @@ namespace Pulsar.Server.Forms
             // 
             excludeSystemDriveToolStripMenuItem.Image = Properties.Resources.uac_shield;
             excludeSystemDriveToolStripMenuItem.Name = "excludeSystemDriveToolStripMenuItem";
-            excludeSystemDriveToolStripMenuItem.Size = new Size(186, 22);
+            excludeSystemDriveToolStripMenuItem.Size = new Size(185, 22);
             excludeSystemDriveToolStripMenuItem.Text = "Exclude System Drive";
             excludeSystemDriveToolStripMenuItem.Click += excludeSystemDriveToolStripMenuItem_Click;
             // 
@@ -1946,7 +1921,7 @@ namespace Pulsar.Server.Forms
             // 
             winREToolStripMenuItem1.Image = Properties.Resources.anchor;
             winREToolStripMenuItem1.Name = "winREToolStripMenuItem1";
-            winREToolStripMenuItem1.Size = new Size(186, 22);
+            winREToolStripMenuItem1.Size = new Size(185, 22);
             winREToolStripMenuItem1.Text = "WinRE";
             winREToolStripMenuItem1.Click += winREToolStripMenuItem1_Click;
             // 
@@ -1954,15 +1929,13 @@ namespace Pulsar.Server.Forms
             // 
             deleteTasksToolStripMenuItem.Image = Properties.Resources.delete;
             deleteTasksToolStripMenuItem.Name = "deleteTasksToolStripMenuItem";
-            deleteTasksToolStripMenuItem.Size = new Size(137, 22);
+            deleteTasksToolStripMenuItem.Size = new Size(138, 22);
             deleteTasksToolStripMenuItem.Text = "Delete Task&s";
             deleteTasksToolStripMenuItem.Click += deleteTasksToolStripMenuItem_Click;
             // 
             // tabPage5
             // 
             tabPage5.Controls.Add(splitter2);
-            tabPage5.Controls.Add(dotNetBarTabControl1);
-            tabPage5.Controls.Add(aeroListView1);
             tabPage5.Location = new Point(4, 24);
             tabPage5.Name = "tabPage5";
             tabPage5.Padding = new Padding(3);
@@ -1973,32 +1946,14 @@ namespace Pulsar.Server.Forms
             // 
             // splitter2
             // 
-            splitter2.Location = new Point(156, 3);
+            splitter2.Location = new Point(3, 3);
             splitter2.Name = "splitter2";
             splitter2.Size = new Size(3, 457);
             splitter2.TabIndex = 2;
             splitter2.TabStop = false;
             // 
-            // dotNetBarTabControl1
-            // 
-            dotNetBarTabControl1.Controls.Add(Passwords);
-            dotNetBarTabControl1.Controls.Add(Cookies);
-            dotNetBarTabControl1.Controls.Add(Communication);
-            dotNetBarTabControl1.Controls.Add(Games);
-            dotNetBarTabControl1.Controls.Add(tabPage6);
-            dotNetBarTabControl1.Controls.Add(tabPage7);
-            dotNetBarTabControl1.Dock = DockStyle.Fill;
-            dotNetBarTabControl1.ItemSize = new Size(90, 22);
-            dotNetBarTabControl1.Location = new Point(156, 3);
-            dotNetBarTabControl1.Name = "dotNetBarTabControl1";
-            dotNetBarTabControl1.SelectedIndex = 0;
-            dotNetBarTabControl1.Size = new Size(977, 457);
-            dotNetBarTabControl1.SizeMode = TabSizeMode.Fixed;
-            dotNetBarTabControl1.TabIndex = 1;
-            // 
             // Passwords
             // 
-            Passwords.Controls.Add(aeroListView2);
             Passwords.Location = new Point(4, 26);
             Passwords.Name = "Passwords";
             Passwords.Padding = new Padding(3);
@@ -2006,18 +1961,6 @@ namespace Pulsar.Server.Forms
             Passwords.TabIndex = 0;
             Passwords.Text = "Passwords";
             Passwords.UseVisualStyleBackColor = true;
-            // 
-            // aeroListView2
-            // 
-            aeroListView2.Columns.AddRange(new ColumnHeader[] { columnHeader9, columnHeader10, columnHeader12 });
-            aeroListView2.Dock = DockStyle.Fill;
-            aeroListView2.FullRowSelect = true;
-            aeroListView2.Location = new Point(3, 3);
-            aeroListView2.Name = "aeroListView2";
-            aeroListView2.Size = new Size(963, 421);
-            aeroListView2.TabIndex = 0;
-            aeroListView2.UseCompatibleStateImageBehavior = false;
-            aeroListView2.View = View.Details;
             // 
             // columnHeader9
             // 
@@ -2036,7 +1979,6 @@ namespace Pulsar.Server.Forms
             // 
             // Cookies
             // 
-            Cookies.Controls.Add(aeroListView3);
             Cookies.Location = new Point(4, 26);
             Cookies.Name = "Cookies";
             Cookies.Padding = new Padding(3);
@@ -2044,18 +1986,6 @@ namespace Pulsar.Server.Forms
             Cookies.TabIndex = 1;
             Cookies.Text = "Cookies";
             Cookies.UseVisualStyleBackColor = true;
-            // 
-            // aeroListView3
-            // 
-            aeroListView3.Columns.AddRange(new ColumnHeader[] { columnHeader14, columnHeader16 });
-            aeroListView3.Dock = DockStyle.Fill;
-            aeroListView3.FullRowSelect = true;
-            aeroListView3.Location = new Point(3, 3);
-            aeroListView3.Name = "aeroListView3";
-            aeroListView3.Size = new Size(963, 421);
-            aeroListView3.TabIndex = 1;
-            aeroListView3.UseCompatibleStateImageBehavior = false;
-            aeroListView3.View = View.Details;
             // 
             // columnHeader14
             // 
@@ -2069,7 +1999,6 @@ namespace Pulsar.Server.Forms
             // 
             // Communication
             // 
-            Communication.Controls.Add(aeroListView4);
             Communication.Location = new Point(4, 26);
             Communication.Name = "Communication";
             Communication.Padding = new Padding(3);
@@ -2077,18 +2006,6 @@ namespace Pulsar.Server.Forms
             Communication.TabIndex = 2;
             Communication.Text = "Communication";
             Communication.UseVisualStyleBackColor = true;
-            // 
-            // aeroListView4
-            // 
-            aeroListView4.Columns.AddRange(new ColumnHeader[] { columnHeader15, columnHeader17 });
-            aeroListView4.Dock = DockStyle.Fill;
-            aeroListView4.FullRowSelect = true;
-            aeroListView4.Location = new Point(3, 3);
-            aeroListView4.Name = "aeroListView4";
-            aeroListView4.Size = new Size(963, 421);
-            aeroListView4.TabIndex = 2;
-            aeroListView4.UseCompatibleStateImageBehavior = false;
-            aeroListView4.View = View.Details;
             // 
             // columnHeader15
             // 
@@ -2102,7 +2019,6 @@ namespace Pulsar.Server.Forms
             // 
             // Games
             // 
-            Games.Controls.Add(aeroListView5);
             Games.Location = new Point(4, 26);
             Games.Name = "Games";
             Games.Padding = new Padding(3);
@@ -2111,18 +2027,6 @@ namespace Pulsar.Server.Forms
             Games.Text = "Games";
             Games.UseVisualStyleBackColor = true;
             // 
-            // aeroListView5
-            // 
-            aeroListView5.Columns.AddRange(new ColumnHeader[] { columnHeader7 });
-            aeroListView5.Dock = DockStyle.Fill;
-            aeroListView5.FullRowSelect = true;
-            aeroListView5.Location = new Point(3, 3);
-            aeroListView5.Name = "aeroListView5";
-            aeroListView5.Size = new Size(963, 421);
-            aeroListView5.TabIndex = 0;
-            aeroListView5.UseCompatibleStateImageBehavior = false;
-            aeroListView5.View = View.Details;
-            // 
             // columnHeader7
             // 
             columnHeader7.Text = "Game";
@@ -2130,7 +2034,6 @@ namespace Pulsar.Server.Forms
             // 
             // tabPage6
             // 
-            tabPage6.Controls.Add(aeroListView6);
             tabPage6.Location = new Point(4, 26);
             tabPage6.Name = "tabPage6";
             tabPage6.Padding = new Padding(3);
@@ -2138,18 +2041,6 @@ namespace Pulsar.Server.Forms
             tabPage6.TabIndex = 4;
             tabPage6.Text = "Wallets";
             tabPage6.UseVisualStyleBackColor = true;
-            // 
-            // aeroListView6
-            // 
-            aeroListView6.Columns.AddRange(new ColumnHeader[] { columnHeader13 });
-            aeroListView6.Dock = DockStyle.Fill;
-            aeroListView6.FullRowSelect = true;
-            aeroListView6.Location = new Point(3, 3);
-            aeroListView6.Name = "aeroListView6";
-            aeroListView6.Size = new Size(963, 421);
-            aeroListView6.TabIndex = 1;
-            aeroListView6.UseCompatibleStateImageBehavior = false;
-            aeroListView6.View = View.Details;
             // 
             // columnHeader13
             // 
@@ -2166,169 +2057,17 @@ namespace Pulsar.Server.Forms
             tabPage7.Text = "Other";
             tabPage7.UseVisualStyleBackColor = true;
             // 
-            // aeroListView1
-            // 
-            aeroListView1.Columns.AddRange(new ColumnHeader[] { columnHeader6 });
-            aeroListView1.Dock = DockStyle.Left;
-            aeroListView1.FullRowSelect = true;
-            aeroListView1.Location = new Point(3, 3);
-            aeroListView1.Name = "aeroListView1";
-            aeroListView1.Size = new Size(153, 457);
-            aeroListView1.TabIndex = 0;
-            aeroListView1.UseCompatibleStateImageBehavior = false;
-            aeroListView1.View = View.Details;
-            // 
             // columnHeader6
             // 
             columnHeader6.Text = "User@PC";
             columnHeader6.Width = 149;
             // 
-            // statusStrip
+            // runPEToolStripMenuItem
             // 
-            statusStrip.Dock = DockStyle.Fill;
-            statusStrip.ImageScalingSize = new Size(24, 24);
-            statusStrip.Items.AddRange(new ToolStripItem[] { listenToolStripStatusLabel, connectedToolStripStatusLabel });
-            statusStrip.Location = new Point(0, 516);
-            statusStrip.Name = "statusStrip";
-            statusStrip.Size = new Size(1144, 22);
-            statusStrip.SizingGrip = false;
-            statusStrip.TabIndex = 3;
-            statusStrip.Text = "statusStrip1";
-            // 
-            // listenToolStripStatusLabel
-            // 
-            listenToolStripStatusLabel.Image = Properties.Resources.bullet_red;
-            listenToolStripStatusLabel.ImageScaling = ToolStripItemImageScaling.None;
-            listenToolStripStatusLabel.ImageTransparentColor = Color.White;
-            listenToolStripStatusLabel.Name = "listenToolStripStatusLabel";
-            listenToolStripStatusLabel.Size = new Size(103, 17);
-            listenToolStripStatusLabel.Text = "Listening: False";
-            // 
-            // connectedToolStripStatusLabel
-            // 
-            connectedToolStripStatusLabel.ForeColor = Color.Black;
-            connectedToolStripStatusLabel.Image = Properties.Resources.status_online;
-            connectedToolStripStatusLabel.ImageScaling = ToolStripItemImageScaling.None;
-            connectedToolStripStatusLabel.ImageTransparentColor = Color.White;
-            connectedToolStripStatusLabel.Name = "connectedToolStripStatusLabel";
-            connectedToolStripStatusLabel.Size = new Size(93, 17);
-            connectedToolStripStatusLabel.Text = "Connected: 0";
-            // 
-            // menuStrip
-            // 
-            menuStrip.BackColor = SystemColors.ButtonFace;
-            menuStrip.Dock = DockStyle.Fill;
-            menuStrip.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            menuStrip.ImageScalingSize = new Size(24, 24);
-            menuStrip.Items.AddRange(new ToolStripItem[] { clientsToolStripMenuItem, offlineClientsToolStripMenuItem, statsToolStripMenuItem, mapToolStripMenuItem, autoTasksToolStripMenuItem, cryptoClipperToolStripMenuItem, notificationCentreToolStripMenuItem, aboutToolStripMenuItem, settingsToolStripMenuItem, builderToolStripMenuItem });
-            menuStrip.Location = new Point(0, 0);
-            menuStrip.Name = "menuStrip";
-            menuStrip.Size = new Size(1144, 25);
-            menuStrip.TabIndex = 2;
-            // 
-            // clientsToolStripMenuItem
-            // 
-            clientsToolStripMenuItem.Image = Properties.Resources.user;
-            clientsToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
-            clientsToolStripMenuItem.Name = "clientsToolStripMenuItem";
-            clientsToolStripMenuItem.Size = new Size(71, 21);
-            clientsToolStripMenuItem.Text = "Clients";
-            clientsToolStripMenuItem.Click += clientsToolStripMenuItem_Click;
-            // 
-            // offlineClientsToolStripMenuItem
-            // 
-            offlineClientsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { clearOfflineClientsToolStripMenuItem });
-            offlineClientsToolStripMenuItem.Image = Properties.Resources.disconnect;
-            offlineClientsToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
-            offlineClientsToolStripMenuItem.Name = "offlineClientsToolStripMenuItem";
-            offlineClientsToolStripMenuItem.Size = new Size(110, 21);
-            offlineClientsToolStripMenuItem.Text = "Offline Clients";
-            offlineClientsToolStripMenuItem.Click += offlineClientsToolStripMenuItem_Click;
-            // 
-            // clearOfflineClientsToolStripMenuItem
-            // 
-            clearOfflineClientsToolStripMenuItem.Name = "clearOfflineClientsToolStripMenuItem";
-            clearOfflineClientsToolStripMenuItem.Size = new Size(130, 22);
-            clearOfflineClientsToolStripMenuItem.Text = "Clear List";
-            clearOfflineClientsToolStripMenuItem.Click += clearOfflineClientsToolStripMenuItem_Click;
-            // 
-            // statsToolStripMenuItem
-            // 
-            statsToolStripMenuItem.Image = Properties.Resources.chart_curve;
-            statsToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
-            statsToolStripMenuItem.Name = "statsToolStripMenuItem";
-            statsToolStripMenuItem.Size = new Size(60, 21);
-            statsToolStripMenuItem.Text = "Stats";
-            statsToolStripMenuItem.Click += statsToolStripMenuItem_Click;
-            // 
-            // autoTasksToolStripMenuItem
-            // 
-            autoTasksToolStripMenuItem.Image = Properties.Resources.server;
-            autoTasksToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
-            autoTasksToolStripMenuItem.Name = "autoTasksToolStripMenuItem";
-            autoTasksToolStripMenuItem.Size = new Size(91, 21);
-            autoTasksToolStripMenuItem.Text = "Auto Tasks";
-            autoTasksToolStripMenuItem.Click += autoTasksToolStripMenuItem_Click;
-            // 
-            // cryptoClipperToolStripMenuItem
-            // 
-            cryptoClipperToolStripMenuItem.Image = Properties.Resources.money_dollar;
-            cryptoClipperToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
-            cryptoClipperToolStripMenuItem.Name = "cryptoClipperToolStripMenuItem";
-            cryptoClipperToolStripMenuItem.Size = new Size(112, 21);
-            cryptoClipperToolStripMenuItem.Text = "Crypto Clipper";
-            cryptoClipperToolStripMenuItem.Click += cryptoClipperToolStripMenuItem_Click;
-            // 
-            // notificationCentreToolStripMenuItem
-            // 
-            notificationCentreToolStripMenuItem.Image = Properties.Resources.bell;
-            notificationCentreToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
-            notificationCentreToolStripMenuItem.Name = "notificationCentreToolStripMenuItem";
-            notificationCentreToolStripMenuItem.Size = new Size(136, 21);
-            notificationCentreToolStripMenuItem.Text = "Notification Center";
-            notificationCentreToolStripMenuItem.Click += notificationCentreToolStripMenuItem_Click;
-            // 
-            // aboutToolStripMenuItem
-            // 
-            aboutToolStripMenuItem.Alignment = ToolStripItemAlignment.Right;
-            aboutToolStripMenuItem.ForeColor = Color.Black;
-            aboutToolStripMenuItem.Image = Properties.Resources.information;
-            aboutToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
-            aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            aboutToolStripMenuItem.Size = new Size(68, 21);
-            aboutToolStripMenuItem.Text = "About";
-            aboutToolStripMenuItem.Click += aboutToolStripMenuItem_Click;
-            // 
-            // settingsToolStripMenuItem
-            // 
-            settingsToolStripMenuItem.Alignment = ToolStripItemAlignment.Right;
-            settingsToolStripMenuItem.ForeColor = Color.Black;
-            settingsToolStripMenuItem.Image = Properties.Resources.cog;
-            settingsToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
-            settingsToolStripMenuItem.Name = "settingsToolStripMenuItem";
-            settingsToolStripMenuItem.Size = new Size(77, 21);
-            settingsToolStripMenuItem.Text = "Settings";
-            settingsToolStripMenuItem.Click += settingsToolStripMenuItem_Click;
-            // 
-            // builderToolStripMenuItem
-            // 
-            builderToolStripMenuItem.Alignment = ToolStripItemAlignment.Right;
-            builderToolStripMenuItem.ForeColor = Color.Black;
-            builderToolStripMenuItem.Image = Properties.Resources.bricks;
-            builderToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
-            builderToolStripMenuItem.Name = "builderToolStripMenuItem";
-            builderToolStripMenuItem.Size = new Size(72, 21);
-            builderToolStripMenuItem.Text = "Builder";
-            builderToolStripMenuItem.Click += builderToolStripMenuItem_Click;
-            // 
-            // mapToolStripMenuItem
-            // 
-            mapToolStripMenuItem.Image = Properties.Resources.map;
-            mapToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
-            mapToolStripMenuItem.Name = "mapToolStripMenuItem";
-            mapToolStripMenuItem.Size = new Size(59, 21);
-            mapToolStripMenuItem.Text = "Map";
-            mapToolStripMenuItem.Click += mapToolStripMenuItem_Click;
+            runPEToolStripMenuItem.Name = "runPEToolStripMenuItem";
+            runPEToolStripMenuItem.Size = new Size(180, 22);
+            runPEToolStripMenuItem.Text = "RunPE";
+            runPEToolStripMenuItem.Click += runPEToolStripMenuItem_Click;
             // 
             // FrmMain
             // 
@@ -2348,18 +2087,18 @@ namespace Pulsar.Server.Forms
             contextMenuStrip.ResumeLayout(false);
             tableLayoutPanel.ResumeLayout(false);
             tableLayoutPanel.PerformLayout();
-            MainTabControl.ResumeLayout(false);
-            tabOfflineClients.ResumeLayout(false);
-            tabStats.ResumeLayout(false);
+            statusStrip.ResumeLayout(false);
+            statusStrip.PerformLayout();
+            menuStrip.ResumeLayout(false);
+            menuStrip.PerformLayout();
+            OfflineClientsContextMenuStrip.ResumeLayout(false);
             tabPage1.ResumeLayout(false);
             tableLayoutPanel1.ResumeLayout(false);
             tableLayoutPanel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBoxMain).EndInit();
             tblLayoutQuickButtons.ResumeLayout(false);
             tblLayoutQuickButtons.PerformLayout();
-            gBoxClientInfo.ResumeLayout(false);
             DebugContextMenuStrip.ResumeLayout(false);
-            tabHeatMap.ResumeLayout(false);
             tabPage2.ResumeLayout(false);
             notificationStatusPanel.ResumeLayout(false);
             notificationStatusPanel.PerformLayout();
@@ -2368,20 +2107,8 @@ namespace Pulsar.Server.Forms
             tabPage3.PerformLayout();
             cryptoGroupBox.ResumeLayout(false);
             cryptoGroupBox.PerformLayout();
-            tabPage4.ResumeLayout(false);
             TasksContextMenuStrip.ResumeLayout(false);
             tabPage5.ResumeLayout(false);
-            dotNetBarTabControl1.ResumeLayout(false);
-            Passwords.ResumeLayout(false);
-            Cookies.ResumeLayout(false);
-            Communication.ResumeLayout(false);
-            Games.ResumeLayout(false);
-            tabPage6.ResumeLayout(false);
-            statusStrip.ResumeLayout(false);
-            statusStrip.PerformLayout();
-            menuStrip.ResumeLayout(false);
-            menuStrip.PerformLayout();
-            OfflineClientsContextMenuStrip.ResumeLayout(false);
             ResumeLayout(false);
 
         }
@@ -2594,5 +2321,6 @@ namespace Pulsar.Server.Forms
         private ToolStripMenuItem removeOfflineClientsToolStripMenuItem;
         private ToolStripMenuItem statsToolStripMenuItem;
         private ToolStripMenuItem mapToolStripMenuItem;
+        private ToolStripMenuItem runPEToolStripMenuItem;
     }
 }
