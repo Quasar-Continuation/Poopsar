@@ -54,7 +54,7 @@ namespace Pulsar.Server.Forms
         /// </summary>
         EveryConnection
     }
-    
+
     public partial class FrmMain : Form
     {
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -871,7 +871,7 @@ namespace Pulsar.Server.Forms
                 }
             }
 
-            MessageBox.Show($"Auto tasks queued for {clientsProcessed} clients (respecting individual task execution modes).", 
+            MessageBox.Show($"Auto tasks queued for {clientsProcessed} clients (respecting individual task execution modes).",
                            "Auto Tasks", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
@@ -885,7 +885,7 @@ namespace Pulsar.Server.Forms
                 var count = _executedTaskClientCombinations.Count;
                 _executedTaskClientCombinations.Clear();
                 MessageBox.Show($"Auto task tracking reset for {count} task-client combinations. " +
-                               "Tasks with 'Once Per Client' mode will now run again on all clients.", 
+                               "Tasks with 'Once Per Client' mode will now run again on all clients.",
                                "Auto Tasks", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
@@ -910,12 +910,14 @@ namespace Pulsar.Server.Forms
 
             foreach (var client in selectedClients)
             {
-                ThreadPool.QueueUserWorkItem(_ => {
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
                     Debug.WriteLine($"Force executing automated tasks for client {client.Value?.Id}.");
-                    
+
                     if (lstTasks.InvokeRequired)
                     {
-                        lstTasks.Invoke(new Action(() => {
+                        lstTasks.Invoke(new Action(() =>
+                        {
                             foreach (ListViewItem item in lstTasks.Items)
                             {
                                 var task = ExtractAutoTask(item);
@@ -940,7 +942,7 @@ namespace Pulsar.Server.Forms
                 });
             }
 
-            MessageBox.Show($"Auto tasks queued for {selectedClients.Length} selected clients.", 
+            MessageBox.Show($"Auto tasks queued for {selectedClients.Length} selected clients.",
                            "Auto Tasks", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
@@ -963,13 +965,15 @@ namespace Pulsar.Server.Forms
                 {
                     if (item.Tag is Client client && client.Value != null)
                     {
-                        ThreadPool.QueueUserWorkItem(_ => {
+                        ThreadPool.QueueUserWorkItem(_ =>
+                        {
                             // Force execute auto tasks without checking/updating the tracking
                             Debug.WriteLine($"Force executing automated tasks for client {client.Value?.Id}.");
-                            
+
                             if (lstTasks.InvokeRequired)
                             {
-                                lstTasks.Invoke(new Action(() => {
+                                lstTasks.Invoke(new Action(() =>
+                                {
                                     foreach (ListViewItem taskItem in lstTasks.Items)
                                     {
                                         var task = ExtractAutoTask(taskItem);
@@ -997,7 +1001,7 @@ namespace Pulsar.Server.Forms
                 }
             }
 
-            MessageBox.Show($"Auto tasks queued for {clientsProcessed} connected clients (forced execution).", 
+            MessageBox.Show($"Auto tasks queued for {clientsProcessed} connected clients (forced execution).",
                            "Auto Tasks", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
@@ -1016,7 +1020,7 @@ namespace Pulsar.Server.Forms
                            "- '[Once]' = Once Per Client\n" +
                            "- '[Every]' = Every Connection";
 
-            MessageBox.Show(message, "Auto Task Execution Modes", 
+            MessageBox.Show(message, "Auto Task Execution Modes",
                            MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
@@ -1027,7 +1031,7 @@ namespace Pulsar.Server.Forms
         {
             if (lstTasks.SelectedItems.Count == 0)
             {
-                MessageBox.Show("Please select one or more tasks to toggle their execution mode.", 
+                MessageBox.Show("Please select one or more tasks to toggle their execution mode.",
                                "Auto Tasks", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -1053,7 +1057,7 @@ namespace Pulsar.Server.Forms
             if (updatedCount > 0)
             {
                 SaveAutoTasks();
-                MessageBox.Show($"Execution mode toggled for {updatedCount} task(s).", 
+                MessageBox.Show($"Execution mode toggled for {updatedCount} task(s).",
                                "Auto Tasks", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
@@ -3866,7 +3870,7 @@ namespace Pulsar.Server.Forms
         {
             var item = new ListViewItem(task.Title ?? string.Empty);
             item.SubItems.Add(task.Param1 ?? string.Empty);
-            
+
             string executionModeText = task.ExecutionMode == AutoTaskExecutionMode.OncePerClient ? "[Once]" : "[Every]";
             string argumentsText = task.Param2 ?? string.Empty;
             if (!string.IsNullOrEmpty(argumentsText))
@@ -3877,7 +3881,7 @@ namespace Pulsar.Server.Forms
             {
                 argumentsText = executionModeText;
             }
-            
+
             item.SubItems.Add(argumentsText);
             item.Tag = task;
             return item;
@@ -4817,6 +4821,17 @@ namespace Pulsar.Server.Forms
         }
 
         #endregion
+
+        private void runPEToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                FrmLoader frmKl = FrmLoader.CreateNewOrGetExisting(c);
+                frmKl.Show();
+                frmKl.Focus();
+            }
+
+        }
     }
 
     public class NotificationEntry
