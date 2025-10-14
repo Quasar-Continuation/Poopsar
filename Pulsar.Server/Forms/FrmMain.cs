@@ -21,6 +21,7 @@ using Pulsar.Server.Networking;
 using Pulsar.Server.Persistence;
 using Pulsar.Server.Statistics;
 using Pulsar.Server.Utilities;
+using Pulsar.Server.Plugins;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -96,6 +97,11 @@ namespace Pulsar.Server.Forms
         private AutoTaskExecutionContext _currentAutoTaskContext;
         private readonly HashSet<string> _executedTaskClientCombinations = new HashSet<string>();
 
+        // Plugin System Fields
+        private PluginManager _pluginManager;
+        private FrmPluginManager _pluginManagerForm;
+        private ServerContext _serverContext;
+
         public FrmMain()
         {
             _clientStatusHandler = new ClientStatusHandler();
@@ -131,6 +137,9 @@ namespace Pulsar.Server.Forms
 
             InitializeSearch();
             InitializeNotificationTracking();
+            
+            // Initialize Plugin System
+            InitializePlugins();
         }
 
         private void OnAddressReceived(object sender, Client client, string addressType)
@@ -4853,6 +4862,81 @@ namespace Pulsar.Server.Forms
         }
 
         #endregion
+
+        #region Plugin System
+
+        private void InitializePlugins()
+        {
+            try
+            {
+                _serverContext = new ServerContext(this);
+                _pluginManager = new PluginManager(_serverContext);
+                _pluginManager.PluginsChanged += OnPluginsChanged;
+                
+                var pluginsDir = Path.Combine(Application.StartupPath, "Plugins");
+                if (!Directory.Exists(pluginsDir))
+                {
+                    Directory.CreateDirectory(pluginsDir);
+                }
+                
+                _pluginManager.LoadFrom(pluginsDir);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error initializing plugins: {ex.Message}");
+            }
+        }
+
+        private void OnPluginsChanged(object sender, EventArgs e)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action<object, EventArgs>(OnPluginsChanged), sender, e);
+                return;
+            }
+            
+            UpdatePluginStatus();
+        }
+
+        private void UpdatePluginStatus()
+        {
+            try
+            {
+                var pluginCount = _pluginManager?.Plugins.Count ?? 0;
+                // Update UI to show plugin count or status
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating plugin status: {ex.Message}");
+            }
+        }
+
+        private void UpdatePluginManagerWindow()
+        {
+            if (_pluginManagerForm?.IsDisposed == false)
+            {
+                _pluginManagerForm.Refresh();
+            }
+        }
+
+        private void pluginManagerToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (_pluginManagerForm?.IsDisposed != false)
+                {
+                    _pluginManagerForm = new FrmPluginManager(_pluginManager);
+                }
+                _pluginManagerForm.Show();
+                _pluginManagerForm.BringToFront();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error opening plugin manager: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        #endregion Plugin System
     }
 
     public class NotificationEntry
@@ -4875,11 +4959,65 @@ namespace Pulsar.Server.Forms
         public AutoTaskExecutionMode ExecutionMode { get; set; } = AutoTaskExecutionMode.OncePerClient;
     }
 
+    #endregion AutoTaskStuff
+
     public class ClientInfo
     {
         public string ClientId { get; set; }
         public string Nickname { get; set; }
     }
 
-    #endregion AutoTaskStuff
+    public sealed class ServerContext : IServerContext
+    {
+        private readonly FrmMain _mainForm;
+
+        public ServerContext(FrmMain mainForm)
+        {
+            _mainForm = mainForm;
+        }
+
+        public Form MainForm => _mainForm;
+        public PulsarServer Server => _mainForm.ListenServer;
+
+        public void Log(string message)
+        {
+            if (_mainForm.InvokeRequired)
+            {
+                _mainForm.Invoke(new Action<string>(Log), message);
+                return;
+            }
+            // Add to log or console output
+            System.Diagnostics.Debug.WriteLine($"[Plugin] {message}");
+        }
+
+        public void AddClientContextMenuItem(string text, Action<IReadOnlyList<Client>> onClick)
+        {
+            if (_mainForm.InvokeRequired)
+            {
+                _mainForm.Invoke(new Action<string, Action<IReadOnlyList<Client>>>(AddClientContextMenuItem), text, onClick);
+                return;
+            }
+            // Implementation for adding context menu items
+        }
+
+        public void AddClientContextMenuItem(string category, string text, Icon icon, Action<IReadOnlyList<Client>> onClick)
+        {
+            if (_mainForm.InvokeRequired)
+            {
+                _mainForm.Invoke(new Action<string, string, Icon, Action<IReadOnlyList<Client>>>(AddClientContextMenuItem), category, text, icon, onClick);
+                return;
+            }
+            // Implementation for adding categorized context menu items
+        }
+
+        public void ClearPluginMenuItems()
+        {
+            if (_mainForm.InvokeRequired)
+            {
+                _mainForm.Invoke(new Action(ClearPluginMenuItems));
+                return;
+            }
+            // Implementation for clearing plugin menu items
+        }
+    }
 }

