@@ -24,6 +24,14 @@ Welcome to the Pulsar Plugin System! This guide will teach you how to create pow
 
 ## Plugin Types
 
+### 0. **Client-Only Auto Plugins** (New)
+- Target a single assembly that implements `IUniversalPlugin`
+- Name the compiled DLL with a `.Client.dll` suffix (for example `ActionPlugin.Client.dll`) and drop it into `Pulsar.Server/Plugins`
+- Every connected client loads the plugin automatically without any server UI wiring
+- The plugin's `Initialize` method runs immediately after download, perfect for one-shot actions
+- Update the `Version` property when you publish a new build so clients receive the fresh copy
+- Optional: place a `<PluginName>.init` file next to your DLL to supply raw init data bytes
+
 ### 1. **Server-Only Plugins** (Run on server machine)
 - Add menu items to the server interface
 - Create custom server UI windows
@@ -191,6 +199,50 @@ Add these NuGet packages to your project:
 
 ## 🎨 Code Templates
 
+### Template 0: Auto-Loaded Message Box (Client Only)
+```csharp
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+using Pulsar.Common.Plugins;
+
+namespace ActionPlugins
+{
+    public sealed class ActionPlugin : IUniversalPlugin
+    {
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
+
+        public string PluginId => "actionplugin";
+        public string Version => "1.0.0";
+        public string[] SupportedCommands => Array.Empty<string>();
+
+        public void Initialize(byte[] initData)
+        {
+            var message = initData is { Length: > 0 }
+                ? Encoding.UTF8.GetString(initData)
+                : "Action executed!";
+
+            MessageBox(IntPtr.Zero, message, "Action Plugin", 0);
+        }
+
+        public PluginResult ExecuteCommand(string command, byte[] parameters)
+        {
+            return new PluginResult
+            {
+                Success = false,
+                Message = "No commands supported",
+                ShouldUnload = true
+            };
+        }
+
+        public bool IsComplete => true;
+        public void Cleanup() { }
+    }
+}
+```
+Compile the project as `ActionPlugin.Client.dll` (or any name ending in `.Client.dll`) and drop it into `Pulsar.Server/Plugins`. If you want to change the message at runtime, create a text file named `ActionPlugin.Client.init` next to the DLL containing the message body (UTF-8 encoded).
+
 ### Template 1: Information Collector
 ```csharp
 public class InfoCollector : IUniversalPlugin
@@ -265,6 +317,136 @@ public class ActionPlugin : IUniversalPlugin
     {
         // Your action code here
         return "Action completed successfully!";
+    }
+}
+
+```
+
+### Template 3: Context Menu Client + Server Pair
+This example ships a client plugin and hooks a context menu item on the server. When the menu item is clicked, each selected client displays a message box.
+
+**Server plugin (compile as `ContextMenuMessage.Server.dll`):**
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Windows.Forms;
+using Pulsar.Server.Networking;
+using Pulsar.Server.Plugins;
+
+namespace ExamplePlugins.ContextMenu
+{
+    public sealed class ContextMenuServerPlugin : IServerPlugin
+    {
+        private string _pluginDirectory = string.Empty;
+
+        public string Name => "Context Menu Message";
+        public Version PluginVersion => new Version(1, 0, 0, 0);
+        public string Author => "Example";
+        public string Description => "Adds a context menu entry that shows a client-side message box.";
+        public bool AutoLoadToClients => false;
+
+        public void Initialize(IServerContext context)
+        {
+            _pluginDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? AppDomain.CurrentDomain.BaseDirectory;
+
+            context.AddClientContextMenuItem(new[] { "Examples" }, "Show Message", OnShowMessageClicked);
+        }
+
+        public void Dispose() { }
+
+        private void OnShowMessageClicked(IReadOnlyList<Client> clients)
+        {
+            try
+            {
+                var clientAssemblyPath = Path.Combine(_pluginDirectory, "ContextMenuMessage.Client.dll");
+                if (!File.Exists(clientAssemblyPath))
+                {
+                    MessageBox.Show("ContextMenuMessage.Client.dll not found next to the server plugin.", "Context Menu Plugin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                var assemblyBytes = File.ReadAllBytes(clientAssemblyPath);
+                foreach (var client in clients)
+                {
+                    var pluginId = $"context.menu.message.{client.Id:N}";
+                    PushSender.LoadUniversalPlugin(client, pluginId, assemblyBytes, Array.Empty<byte>(), "ExamplePlugins.ContextMenu.ContextMenuClientPlugin", "Initialize");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Context menu plugin failed: {ex.Message}", "Context Menu Plugin", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+    }
+}
+```
+
+**Client plugin (compile as `ContextMenuMessage.Client.dll`):**
+
+```csharp
+using System;
+using System.Runtime.InteropServices;
+using Pulsar.Common.Plugins;
+
+namespace ExamplePlugins.ContextMenu
+{
+    public sealed class ContextMenuClientPlugin : IUniversalPlugin
+    {
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
+
+        public string PluginId => "contextmenumessage";
+        public string Version => "1.0.0";
+        public string[] SupportedCommands => Array.Empty<string>();
+
+        public void Initialize(byte[] initData)
+        {
+            MessageBox(IntPtr.Zero, "Hello from the context menu action!", "Context Menu Plugin", 0);
+        }
+
+        public PluginResult ExecuteCommand(string command, byte[] parameters)
+        {
+            return new PluginResult
+            {
+                Success = false,
+                Message = "No commands supported",
+                ShouldUnload = true
+            };
+        }
+
+        public bool IsComplete => true;
+        public void Cleanup() { }
+    }
+}
+```
+
+Place both DLLs in `Pulsar.Server/Plugins`. The client DLL must keep the `.Client.dll` suffix so Pulsar auto-dispatches it.
+
+### Template 4: Server-Only Message Box Plugin
+```csharp
+using System;
+using System.Windows.Forms;
+using Pulsar.Server.Plugins;
+
+namespace ExamplePlugins.ServerOnly
+{
+    public sealed class ServerHelloPlugin : IServerPlugin
+    {
+        public string Name => "Server Hello";
+        public Version PluginVersion => new Version(1, 0, 0, 0);
+        public string Author => "Example";
+        public string Description => "Shows a message box when the plugin loads.";
+        public bool AutoLoadToClients => false;
+
+        public void Initialize(IServerContext context)
+        {
+            MessageBox.Show("Hello from the server plugin!", "Server Hello", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        public void Dispose() { }
     }
 }
 

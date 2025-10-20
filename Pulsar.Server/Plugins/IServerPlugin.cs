@@ -9,5 +9,6 @@ namespace Pulsar.Server.Plugins
         string Description { get; }
         string Type { get; }
         void Initialize(IServerContext context);
+        bool AutoLoadToClients => false;
     }
 }

@@ -36,6 +36,7 @@ namespace Pulsar.Server.Plugins
                 
                 var enabledDlls = Directory.EnumerateFiles(folder, "*.dll", SearchOption.TopDirectoryOnly)
                     .Where(f => !f.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase))
+                    .Where(f => !IsClientPluginFile(f))
                     .OrderBy(Path.GetFileName)
                     .ToList();
 
@@ -80,6 +81,11 @@ namespace Pulsar.Server.Plugins
 
         private void OnFileChanged(object sender, FileSystemEventArgs e)
         {
+            if (IsClientPluginFile(e.FullPath))
+            {
+                _context.Log($"Ignoring client plugin file {e.ChangeType}: {e.Name}");
+                return;
+            }
             _context.Log($"File {e.ChangeType}: {e.Name}");
             Task.Delay(500).ContinueWith(_ => 
             {
@@ -96,6 +102,11 @@ namespace Pulsar.Server.Plugins
 
         private void OnFileRenamed(object sender, RenamedEventArgs e)
         {
+            if (IsClientPluginFile(e.FullPath) && IsClientPluginFile(e.OldFullPath))
+            {
+                _context.Log($"Ignoring client plugin rename: {e.OldName} -> {e.Name}");
+                return;
+            }
             _context.Log($"File renamed: {e.OldName} -> {e.Name}");
             Task.Delay(500).ContinueWith(_ => 
             {
@@ -143,6 +154,7 @@ namespace Pulsar.Server.Plugins
                     
                     var enabledDlls = Directory.EnumerateFiles(folder, "*.dll", SearchOption.TopDirectoryOnly)
                         .Where(f => !f.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase))
+                        .Where(f => !IsClientPluginFile(f))
                         .OrderBy(Path.GetFileName)
                         .ToList();
 
@@ -219,6 +231,12 @@ namespace Pulsar.Server.Plugins
         {
             try
             {
+                if (IsClientPluginFile(path))
+                {
+                    _context.Log($"Skipping client plugin assembly for server load: {Path.GetFileName(path)}");
+                    return null;
+                }
+
                 var dllName = Path.GetFileName(path);
                 var alreadyLoaded = _plugins.Any(p => 
                 {
@@ -286,6 +304,13 @@ namespace Pulsar.Server.Plugins
         public void Dispose()
         {
             _watcher?.Dispose();
+        }
+
+        private static bool IsClientPluginFile(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return false;
+            var fileName = Path.GetFileName(path);
+            return fileName != null && fileName.EndsWith(".Client.dll", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
