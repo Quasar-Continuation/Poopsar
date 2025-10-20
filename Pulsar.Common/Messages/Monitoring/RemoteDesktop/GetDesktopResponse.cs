@@ -27,5 +27,8 @@ namespace Pulsar.Common.Messages.Monitoring.RemoteDesktop
 
         [Key(7)]
         public float FrameRate { get; set; }
+
+        [Key(8)]
+        public RemoteDesktopImageFormat ImageFormat { get; set; } = RemoteDesktopImageFormat.Png;
     }
 }
