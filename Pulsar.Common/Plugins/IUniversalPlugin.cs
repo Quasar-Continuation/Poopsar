@@ -18,7 +18,7 @@ namespace Pulsar.Common.Plugins
     {
         public bool Success { get; set; }
         public string Message { get; set; }
-        public byte[] Data { get; set; }
+        public Object Data { get; set; }
         public bool ShouldUnload { get; set; }
         public string NextCommand { get; set; }
     }
