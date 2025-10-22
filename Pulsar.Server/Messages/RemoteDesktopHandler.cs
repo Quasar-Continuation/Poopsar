@@ -366,28 +366,29 @@ namespace Pulsar.Server.Messages
         {
             try
             {
-                var decoded = _codec.DecodeData(ms);
-
-                if (decoded != null)
+                using (var decoded = _codec.DecodeData(ms))
                 {
-                    // Restore old logic — ensure local resolution is valid
-                    EnsureLocalResolutionInitialized(decoded.Size);
+                    if (decoded != null)
+                    {
+                        // Restore old logic — ensure local resolution is valid
+                        EnsureLocalResolutionInitialized(decoded.Size);
 
-                    // Old-method compatible rendering path:
-                    // If resolution differs, resize to local display size
-                    if ((decoded.Width != LocalResolution.Width ||
-                         decoded.Height != LocalResolution.Height) &&
-                        LocalResolution.Width > 0 && LocalResolution.Height > 0)
-                    {
-                        using (var resized = new Bitmap(decoded, LocalResolution))
+                        // Old-method compatible rendering path:
+                        // If resolution differs, resize to local display size
+                        if ((decoded.Width != LocalResolution.Width ||
+                             decoded.Height != LocalResolution.Height) &&
+                            LocalResolution.Width > 0 && LocalResolution.Height > 0)
                         {
-                            // Clone the resized bitmap before disposing
-                            OnReport((Bitmap)resized.Clone());
+                            using (var resized = new Bitmap(decoded, LocalResolution))
+                            {
+                                // Clone the resized bitmap before disposing
+                                OnReport((Bitmap)resized.Clone());
+                            }
                         }
-                    }
-                    else
-                    {
-                        OnReport(decoded);
+                        else
+                        {
+                            OnReport(decoded);
+                        }
                     }
                 }
             }
