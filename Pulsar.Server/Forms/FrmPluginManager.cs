@@ -1,32 +1,19 @@
+﻿using Pulsar.Server.Forms.DarkMode;
+using Pulsar.Server.Plugins;
+using Pulsar.Server.Utilities;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Pulsar.Server.Plugins;
-using Pulsar.Server.Forms.DarkMode;
-using Pulsar.Server.Utilities;
 
 namespace Pulsar.Server.Forms
 {
-    public class NonResizableListView : ListView
-    {
-        protected override void WndProc(ref Message m)
-        {
-            if (m.Msg == 0x0201)
-            {
-                var hitTest = this.HitTest(new Point((int)m.LParam & 0xFFFF, (int)m.LParam >> 16));
-                if (hitTest.Location == ListViewHitTestLocations.None)
-                {
-                    return;
-                }
-            }
-            base.WndProc(ref m);
-        }
-    }
-
     public partial class FrmPluginManager : Form
     {
         private readonly PluginManager _pluginManager;
@@ -35,32 +22,26 @@ namespace Pulsar.Server.Forms
         private bool _sortAscending = true;
         private bool _toggleFromCheckbox;
         private bool _suppressItemCheck;
-        
-        private System.Windows.Forms.Button btnManage;
-        private System.Windows.Forms.Button btnRefresh;
-        private System.Windows.Forms.Button btnBrowse;
-        private NonResizableListView listView;
-        private System.Windows.Forms.Button btnSave;
-        private System.Windows.Forms.Button btnClose;
-        private System.Windows.Forms.Label lblTitle;
-        private System.Windows.Forms.ColumnHeader colName;
-        private System.Windows.Forms.ColumnHeader colVersion;
-        private System.Windows.Forms.ColumnHeader colStatus;
-        private System.Windows.Forms.ColumnHeader colType;
-        private System.Windows.Forms.ColumnHeader colActions;
 
-        internal FrmPluginManager(PluginManager pluginManager)
+        public FrmPluginManager(PluginManager pluginManager)
         {
             try
             {
                 _pluginManager = pluginManager;
                 InitializeComponent();
+                DarkModeManager.ApplyDarkMode(this);
+                ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
+
+                this.listView.Resize += (s, e) => AdjustColumnWidths();
+                this.Resize += (s, e) => AdjustColumnWidths();
+                AdjustColumnWidths();
+
                 LoadPlugins();
                 SetupEventHandlers();
-                
+
                 this.ShowInTaskbar = true;
                 this.TopMost = false;
-                
+
                 try
                 {
                     var res = new System.ComponentModel.ComponentResourceManager(typeof(FrmSettings));
@@ -77,149 +58,19 @@ namespace Pulsar.Server.Forms
             }
         }
 
-        private void InitializeComponent()
+        public class NonResizableListView : ListView
         {
-            this.btnManage = new System.Windows.Forms.Button();
-            this.btnRefresh = new System.Windows.Forms.Button();
-            this.btnBrowse = new System.Windows.Forms.Button();
-            this.listView = new NonResizableListView();
-            this.btnSave = new System.Windows.Forms.Button();
-            this.btnClose = new System.Windows.Forms.Button();
-            this.lblTitle = new System.Windows.Forms.Label();
-            this.colName = new System.Windows.Forms.ColumnHeader();
-            this.colVersion = new System.Windows.Forms.ColumnHeader();
-            this.colStatus = new System.Windows.Forms.ColumnHeader();
-            this.colType = new System.Windows.Forms.ColumnHeader();
-            this.colActions = new System.Windows.Forms.ColumnHeader();
-            this.SuspendLayout();
-            
-            this.btnManage.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left;
-            this.btnManage.Location = new System.Drawing.Point(12, 45);
-            this.btnManage.Name = "btnManage";
-            this.btnManage.Size = new System.Drawing.Size(80, 30);
-            this.btnManage.TabIndex = 0;
-            this.btnManage.Text = "Manage";
-            this.btnManage.UseVisualStyleBackColor = true;
-            
-            this.btnRefresh.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left;
-            this.btnRefresh.Location = new System.Drawing.Point(100, 45);
-            this.btnRefresh.Name = "btnRefresh";
-            this.btnRefresh.Size = new System.Drawing.Size(80, 30);
-            this.btnRefresh.TabIndex = 1;
-            this.btnRefresh.Text = "Refresh";
-            this.btnRefresh.UseVisualStyleBackColor = true;
-            
-            this.btnBrowse.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
-            this.btnBrowse.Location = new System.Drawing.Point(580, 45);
-            this.btnBrowse.Name = "btnBrowse";
-            this.btnBrowse.Size = new System.Drawing.Size(120, 30);
-            this.btnBrowse.TabIndex = 2;
-            this.btnBrowse.Text = "Browse Plugins";
-            this.btnBrowse.UseVisualStyleBackColor = true;
-            
-            this.listView.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
-            this.listView.CheckBoxes = true;
-            this.listView.FullRowSelect = true;
-            this.listView.GridLines = false;
-            this.listView.Location = new System.Drawing.Point(12, 85);
-            this.listView.Name = "listView";
-            this.listView.Size = new System.Drawing.Size(688, 350);
-            this.listView.TabIndex = 3;
-            this.listView.UseCompatibleStateImageBehavior = false;
-            this.listView.View = System.Windows.Forms.View.Details;
-            this.listView.Sorting = System.Windows.Forms.SortOrder.None;
-            this.listView.AllowColumnReorder = false;
-            this.listView.OwnerDraw = true;
-            this.listView.DrawColumnHeader += new System.Windows.Forms.DrawListViewColumnHeaderEventHandler(this.listView_DrawColumnHeader);
-            this.listView.DrawItem += new System.Windows.Forms.DrawListViewItemEventHandler(this.listView_DrawItem);
-            this.listView.DrawSubItem += new System.Windows.Forms.DrawListViewSubItemEventHandler(this.listView_DrawSubItem);
-            this.listView.ColumnClick += new System.Windows.Forms.ColumnClickEventHandler(this.listView_ColumnClick);
-            this.listView.MouseClick += new System.Windows.Forms.MouseEventHandler(this.listView_MouseClick);
-            this.listView.DoubleClick += new System.EventHandler(this.listView_DoubleClick);
-            this.listView.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            var rowHeightImages = new ImageList();
-            rowHeightImages.ImageSize = new Size(1, 28);
-            this.listView.SmallImageList = rowHeightImages;
-            
-            this.colName.Text = "Plugin Name";
-            this.colName.Width = 320;
-            
-            this.colVersion.Text = "Version";
-            this.colVersion.Width = 110;
-            
-            this.colStatus.Text = "Status";
-            this.colStatus.Width = 110;
-            
-            this.colType.Text = "Type";
-            this.colType.Width = 200;
-            
-            this.colActions.Text = "Actions";
-            this.colActions.Width = 125;
-            this.colActions.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            
-            this.btnSave.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right;
-            this.btnSave.Location = new System.Drawing.Point(500, 450);
-            this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(120, 30);
-            this.btnSave.TabIndex = 4;
-            this.btnSave.Text = "Save & Restart";
-            this.btnSave.UseVisualStyleBackColor = true;
-            
-            this.btnClose.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right;
-            this.btnClose.Location = new System.Drawing.Point(630, 450);
-            this.btnClose.Name = "btnClose";
-            this.btnClose.Size = new System.Drawing.Size(80, 30);
-            this.btnClose.TabIndex = 5;
-            this.btnClose.Text = "Close";
-            this.btnClose.UseVisualStyleBackColor = true;
-            
-            this.lblTitle.AutoSize = true;
-            this.lblTitle.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblTitle.Location = new System.Drawing.Point(12, 12);
-            this.lblTitle.Name = "lblTitle";
-            this.lblTitle.Size = new System.Drawing.Size(120, 21);
-            this.lblTitle.TabIndex = 6;
-            this.lblTitle.Text = "Plugin Manager";
-            
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(720, 500);
-            this.Controls.Add(this.lblTitle);
-            this.Controls.Add(this.btnClose);
-            this.Controls.Add(this.btnSave);
-            this.Controls.Add(this.listView);
-            this.Controls.Add(this.btnBrowse);
-            this.Controls.Add(this.btnRefresh);
-            this.Controls.Add(this.btnManage);
-            this.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Sizable;
-            this.MaximizeBox = true;
-            this.MinimizeBox = true;
-            this.MinimumSize = new System.Drawing.Size(600, 400);
-            this.Name = "FrmPluginManager";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "Plugin Manager";
-            this.ResumeLayout(false);
-            this.PerformLayout();
-
-            this.listView.Columns.Add(this.colName);
-            this.listView.Columns.Add(this.colVersion);
-            this.listView.Columns.Add(this.colStatus);
-            this.listView.Columns.Add(this.colType);
-            this.listView.Columns.Add(this.colActions);
-            
-            this.listView.Resize += (s, e) => AdjustColumnWidths();
-            this.Resize += (s, e) => AdjustColumnWidths();
-            AdjustColumnWidths();
-
-            try
+            protected override void WndProc(ref Message m)
             {
-                DarkModeManager.ApplyDarkMode(this);
-                ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Dark mode application failed: {ex.Message}");
+                if (m.Msg == 0x0201)
+                {
+                    var hitTest = this.HitTest(new Point((int)m.LParam & 0xFFFF, (int)m.LParam >> 16));
+                    if (hitTest.Location == ListViewHitTestLocations.None)
+                    {
+                        return;
+                    }
+                }
+                base.WndProc(ref m);
             }
         }
 
@@ -271,7 +122,6 @@ namespace Pulsar.Server.Forms
             }
             catch { }
         }
-
         private void SetupEventHandlers()
         {
             this.btnManage.Click += BtnManage_Click;
@@ -321,7 +171,7 @@ namespace Pulsar.Server.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to open plugins folder: {ex.Message}", "Error", 
+                MessageBox.Show($"Failed to open plugins folder: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -359,15 +209,15 @@ namespace Pulsar.Server.Forms
                 btnSave.Enabled = false;
                 btnSave.Text = "Saving...";
                 Application.DoEvents();
-                
+
                 var changes = new List<string>();
-                
+
                 foreach (var pluginInfo in _pluginInfos)
                 {
                     bool hasDll = File.Exists(pluginInfo.FilePath);
                     bool hasDisabled = File.Exists(pluginInfo.DisabledPath);
                     bool isCurrentlyEnabled = hasDll && !hasDisabled;
-                    
+
                     if (pluginInfo.Enabled != isCurrentlyEnabled)
                     {
                         if (pluginInfo.Enabled)
@@ -398,11 +248,11 @@ namespace Pulsar.Server.Forms
                         }
                     }
                 }
-                
+
                 await Task.Run(() => {
                     try { _pluginManager.ReloadPlugins(); } catch { }
                 });
-                
+
                 this.Invoke(new Action(() => {
                     LoadPlugins();
                 }));
@@ -410,9 +260,9 @@ namespace Pulsar.Server.Forms
                 this.Invoke(new Action(() => {
                     if (changes.Count > 0)
                     {
-                        var result = MessageBox.Show($"Changes saved:\n{string.Join("\n", changes)}\n\nRestart Pulsar to apply changes?", 
+                        var result = MessageBox.Show($"Changes saved:\n{string.Join("\n", changes)}\n\nRestart Pulsar to apply changes?",
                             "Plugin Manager", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                        
+
                         if (result == DialogResult.Yes)
                         {
                             var currentExe = Application.ExecutablePath;
@@ -421,16 +271,16 @@ namespace Pulsar.Server.Forms
                                 FileName = currentExe,
                                 UseShellExecute = true
                             };
-                            
+
                             System.Diagnostics.Process.Start(startInfo);
                             Application.Exit();
                         }
                     }
                     else
                     {
-                        var result = MessageBox.Show("No changes detected, but plugins have been reloaded.\n\nRestart Pulsar to ensure all plugins are properly loaded?", 
+                        var result = MessageBox.Show("No changes detected, but plugins have been reloaded.\n\nRestart Pulsar to ensure all plugins are properly loaded?",
                             "Plugin Manager", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                        
+
                         if (result == DialogResult.Yes)
                         {
                             var currentExe = Application.ExecutablePath;
@@ -439,7 +289,7 @@ namespace Pulsar.Server.Forms
                                 FileName = currentExe,
                                 UseShellExecute = true
                             };
-                            
+
                             System.Diagnostics.Process.Start(startInfo);
                             Application.Exit();
                         }
@@ -449,7 +299,7 @@ namespace Pulsar.Server.Forms
             catch (Exception ex)
             {
                 this.Invoke(new Action(() => {
-                    MessageBox.Show($"Failed to save changes: {ex.Message}", 
+                    MessageBox.Show($"Failed to save changes: {ex.Message}",
                         "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }));
             }
@@ -485,7 +335,7 @@ namespace Pulsar.Server.Forms
 
                 var enabledPlugins = _pluginManager.Plugins.ToList();
                 var pluginsDir = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "Plugins");
-                
+
                 if (!Directory.Exists(pluginsDir))
                 {
                     return;
@@ -516,7 +366,7 @@ namespace Pulsar.Server.Forms
 
                     bool isEnabledFs = File.Exists(entry.dllPath) && !File.Exists(entry.disabledPath);
                     string loadPath = isEnabledFs && File.Exists(entry.dllPath) ? entry.dllPath : (File.Exists(entry.disabledPath) ? entry.disabledPath : entry.dllPath);
-                    
+
                     var pluginInfo = new PluginInfo
                     {
                         Name = pluginName,
@@ -680,7 +530,7 @@ namespace Pulsar.Server.Forms
             {
                 _sortAscending = true;
             }
-            
+
             _lastSortColumn = e.Column;
             SortListView(e.Column);
         }
@@ -688,20 +538,20 @@ namespace Pulsar.Server.Forms
         private void SortListView(int columnIndex)
         {
             this.listView.BeginUpdate();
-            
+
             var items = new List<ListViewItem>();
             foreach (ListViewItem item in this.listView.Items)
             {
                 items.Add(item);
             }
-            
+
             items.Sort((x, y) =>
             {
                 string xText = x.SubItems[columnIndex].Text;
                 string yText = y.SubItems[columnIndex].Text;
-                
+
                 int result;
-                
+
                 switch (columnIndex)
                 {
                     case 0:
@@ -718,16 +568,16 @@ namespace Pulsar.Server.Forms
                         result = string.Compare(xText, yText, StringComparison.OrdinalIgnoreCase);
                         break;
                 }
-                
+
                 return _sortAscending ? result : -result;
             });
-            
+
             this.listView.Items.Clear();
             foreach (var item in items)
             {
                 this.listView.Items.Add(item);
             }
-            
+
             this.listView.EndUpdate();
             this.listView.Invalidate();
         }
@@ -944,10 +794,10 @@ namespace Pulsar.Server.Forms
         private void listView_DrawColumnHeader(object sender, DrawListViewColumnHeaderEventArgs e)
         {
             bool isSorted = e.ColumnIndex == _lastSortColumn;
-            
+
             Color backgroundColor = isSorted ? Color.FromArgb(70, 130, 180) : Color.FromArgb(60, 60, 63);
             Color textColor = isSorted ? Color.White : Color.White;
-            
+
             Rectangle headerFill = e.Bounds;
             if (e.ColumnIndex == this.listView.Columns.Count - 1)
             {
@@ -957,7 +807,7 @@ namespace Pulsar.Server.Forms
             {
                 e.Graphics.FillRectangle(brush, headerFill);
             }
-            
+
             var headerFlags = TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine |
                                (e.Header == this.colActions ? TextFormatFlags.HorizontalCenter : TextFormatFlags.Left);
             Rectangle headerBounds = e.Bounds;
@@ -966,7 +816,7 @@ namespace Pulsar.Server.Forms
                 headerBounds = new Rectangle(e.Bounds.X + 30, e.Bounds.Y, Math.Max(0, e.Bounds.Width - 30), e.Bounds.Height);
             }
             TextRenderer.DrawText(e.Graphics, e.Header.Text, e.Font, headerBounds, textColor, headerFlags);
-            
+
             if (e.ColumnIndex == this.listView.Columns.Count - 1)
             {
                 int right = this.listView.ClientSize.Width;
@@ -1001,7 +851,7 @@ namespace Pulsar.Server.Forms
             Color textColor = (enabledFsOverride.HasValue && !enabledFsOverride.Value)
                 ? Color.FromArgb(150, 150, 150)
                 : e.Item.ForeColor;
-            
+
             Rectangle rowFill = e.Bounds;
             if (e.ColumnIndex == this.listView.Columns.Count - 1)
             {
@@ -1011,7 +861,7 @@ namespace Pulsar.Server.Forms
             {
                 e.Graphics.FillRectangle(brush, rowFill);
             }
-            
+
             var cellFlags = TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine |
                             (e.ColumnIndex == 4 ? TextFormatFlags.HorizontalCenter : TextFormatFlags.Left);
             Rectangle cellBounds = e.Bounds;
@@ -1064,10 +914,10 @@ namespace Pulsar.Server.Forms
 
                 var assembly = System.Reflection.Assembly.LoadFrom(path);
                 var types = assembly.GetTypes();
-                
+
                 bool hasServerPlugin = types.Any(t => typeof(IServerPlugin).IsAssignableFrom(t) && !t.IsAbstract);
                 bool hasClientPlugin = types.Any(t => t.Name.Contains("Client") || t.Name.Contains("ClientModule"));
-                
+
                 if (hasServerPlugin && hasClientPlugin)
                     return "Server & Client";
                 else if (hasServerPlugin)

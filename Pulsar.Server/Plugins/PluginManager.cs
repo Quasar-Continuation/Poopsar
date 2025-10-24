@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Pulsar.Server.Plugins
 {
-    internal sealed class PluginManager
+    public sealed class PluginManager : IDisposable
     {
         private readonly IServerContext _context;
         private readonly List<IServerPlugin> _plugins = new List<IServerPlugin>();
@@ -303,6 +303,14 @@ namespace Pulsar.Server.Plugins
 
         public void Dispose()
         {
+            foreach (var plugin in _plugins)
+            {
+                if (plugin is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            }
+            _plugins.Clear();
             _watcher?.Dispose();
         }
 
