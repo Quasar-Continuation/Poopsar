@@ -8,8 +8,8 @@ namespace Pulsar.Common.Plugins
         string Version { get; }
         string[] SupportedCommands { get; }
 
-        void Initialize(byte[] initData);
-        PluginResult ExecuteCommand(string command, byte[] parameters);
+        void Initialize(Object initData);
+        PluginResult ExecuteCommand(string command, Object parameters);
         void Cleanup();
         bool IsComplete { get; }
     }
