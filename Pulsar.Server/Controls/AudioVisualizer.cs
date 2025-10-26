@@ -116,12 +116,19 @@ namespace Pulsar.Server.Controls
 
             _currentLevel += (_targetLevel - _currentLevel) * SMOOTHING;
 
-
             for (int i = 0; i < _barCount; i++)
             {
                 float baseHeight = _currentLevel;
-                float variation = (float)_random.NextDouble() * 0.3f - 0.15f;
-                _targetHeights[i] = Math.Max(0f, Math.Min(1f, baseHeight + variation));
+
+                if (_currentLevel > 0.01f)
+                {
+                    float variation = (float)_random.NextDouble() * 0.3f - 0.15f;
+                    _targetHeights[i] = Math.Max(0f, Math.Min(1f, baseHeight + variation));
+                }
+                else
+                {
+                    _targetHeights[i] = 0f;
+                }
 
                 if (_barHeights[i] < _targetHeights[i])
                 {
