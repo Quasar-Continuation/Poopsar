@@ -82,6 +82,7 @@ namespace Pulsar.Server.Forms
         {
             _connectClient.ClientState += ClientDisconnected;
             _remoteAudioHandler.MicrophoneChanged += MicrophoneChanged;
+            _remoteAudioHandler.AudioDataReceived += AudioDataReceived;
             MessageHandler.Register(_remoteAudioHandler);
         }
 
@@ -91,8 +92,53 @@ namespace Pulsar.Server.Forms
         private void UnregisterMessageHandler()
         {
             MessageHandler.Unregister(_remoteAudioHandler);
+            _remoteAudioHandler.AudioDataReceived -= AudioDataReceived;
             _remoteAudioHandler.MicrophoneChanged -= MicrophoneChanged;
             _connectClient.ClientState -= ClientDisconnected;
+        }
+
+        /// <summary>
+        /// Called when audio data is received from the remote microphone.
+        /// </summary>
+        private void AudioDataReceived(object sender, byte[] audioData)
+        {
+            if (audioData == null || audioData.Length == 0)
+                return;
+
+            float level = CalculateAudioLevel(audioData);
+
+            if (audioVisualizer.InvokeRequired)
+            {
+                audioVisualizer.BeginInvoke(new Action(() => audioVisualizer.UpdateLevel(level)));
+            }
+            else
+            {
+                audioVisualizer.UpdateLevel(level);
+            }
+        }
+
+        /// <summary>
+        /// Calculates the audio level from raw audio data.
+        /// </summary>
+        private float CalculateAudioLevel(byte[] audioData)
+        {
+            if (audioData.Length < 2)
+                return 0f;
+
+            long sum = 0;
+            int sampleCount = audioData.Length / 2;
+
+            for (int i = 0; i < audioData.Length - 1; i += 2)
+            {
+                short sample = (short)((audioData[i + 1] << 8) | audioData[i]);
+                int absSample = sample == short.MinValue ? short.MaxValue : Math.Abs(sample);
+                sum += absSample;
+            }
+
+            float average = (float)sum / sampleCount;
+            float normalized = average / 32768f;
+
+            return Math.Min(normalized * 8f, 1f);
         }
 
         /// <summary>
@@ -124,6 +170,7 @@ namespace Pulsar.Server.Forms
             {
                 ToggleConfigurationControls(false);
                 _remoteAudioHandler.EndReceiveAudio(cbDevices.SelectedIndex);
+                audioVisualizer.Reset();
             }
             catch (Exception ex)
             {

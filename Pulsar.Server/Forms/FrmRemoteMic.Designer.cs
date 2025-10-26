@@ -40,12 +40,13 @@ namespace Pulsar.Server.Forms
             this.barQuality = new System.Windows.Forms.TrackBar();
             this.button1 = new System.Windows.Forms.Button();
             this.button2 = new System.Windows.Forms.Button();
+            this.audioVisualizer = new Pulsar.Server.Controls.AudioVisualizer();
             ((System.ComponentModel.ISupportInitialize)(this.barQuality)).BeginInit();
             this.SuspendLayout();
             // 
             // cbDevices
             // 
-            this.cbDevices.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.cbDevices.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.cbDevices.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cbDevices.FormattingEnabled = true;
@@ -76,7 +77,7 @@ namespace Pulsar.Server.Forms
             // 
             // lblQualityShow
             // 
-            this.lblQualityShow.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.lblQualityShow.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.lblQualityShow.AutoSize = true;
             this.lblQualityShow.Location = new System.Drawing.Point(175, 60);
@@ -87,7 +88,7 @@ namespace Pulsar.Server.Forms
             // 
             // barQuality
             // 
-            this.barQuality.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.barQuality.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.barQuality.Location = new System.Drawing.Point(114, 28);
             this.barQuality.Maximum = 12;
@@ -120,11 +121,22 @@ namespace Pulsar.Server.Forms
             this.button2.UseVisualStyleBackColor = true;
             this.button2.Click += new System.EventHandler(this.button2_Click);
             // 
+            // audioVisualizer
+            // 
+            this.audioVisualizer.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.audioVisualizer.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(28)))), ((int)(((byte)(28)))), ((int)(((byte)(28)))));
+            this.audioVisualizer.Location = new System.Drawing.Point(9, 140);
+            this.audioVisualizer.Name = "audioVisualizer";
+            this.audioVisualizer.Size = new System.Drawing.Size(263, 30);
+            this.audioVisualizer.TabIndex = 15;
+            // 
             // FrmRemoteMic
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
-            this.ClientSize = new System.Drawing.Size(285, 145);
+            this.ClientSize = new System.Drawing.Size(285, 180);
+            this.Controls.Add(this.audioVisualizer);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.button1);
             this.Controls.Add(this.label1);
@@ -156,5 +168,6 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.TrackBar barQuality;
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Button button2;
+        private Pulsar.Server.Controls.AudioVisualizer audioVisualizer;
     }
 }

