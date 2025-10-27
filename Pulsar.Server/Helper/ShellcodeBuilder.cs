@@ -65,8 +65,8 @@ namespace Pulsar.Server.Helper
             EntropyLevel entropy = EntropyLevel.RandomSymmetric,
             Architecture arch = Architecture.Both,
             Format format = Format.Binary,
-            Compress compression = Compress.None,
-            Bypass bypass = Bypass.Continue,
+            Compress compression = Compress.aPLib,
+            Bypass bypass = Bypass.None,
             Headers headers = Headers.Overwrite
         )
         {
