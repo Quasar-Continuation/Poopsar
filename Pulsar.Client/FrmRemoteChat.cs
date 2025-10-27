@@ -1,4 +1,5 @@
-﻿using Pulsar.Common.Messages.UserSupport.RemoteChat;
+﻿using Pulsar.Client.Utilities.DarkMode;
+using Pulsar.Common.Messages.UserSupport.RemoteChat;
 using Pulsar.Common.Networking;
 using System;
 using System.Collections.Generic;
@@ -45,6 +46,7 @@ namespace Pulsar.Client
 
             this._connectedClient = client;
             InitializeComponent();
+            DarkModeManager.ApplyDarkMode(this);
             Active = true;
             txtMessage.KeyDown += new KeyEventHandler(txtMessage_KeyDown); // Subscribe to the KeyDown event
 
