@@ -24,6 +24,7 @@ using Pulsar.Server.Utilities;
 using Pulsar.Server.Plugins;
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -74,8 +75,10 @@ namespace Pulsar.Server.Forms
         private readonly ClientDebugLog _clientDebugLogHandler;
         private readonly DeferredAssemblyHandler _deferredAssemblyHandler = new DeferredAssemblyHandler();
         private readonly UniversalPluginResponseHandler _universalPluginResponseHandler = new UniversalPluginResponseHandler();
-        private readonly Queue<KeyValuePair<Client, bool>> _clientConnections = new Queue<KeyValuePair<Client, bool>>();
-        private readonly object _processingClientConnectionsLock = new object();
+        private readonly BlockingCollection<KeyValuePair<Client, bool>> _clientConnections = new(new ConcurrentQueue<KeyValuePair<Client, bool>>());
+        private readonly object _clientConnectionsStartLock = new object();
+        private Task _clientConnectionsConsumerTask;
+        private CancellationTokenSource _clientConnectionsCts;
         private readonly object _lockClients = new object();
         private readonly object _offlineRefreshLock = new object();
         private readonly object _statsRefreshLock = new object();
@@ -448,6 +451,30 @@ namespace Pulsar.Server.Forms
                     notifyIcon.Visible = false;
                     notifyIcon.Dispose();
                 }
+                try
+                {
+                    _statusUpdateTimer?.Dispose();
+                    _statusUpdateTimer = null;
+                }
+                catch { }
+
+                try
+                {
+                    if (_clientConnectionsCts != null)
+                    {
+                        _clientConnectionsCts.Cancel();
+                        _clientConnections.CompleteAdding();
+                        _clientConnectionsConsumerTask?.Wait(2000);
+                        _clientConnectionsCts.Dispose();
+                        _clientConnectionsCts = null;
+                        try
+                        {
+                            _clientConnections?.Dispose();
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
             }
             catch (Exception ex)
             {
@@ -690,18 +717,16 @@ namespace Pulsar.Server.Forms
                 OfflineClientRepository.UpsertClient(client);
                 ScheduleOfflineListRefresh();
                 ScheduleStatsRefresh();
-                lock (_clientConnections)
-                {
-                    if (!ListenServer.Listening) return;
-                    _clientConnections.Enqueue(new KeyValuePair<Client, bool>(client, true));
-                }
+                if (!ListenServer.Listening) return;
+                _clientConnections.Add(new KeyValuePair<Client, bool>(client, true));
 
-                lock (_processingClientConnectionsLock)
+                lock (_clientConnectionsStartLock)
                 {
                     if (!_processingClientConnections)
                     {
                         _processingClientConnections = true;
-                        ThreadPool.QueueUserWorkItem(ProcessClientConnections);
+                        _clientConnectionsCts = new CancellationTokenSource();
+                        _clientConnectionsConsumerTask = Task.Run(() => ProcessClientConnectionsLoop(_clientConnectionsCts.Token));
                     }
                 }
                 UpdateConnectedClientsCount();
@@ -722,18 +747,16 @@ namespace Pulsar.Server.Forms
             {
                 _clientAutoPluginState.Remove(client);
             }
-            lock (_clientConnections)
-            {
-                if (!ListenServer.Listening) return;
-                _clientConnections.Enqueue(new KeyValuePair<Client, bool>(client, false));
-            }
+            if (!ListenServer.Listening) return;
+            _clientConnections.Add(new KeyValuePair<Client, bool>(client, false));
 
-            lock (_processingClientConnectionsLock)
+            lock (_clientConnectionsStartLock)
             {
                 if (!_processingClientConnections)
                 {
                     _processingClientConnections = true;
-                    ThreadPool.QueueUserWorkItem(ProcessClientConnections);
+                    _clientConnectionsCts = new CancellationTokenSource();
+                    _clientConnectionsConsumerTask = Task.Run(() => ProcessClientConnectionsLoop(_clientConnectionsCts.Token));
                 }
             }
 
@@ -772,62 +795,67 @@ namespace Pulsar.Server.Forms
             });
         }
 
-        private void ProcessClientConnections(object state)
+        private void ProcessClientConnectionsLoop(CancellationToken token)
         {
             const int batchSize = 10; // up to 10 clients at once
             var batch = new List<KeyValuePair<Client, bool>>(batchSize);
 
-            while (true)
+            try
             {
-                batch.Clear();
-
-                lock (_clientConnections)
+                while (!token.IsCancellationRequested)
                 {
+                    batch.Clear();
+
+                    KeyValuePair<Client, bool> first;
+                    try
+                    {
+                        first = _clientConnections.Take(token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+
                     if (!ListenServer.Listening)
                     {
-                        _clientConnections.Clear();
+                        while (_clientConnections.TryTake(out _)) { }
+                        break;
                     }
 
-                    if (_clientConnections.Count == 0)
+                    batch.Add(first);
+                    while (batch.Count < batchSize && _clientConnections.TryTake(out var next))
                     {
-                        lock (_processingClientConnectionsLock)
+                        batch.Add(next);
+                    }
+
+                    foreach (var client in batch)
+                    {
+                        if (client.Key != null)
                         {
-                            _processingClientConnections = false;
-                        }
-                        RefreshStarButtons();
-                        return;
-                    }
+                            switch (client.Value)
+                            {
+                                case true:
+                                    AddClientToListview(client.Key);
+                                    ThreadPool.QueueUserWorkItem(_ => StartAutomatedTask(client.Key));
+                                    if (Settings.ShowPopup)
+                                        ThreadPool.QueueUserWorkItem(_ => ShowPopup(client.Key));
+                                    break;
 
-                    while (batch.Count < batchSize && _clientConnections.Count > 0)
-                    {
-                        batch.Add(_clientConnections.Dequeue());
-                    }
-                }
-
-                foreach (var client in batch)
-                {
-                    if (client.Key != null)
-                    {
-                        switch (client.Value)
-                        {
-                            case true:
-                                AddClientToListview(client.Key);
-                                ThreadPool.QueueUserWorkItem(_ => StartAutomatedTask(client.Key));
-                                if (Settings.ShowPopup)
-                                    ThreadPool.QueueUserWorkItem(_ => ShowPopup(client.Key));
-                                break;
-
-                            case false:
-                                RemoveClientFromListview(client.Key);
-                                break;
+                                case false:
+                                    RemoveClientFromListview(client.Key);
+                                    break;
+                            }
                         }
                     }
                 }
-
-                if (_clientConnections.Count > 0)
+            }
+            finally
+            {
+                lock (_clientConnectionsStartLock)
                 {
-                    Thread.Sleep(10);
+                    _processingClientConnections = false;
                 }
+                RefreshStarButtons();
             }
         }
 
@@ -2027,7 +2055,8 @@ namespace Pulsar.Server.Forms
 
         private readonly Dictionary<Client, Dictionary<string, object>> _pendingStatusUpdates = new Dictionary<Client, Dictionary<string, object>>();
         private readonly object _statusUpdateLock = new object();
-        private bool _statusUpdatePending = false;
+        private System.Threading.Timer _statusUpdateTimer;
+        private const int StatusUpdateDebounceMs = 50;
 
         private string _currentSearchFilter = "";
         private readonly Dictionary<Client, ListViewItem> _allClientItems = new Dictionary<Client, ListViewItem>();
@@ -2058,24 +2087,23 @@ namespace Pulsar.Server.Forms
 
                 _pendingStatusUpdates[client][field] = value;
 
-                if (!_statusUpdatePending)
+                if (_statusUpdateTimer == null)
                 {
-                    _statusUpdatePending = true;
-                    ThreadPool.QueueUserWorkItem(_ => ProcessStatusUpdates());
+                    _statusUpdateTimer = new System.Threading.Timer(_ => ProcessStatusUpdatesTimerCallback(), null, System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
                 }
+
+                _statusUpdateTimer.Change(StatusUpdateDebounceMs, System.Threading.Timeout.Infinite);
             }
         }
 
-        private void ProcessStatusUpdates()
+        private void ProcessStatusUpdatesTimerCallback()
         {
-            Thread.Sleep(50); //small delay for batched updates.
-
             Dictionary<Client, Dictionary<string, object>> updates;
             lock (_statusUpdateLock)
             {
+                if (_pendingStatusUpdates.Count == 0) return;
                 updates = new Dictionary<Client, Dictionary<string, object>>(_pendingStatusUpdates);
                 _pendingStatusUpdates.Clear();
-                _statusUpdatePending = false;
             }
 
             if (updates.Count == 0) return;
