@@ -217,7 +217,7 @@ namespace Pulsar.Client.Helper
             var dummy = IntPtr.Zero;
 
             // Doesn't really matter if this fails
-            NativeMethods.SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, 1 /* TRUE */, ref dummy, SPIF_SENDWININICHANGE);
+            NativeMethods.SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, 1 /* true */, ref dummy, SPIF_SENDWININICHANGE);
 
         }
 
