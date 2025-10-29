@@ -1,8 +1,8 @@
 # Pulsar
 
-![GitHub Actions Build Status](https://img.shields.io/github/actions/workflow/status/Quasar-Continuation/PulsarV2/dotnet.yml)
-[![Downloads](https://img.shields.io/github/downloads/Quasar-Continuation/PulsarV2/total.svg)](https://github.com/Quasar-Continuation/PulsarV2/releases)
-[![License](https://img.shields.io/github/license/Quasar-Continuation/PulsarV2.svg)](LICENSE)
+![GitHub Actions Build Status](https://img.shields.io/github/actions/workflow/status/Quasar-Continuation/Poopsar/dotnet.yml)
+[![Downloads](https://img.shields.io/github/downloads/Quasar-Continuation/Poopsar/total.svg)](https://github.com/Quasar-Continuation/Poopsar/releases)
+[![License](https://img.shields.io/github/license/Quasar-Continuation/Poopsar.svg)](LICENSE)
 ![.NET](https://img.shields.io/badge/.NET-4.7.2%2B-blue)
 ![Windows](https://img.shields.io/badge/OS-Windows-blue)
 
@@ -85,7 +85,7 @@ Join our [Telegram channel](https://t.me/novashadowisgay) for updates, discussio
 
 ## 📥 Download
 
-- **[Latest Stable Release](https://github.com/Quasar-Continuation/PulsarV2/releases)**
+- **[Latest Stable Release](https://github.com/Quasar-Continuation/Poopsar/releases)**
 
 ---
 
