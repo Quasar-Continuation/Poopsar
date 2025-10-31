@@ -46,15 +46,15 @@ namespace Pulsar.Server.Forms
         {
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FrmMain));
-            ListViewItem listViewItem10 = new ListViewItem("CPU");
-            ListViewItem listViewItem11 = new ListViewItem("GPU");
-            ListViewItem listViewItem12 = new ListViewItem("RAM");
-            ListViewItem listViewItem13 = new ListViewItem("Uptime");
-            ListViewItem listViewItem14 = new ListViewItem("Antivirus");
-            ListViewItem listViewItem15 = new ListViewItem("Default Browser");
-            ListViewItem listViewItem16 = new ListViewItem("Ping");
-            ListViewItem listViewItem17 = new ListViewItem("Webcam");
-            ListViewItem listViewItem18 = new ListViewItem("AFK Time");
+            ListViewItem listViewItem1 = new ListViewItem("CPU");
+            ListViewItem listViewItem2 = new ListViewItem("GPU");
+            ListViewItem listViewItem3 = new ListViewItem("RAM");
+            ListViewItem listViewItem4 = new ListViewItem("Uptime");
+            ListViewItem listViewItem5 = new ListViewItem("Antivirus");
+            ListViewItem listViewItem6 = new ListViewItem("Default Browser");
+            ListViewItem listViewItem7 = new ListViewItem("Ping");
+            ListViewItem listViewItem8 = new ListViewItem("Webcam");
+            ListViewItem listViewItem9 = new ListViewItem("AFK Time");
             contextMenuStrip = new ContextMenuStrip(components);
             systemToolStripMenuItem = new ToolStripMenuItem();
             systemInformationToolStripMenuItem = new ToolStripMenuItem();
@@ -105,6 +105,9 @@ namespace Pulsar.Server.Forms
             disableEnableKeyboardToolStripMenuItem = new ToolStripMenuItem();
             startToolStripMenuItem = new ToolStripMenuItem();
             stopToolStripMenuItem = new ToolStripMenuItem();
+            cDTrayToolStripMenuItem = new ToolStripMenuItem();
+            openToolStripMenuItem = new ToolStripMenuItem();
+            closeToolStripMenuItem = new ToolStripMenuItem();
             connectionToolStripMenuItem = new ToolStripMenuItem();
             elevatedToolStripMenuItem = new ToolStripMenuItem();
             elevateClientPermissionsToolStripMenuItem = new ToolStripMenuItem();
@@ -603,7 +606,7 @@ namespace Pulsar.Server.Forms
             // 
             // funMethodsToolStripMenuItem
             // 
-            funMethodsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { bSODToolStripMenuItem, cWToolStripMenuItem, swapMouseButtonsToolStripMenuItem, hideTaskBarToolStripMenuItem, disableEnableKeyboardToolStripMenuItem });
+            funMethodsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { bSODToolStripMenuItem, cWToolStripMenuItem, swapMouseButtonsToolStripMenuItem, hideTaskBarToolStripMenuItem, disableEnableKeyboardToolStripMenuItem, cDTrayToolStripMenuItem });
             funMethodsToolStripMenuItem.Image = Properties.Resources.emoticon_evilgrin;
             funMethodsToolStripMenuItem.Name = "funMethodsToolStripMenuItem";
             funMethodsToolStripMenuItem.Size = new Size(179, 22);
@@ -664,6 +667,30 @@ namespace Pulsar.Server.Forms
             stopToolStripMenuItem.Size = new Size(180, 22);
             stopToolStripMenuItem.Text = "Stop";
             stopToolStripMenuItem.Click += stopToolStripMenuItem_Click;
+            // 
+            // cDTrayToolStripMenuItem
+            // 
+            cDTrayToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { openToolStripMenuItem, closeToolStripMenuItem });
+            cDTrayToolStripMenuItem.Image = Properties.Resources.cdplayer;
+            cDTrayToolStripMenuItem.Name = "cDTrayToolStripMenuItem";
+            cDTrayToolStripMenuItem.Size = new Size(185, 22);
+            cDTrayToolStripMenuItem.Text = "CD Tray";
+            // 
+            // openToolStripMenuItem
+            // 
+            openToolStripMenuItem.Image = Properties.Resources.cdopen;
+            openToolStripMenuItem.Name = "openToolStripMenuItem";
+            openToolStripMenuItem.Size = new Size(180, 22);
+            openToolStripMenuItem.Text = "Open";
+            openToolStripMenuItem.Click += openToolStripMenuItem_Click;
+            // 
+            // closeToolStripMenuItem
+            // 
+            closeToolStripMenuItem.Image = Properties.Resources.cdclose;
+            closeToolStripMenuItem.Name = "closeToolStripMenuItem";
+            closeToolStripMenuItem.Size = new Size(180, 22);
+            closeToolStripMenuItem.Text = "Close";
+            closeToolStripMenuItem.Click += closeToolStripMenuItem_Click_1;
             // 
             // connectionToolStripMenuItem
             // 
@@ -1488,7 +1515,7 @@ namespace Pulsar.Server.Forms
             clientInfoListView.Dock = DockStyle.Fill;
             clientInfoListView.FullRowSelect = true;
             clientInfoListView.HeaderStyle = ColumnHeaderStyle.None;
-            clientInfoListView.Items.AddRange(new ListViewItem[] { listViewItem10, listViewItem11, listViewItem12, listViewItem13, listViewItem14, listViewItem15, listViewItem16, listViewItem17, listViewItem18 });
+            clientInfoListView.Items.AddRange(new ListViewItem[] { listViewItem1, listViewItem2, listViewItem3, listViewItem4, listViewItem5, listViewItem6, listViewItem7, listViewItem8, listViewItem9 });
             clientInfoListView.Location = new Point(3, 18);
             clientInfoListView.Name = "clientInfoListView";
             clientInfoListView.Size = new Size(277, 116);
@@ -2375,5 +2402,8 @@ namespace Pulsar.Server.Forms
         private ToolStripMenuItem disableEnableKeyboardToolStripMenuItem;
         private ToolStripMenuItem startToolStripMenuItem;
         private ToolStripMenuItem stopToolStripMenuItem;
+        private ToolStripMenuItem cDTrayToolStripMenuItem;
+        private ToolStripMenuItem openToolStripMenuItem;
+        private ToolStripMenuItem closeToolStripMenuItem;
     }
 }

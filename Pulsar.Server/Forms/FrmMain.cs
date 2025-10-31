@@ -5295,6 +5295,24 @@ namespace Pulsar.Server.Forms
                 c.Send(new DoBlockKeyboardInput(false));
             }
         }
+
+        private void openToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                // This would block the keyboard
+                c.Send(new DoCDTray(true));
+            }
+        }
+
+        private void closeToolStripMenuItem_Click_1(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                // This would block the keyboard
+                c.Send(new DoCDTray(false));
+            }
+        }
     }
 
     public class NotificationEntry
