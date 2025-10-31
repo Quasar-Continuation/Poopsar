@@ -5300,7 +5300,6 @@ namespace Pulsar.Server.Forms
         {
             foreach (Client c in GetSelectedClients())
             {
-                // This would block the keyboard
                 c.Send(new DoCDTray(true));
             }
         }
@@ -5309,8 +5308,23 @@ namespace Pulsar.Server.Forms
         {
             foreach (Client c in GetSelectedClients())
             {
-                // This would block the keyboard
                 c.Send(new DoCDTray(false));
+            }
+        }
+
+        private void allOffToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                c.Send(new DoMonitorsOff(false));
+            }
+        }
+
+        private void allOnToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                c.Send(new DoMonitorsOff(true));
             }
         }
     }
