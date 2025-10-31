@@ -362,6 +362,9 @@ namespace Pulsar.Server.Forms
             UpdatePastebinUI();
 
             btnShellcode.Enabled = File.Exists(Path.Combine(Environment.CurrentDirectory, "donut.exe"));
+            groupBox1.Visible = File.Exists(Path.Combine(Environment.CurrentDirectory, "donut.exe"));
+
+            comboBox1.SelectedIndex = 0;
         }
 
         private void FrmBuilder_FormClosing(object sender, FormClosingEventArgs e)

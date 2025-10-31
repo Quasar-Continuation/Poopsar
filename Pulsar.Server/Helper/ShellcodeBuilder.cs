@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
+using System.Windows.Forms;
+using Pulsar.Server.Forms;
 
 namespace Pulsar.Server.Helper
 {
@@ -65,19 +67,22 @@ namespace Pulsar.Server.Helper
             EntropyLevel entropy = EntropyLevel.RandomSymmetric,
             Architecture arch = Architecture.Both,
             Format format = Format.Binary,
-            Compress compression = Compress.aPLib,
-            Bypass bypass = Bypass.None,
             Headers headers = Headers.Overwrite
         )
         {
             if (string.IsNullOrEmpty(donutExePath))
                 donutExePath = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "donut.exe");
+
             if (!File.Exists(donutExePath))
                 throw new FileNotFoundException("donut.exe not found", donutExePath);
+
             if (!File.Exists(binaryPath))
                 throw new FileNotFoundException("Input Binary not found", binaryPath);
 
-            List<String> args = new List<String>
+            Compress compression = GetCompressionFromForm();
+            Bypass bypass = GetBypassFromForm();
+
+            List<string> args = new List<string>
             {
                 $"-e {(int)entropy}",
                 $"-a {(int)arch}",
@@ -90,10 +95,10 @@ namespace Pulsar.Server.Helper
                 $"-b {(int)bypass}",
                 $"-k {(int)headers}",
             };
+
             if (!string.IsNullOrEmpty(clrVersion))
-            {
                 args.Add($"-r {clrVersion}");
-            }
+
             ProcessStartInfo psi = new ProcessStartInfo
             {
                 FileName = donutExePath,
@@ -104,34 +109,66 @@ namespace Pulsar.Server.Helper
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden
             };
+
             using (Process proc = Process.Start(psi))
             {
                 proc.WaitForExit();
                 if (proc.ExitCode != 0)
                 {
-                    var stdout = proc.StandardOutput.ReadToEnd();
-                    var stderr = proc.StandardError.ReadToEnd();
-                    throw new InvalidOperationException(
-                        $"Donut failed (exit {proc.ExitCode})\nSTDOUT: {stdout}\nSTDERR: {stderr}"
-                    );
+                    string stdout = proc.StandardOutput.ReadToEnd();
+                    string stderr = proc.StandardError.ReadToEnd();
+                    throw new InvalidOperationException($"Donut failed (exit {proc.ExitCode})\nSTDOUT: {stdout}\nSTDERR: {stderr}");
                 }
             }
+
             try
             {
-                byte[] bytes = File.ReadAllBytes(binaryPath);
+                byte[] bytes = File.ReadAllBytes(outputBinPath);
                 if (deleteOutput)
-                {
-                    File.Delete(binaryPath);
-                }
+                    File.Delete(outputBinPath);
+
                 return bytes;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex.Message);
-                throw new InvalidOperationException(
-                    $"Failed to read generated shellcode!"
-                );
+                throw new InvalidOperationException($"Failed to read generated shellcode: {ex.Message}");
             }
+        }
+
+        private static Compress GetCompressionFromForm()
+        {
+            FrmBuilder form = GetBuilderForm();
+            string compressionText = form.comboBox1.Text;
+            return ConvertCompressionTextToEnum(compressionText);
+        }
+
+        private static Bypass GetBypassFromForm()
+        {
+            FrmBuilder form = GetBuilderForm();
+            return form.checkBox2.Checked ? Bypass.Continue : Bypass.None;
+        }
+
+        private static FrmBuilder GetBuilderForm()
+        {
+            foreach (Form form in Application.OpenForms)
+            {
+                if (form is FrmBuilder builderForm)
+                    return builderForm;
+            }
+
+            throw new InvalidOperationException("FrmBuilder form not found or not accessible");
+        }
+
+        private static Compress ConvertCompressionTextToEnum(string compressionText)
+        {
+            return compressionText switch
+            {
+                "None" => Compress.None,
+                "aPLib" => Compress.aPLib,
+                "LZNT1" => Compress.LZNT1,
+                "Xpress" => Compress.Xpress,
+                _ => throw new ArgumentException($"Invalid compression type: {compressionText}")
+            };
         }
     }
 }
