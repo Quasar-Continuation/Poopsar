@@ -145,7 +145,7 @@ namespace Pulsar.Server.Forms
 
             InitializeSearch();
             InitializeNotificationTracking();
-            
+
             // Initialize Plugin System
             InitializePlugins();
         }
@@ -432,20 +432,20 @@ namespace Pulsar.Server.Forms
 
                 if (ListenServer != null)
                     ListenServer.Disconnect();
-                    
+
                 UnregisterMessageHandler();
 
                 _clientPluginCatalog?.Dispose();
-                
+
                 if (_previewImageHandler != null)
                 {
                     MessageHandler.Unregister(_previewImageHandler);
                     _previewImageHandler.Dispose();
                 }
-                
+
                 if (_discordRpc != null)
                     _discordRpc.Enabled = false;  // Disable Discord RPC on close
-                    
+
                 if (notifyIcon != null)
                 {
                     notifyIcon.Visible = false;
@@ -730,7 +730,7 @@ namespace Pulsar.Server.Forms
                     }
                 }
                 UpdateConnectedClientsCount();
-                
+
                 // Load plugins for the new client
                 LoadPluginsForClient(client);
             }
@@ -4946,21 +4946,21 @@ namespace Pulsar.Server.Forms
                 _serverContext = new ServerContext(this);
                 _pluginManager = new PluginManager(_serverContext);
                 _pluginManager.PluginsChanged += OnPluginsChanged;
-                
+
                 var pluginsDir = Path.Combine(Application.StartupPath, "Plugins");
                 if (!Directory.Exists(pluginsDir))
                 {
                     Directory.CreateDirectory(pluginsDir);
                 }
-                
+
                 _pluginManager.LoadFrom(pluginsDir);
 
                 _clientPluginCatalog = new ClientPluginCatalog(_serverContext);
                 _clientPluginCatalog.PluginsChanged += OnClientPluginsChanged;
                 _clientPluginCatalog.LoadFrom(pluginsDir);
-                
+
                 ApplyUIExtensions();
-                
+
                 UpdatePluginStatus();
             }
             catch (Exception ex)
@@ -4976,7 +4976,7 @@ namespace Pulsar.Server.Forms
                 Invoke(new Action<object, EventArgs>(OnPluginsChanged), sender, e);
                 return;
             }
-            
+
             ApplyUIExtensions();
             UpdatePluginStatus();
         }
@@ -5027,7 +5027,7 @@ namespace Pulsar.Server.Forms
                 SendClientOnlyPlugins(client);
             }
         }
-        
+
         private void ApplyUIExtensions()
         {
             try
@@ -5046,7 +5046,7 @@ namespace Pulsar.Server.Forms
                         }
                     }
                 }
-                
+
                 var toolStrip = FindControl<ToolStrip>(this);
                 if (toolStrip != null)
                 {
@@ -5059,7 +5059,7 @@ namespace Pulsar.Server.Forms
                         }
                     }
                 }
-                
+
                 var menuStrip = FindControl<MenuStrip>(this);
                 if (menuStrip != null)
                 {
@@ -5080,19 +5080,19 @@ namespace Pulsar.Server.Forms
                 System.Diagnostics.Debug.WriteLine($"Error applying UI extensions: {ex.Message}");
             }
         }
-        
+
         private T FindControl<T>(Control parent) where T : Control
         {
             if (parent is T target)
                 return target;
-                
+
             foreach (Control child in parent.Controls)
             {
                 var found = FindControl<T>(child);
                 if (found != null)
                     return found;
             }
-            
+
             return null;
         }
 
@@ -5210,12 +5210,12 @@ namespace Pulsar.Server.Forms
                 // Get the plugin's client module bytes
                 var pluginType = serverPlugin.GetType();
                 var asm = pluginType.Assembly;
-                
+
                 // Look for embedded client module
                 var clientModuleName = $"{pluginType.Name}.ClientModule.dll";
                 var resourceName = asm.GetManifestResourceNames()
                     .FirstOrDefault(n => n.EndsWith(clientModuleName, StringComparison.OrdinalIgnoreCase));
-                
+
                 if (resourceName != null)
                 {
                     using (var stream = asm.GetManifestResourceStream(resourceName))
@@ -5223,10 +5223,10 @@ namespace Pulsar.Server.Forms
                     {
                         stream.CopyTo(ms);
                         var clientBytes = ms.ToArray();
-                        
+
                         // Send the plugin to the client
                         var pluginId = $"{pluginType.Name}_{Guid.NewGuid():N}";
-                        PushSender.LoadUniversalPlugin(client, pluginId, clientBytes, null, 
+                        PushSender.LoadUniversalPlugin(client, pluginId, clientBytes, null,
                             $"{pluginType.Name}.ClientModule", "Initialize");
                     }
                 }
@@ -5235,12 +5235,12 @@ namespace Pulsar.Server.Forms
                     // Try to load from file system
                     var pluginsDir = Path.Combine(Application.StartupPath, "Plugins");
                     var clientModulePath = Path.Combine(pluginsDir, $"{pluginType.Name}.ClientModule.dll");
-                    
+
                     if (File.Exists(clientModulePath))
                     {
                         var clientBytes = File.ReadAllBytes(clientModulePath);
                         var pluginId = $"{pluginType.Name}_{Guid.NewGuid():N}";
-                        PushSender.LoadUniversalPlugin(client, pluginId, clientBytes, null, 
+                        PushSender.LoadUniversalPlugin(client, pluginId, clientBytes, null,
                             $"{pluginType.Name}.ClientModule", "Initialize");
                     }
                 }
@@ -5277,6 +5277,24 @@ namespace Pulsar.Server.Forms
         }
 
         #endregion Plugin System
+
+        private void startToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                // This would block the keyboard
+                c.Send(new DoBlockKeyboardInput(true));
+            }
+        }
+
+        private void stopToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                // This would block the keyboard
+                c.Send(new DoBlockKeyboardInput(false));
+            }
+        }
     }
 
     public class NotificationEntry

