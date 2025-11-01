@@ -547,6 +547,15 @@ namespace Pulsar.Server.Forms
         {
             SwitchDirectory(_currentDir);
         }
+        public static void OpenDownloadFolderFor(Client client)
+        {
+            var path = client.Value.DownloadDirectory;
+
+            if (!Directory.Exists(path))
+                Directory.CreateDirectory(path);
+
+            Process.Start("explorer.exe", path);
+        }
 
         /// <summary>
         /// Switches to a new directory and fetches the contents of it.

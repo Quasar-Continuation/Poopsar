@@ -16,6 +16,7 @@ namespace Pulsar.Common.Helpers
             EightOrHigher = Win32NT && (Environment.OSVersion.Version >= new Version(6, 2, 9200));
             EightPointOneOrHigher = Win32NT && (Environment.OSVersion.Version >= new Version(6, 3));
             TenOrHigher = Win32NT && (Environment.OSVersion.Version >= new Version(10, 0));
+            ElevenOrHigher = Win32NT && (Environment.OSVersion.Version >= new Version(10, 0) && Environment.OSVersion.Version.Build >= 22000);
 
             Name = GetOSNameFromEnvironment();
 
@@ -83,6 +84,14 @@ namespace Pulsar.Common.Helpers
         public static bool TenOrHigher { get; }
 
         /// <summary>
+        /// Returns a value indicating whether the Operating System is Windows 11 or higher.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if the Operating System is Windows 11 or higher; otherwise, <c>false</c>.
+        /// </value>
+        public static bool ElevenOrHigher { get; }
+
+        /// <summary>
         /// Gets the OS name from environment variables and registry as fallback for WMI.
         /// </summary>
         private static string GetOSNameFromEnvironment()
@@ -95,19 +104,42 @@ namespace Pulsar.Common.Helpers
                     if (key != null)
                     {
                         var productName = key.GetValue("ProductName")?.ToString();
+                        var currentBuild = key.GetValue("CurrentBuild")?.ToString();
+                        var displayVersion = key.GetValue("DisplayVersion")?.ToString();
+                        var ubr = key.GetValue("UBR")?.ToString(); // Update Build Revision
+
                         if (!string.IsNullOrEmpty(productName))
                         {
+                            // Fix Windows 11 detection - registry might still report "Windows 10" in some cases
+                            if (productName.Contains("Windows 10"))
+                            {
+                                // Check if this is actually Windows 11
+                                if (int.TryParse(currentBuild, out int buildNumber) && buildNumber >= 22000)
+                                {
+                                    return "Windows 11" + (string.IsNullOrEmpty(displayVersion) ? "" : " " + displayVersion);
+                                }
+                            }
+
+                            // Handle Windows 11 that's properly reported in registry
+                            if (productName.Contains("Windows 11"))
+                            {
+                                return productName;
+                            }
+
                             return productName;
                         }
                     }
                 }
 
-                // Fallback to Environment.OSVersion (less detailed but always available)
+                // Fallback to Environment.OSVersion with proper Windows 11 detection
                 var version = Environment.OSVersion;
                 if (version.Platform == PlatformID.Win32NT)
                 {
+                    // Windows 11 has build number 22000 or higher
                     if (version.Version.Major == 10 && version.Version.Minor == 0)
+                    {
                         return version.Version.Build >= 22000 ? "Windows 11" : "Windows 10";
+                    }
                     else if (version.Version.Major == 6)
                     {
                         if (version.Version.Minor == 3) return "Windows 8.1";

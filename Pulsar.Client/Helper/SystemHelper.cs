@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using Pulsar.Common.Helpers;
 using System;
+using System.Collections.Generic;
 using System.Management;
 
 namespace Pulsar.Client.Helper
@@ -115,19 +116,38 @@ namespace Pulsar.Client.Helper
         {
             try
             {
-                string registryKey = @"Software\Microsoft\Windows\Shell\Associations\UrlAssociations\http\UserChoice";
-                using (RegistryKey key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(registryKey))
+                const string registryKey = @"Software\Microsoft\Windows\Shell\Associations\UrlAssociations\http\UserChoice";
+                using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(registryKey))
                 {
-                    if (key != null)
+                    string progId = key?.GetValue("ProgId")?.ToString() ?? "";
+
+                    if (!string.IsNullOrEmpty(progId))
                     {
-                        var browserProgId = key.GetValue("ProgId")?.ToString();
-                        browserProgId = browserProgId.Replace("HTM", "");
-                        return browserProgId ?? "-";
+                        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        { "ChromeHTML", "Google Chrome" },
+                        { "MSEdgeHTM", "Microsoft Edge" },
+                        { "IE.HTTP", "Internet Explorer" },
+                        { "FirefoxURL", "Mozilla Firefox" },
+                        { "BraveHTML", "Brave" },
+                        { "OperaStable", "Opera" },
+                        { "VivaldiHTM", "Vivaldi" }
+                    };
+
+                        foreach (var kvp in map)
+                        {
+                            if (progId.StartsWith(kvp.Key, StringComparison.OrdinalIgnoreCase))
+                                return kvp.Value;
+                        }
+
+                        // fallback: trim weird suffixes
+                        return progId.Split('-')[0].Replace("URL", "").Replace("HTML", "").Trim();
                     }
                 }
             }
             catch
             {
+                // ignore and fallback
             }
 
             return "-";
