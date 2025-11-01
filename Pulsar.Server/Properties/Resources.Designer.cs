@@ -553,6 +553,16 @@ namespace Pulsar.Server.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap lovefolder {
+            get {
+                object obj = ResourceManager.GetObject("lovefolder", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap map {
             get {
                 object obj = ResourceManager.GetObject("map", resourceCulture);
@@ -786,6 +796,16 @@ namespace Pulsar.Server.Properties {
         internal static System.Drawing.Bitmap script_code {
             get {
                 object obj = ResourceManager.GetObject("script_code", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap selectall {
+            get {
+                object obj = ResourceManager.GetObject("selectall", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

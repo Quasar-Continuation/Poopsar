@@ -5327,6 +5327,15 @@ namespace Pulsar.Server.Forms
                 c.Send(new DoMonitorsOff(true));
             }
         }
+
+        private void openClientFolderToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                FrmFileManager.OpenDownloadFolderFor(c);
+            }
+
+        }
     }
 
     public class NotificationEntry

