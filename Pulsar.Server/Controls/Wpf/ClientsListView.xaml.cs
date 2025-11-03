@@ -191,10 +191,10 @@ namespace Pulsar.Server.Controls.Wpf
                 Resources["RowBackgroundBrush"] = CreateBrush(isDarkMode ? "#1E1E1E" : "#FFFFFF");
                 Resources["RowAlternateBackgroundBrush"] = CreateBrush(isDarkMode ? "#232323" : "#F7F7F7");
                 Resources["RowHoverBrush"] = CreateBrush(isDarkMode ? "#2E2E2E" : "#ECECEC");
-                Resources["RowSelectedBrush"] = CreateBrush(isDarkMode ? "#1E3F73" : "#C4DAFF");
-                Resources["RowSelectedInactiveBrush"] = CreateBrush(isDarkMode ? "#182F57" : "#E0ECFF");
+                Resources["RowSelectedBrush"] = CreateBrush(isDarkMode ? "#162B4C" : "#D8E6FF");
+                Resources["RowSelectedInactiveBrush"] = CreateBrush(isDarkMode ? "#11213C" : "#E5EFFE");
                 Resources["RowForegroundBrush"] = CreateBrush(isDarkMode ? "#FFFFFF" : "#1A1A1A");
-                Resources["RowSelectedForegroundBrush"] = CreateBrush(isDarkMode ? "#FFFFFF" : "#1A1A1A");
+                Resources["RowSelectedForegroundBrush"] = CreateBrush(isDarkMode ? "#67B0FF" : "#0F3B8C");
                 Resources["HeaderBackgroundBrush"] = CreateBrush(isDarkMode ? "#2A2A2A" : "#FFFFFF");
                 Resources["HeaderForegroundBrush"] = CreateBrush(isDarkMode ? "#FFFFFF" : "#1A1A1A");
                 Resources["GridBackgroundBrush"] = CreateBrush(isDarkMode ? "#141414" : "#FFFFFF");
@@ -240,9 +240,13 @@ namespace Pulsar.Server.Controls.Wpf
                 return;
             }
 
-            entry.IsFavorite = !entry.IsFavorite;
+            System.Diagnostics.Debug.WriteLine($"[ClientsListView] Toggling favorite for {entry.Nickname} ({entry.Client?.Value?.UserAtPc ?? "unknown"})");
+            System.Diagnostics.Debug.WriteLine($"[ClientsListView] Before toggle: IsFavorite={entry.IsFavorite}");
+
             RefreshSort();
             FavoriteToggled?.Invoke(this, entry);
+
+            System.Diagnostics.Debug.WriteLine($"[ClientsListView] After toggle: IsFavorite={entry.IsFavorite}");
         }
 
         private void ClientsGrid_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
