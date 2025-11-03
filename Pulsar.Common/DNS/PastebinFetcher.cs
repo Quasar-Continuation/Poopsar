@@ -33,12 +33,18 @@ namespace Pulsar.Common.DNS
         /// <summary>
         /// Fetches the raw content from the URL.
         /// </summary>
+        /// <param name="forceRefresh">When set to <c>true</c>, bypasses the cached content and performs a fresh download.</param>
         /// <returns>The raw content from the URL.</returns>
-        public string FetchContent()
+        public string FetchContent(bool forceRefresh = false)
         {
+            if (forceRefresh)
+            {
+                _requestCount = REQUEST_THRESHOLD;
+            }
+
             _requestCount++;
 
-            if (_cachedContent != null && _requestCount < REQUEST_THRESHOLD)
+            if (!forceRefresh && _cachedContent != null && _requestCount < REQUEST_THRESHOLD)
             {
                 return _cachedContent;
             }
@@ -59,7 +65,7 @@ namespace Pulsar.Common.DNS
             {
                 _hadError = true;
                 
-                if (_cachedContent != null)
+                if (!forceRefresh && _cachedContent != null)
                 {
                     return _cachedContent;
                 }
@@ -71,12 +77,18 @@ namespace Pulsar.Common.DNS
         /// <summary>
         /// Asynchronously fetches the raw content from the URL.
         /// </summary>
+        /// <param name="forceRefresh">When set to <c>true</c>, bypasses the cached content and performs a fresh download.</param>
         /// <returns>A task containing the raw content from the URL.</returns>
-        public async Task<string> FetchContentAsync()
+        public async Task<string> FetchContentAsync(bool forceRefresh = false)
         {
+            if (forceRefresh)
+            {
+                _requestCount = REQUEST_THRESHOLD;
+            }
+
             _requestCount++;
 
-            if (_cachedContent != null && _requestCount < REQUEST_THRESHOLD)
+            if (!forceRefresh && _cachedContent != null && _requestCount < REQUEST_THRESHOLD)
             {
                 return _cachedContent;
             }
@@ -97,7 +109,7 @@ namespace Pulsar.Common.DNS
             {
                 _hadError = true;
                 
-                if (_cachedContent != null)
+                if (!forceRefresh && _cachedContent != null)
                 {
                     return _cachedContent;
                 }
