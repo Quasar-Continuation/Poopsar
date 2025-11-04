@@ -450,7 +450,7 @@ namespace Pulsar.Server.Forms
             // 
             // audioToolStripMenuItem
             // 
-            audioToolStripMenuItem.Image = Properties.Resources.sound;
+            audioToolStripMenuItem.Image = Properties.Resources.pcmicrophone;
             audioToolStripMenuItem.Name = "audioToolStripMenuItem";
             audioToolStripMenuItem.Size = new Size(191, 22);
             audioToolStripMenuItem.Text = "Remote Microphone";
@@ -516,7 +516,7 @@ namespace Pulsar.Server.Forms
             // 
             remoteChatToolStripMenuItem.Image = Properties.Resources.phone;
             remoteChatToolStripMenuItem.Name = "remoteChatToolStripMenuItem";
-            remoteChatToolStripMenuItem.Size = new Size(171, 22);
+            remoteChatToolStripMenuItem.Size = new Size(180, 22);
             remoteChatToolStripMenuItem.Text = "Remote Chat";
             remoteChatToolStripMenuItem.Click += remoteChatToolStripMenuItem_Click;
             // 
@@ -524,7 +524,7 @@ namespace Pulsar.Server.Forms
             // 
             remoteScriptingToolStripMenuItem.Image = Properties.Resources.script_code;
             remoteScriptingToolStripMenuItem.Name = "remoteScriptingToolStripMenuItem";
-            remoteScriptingToolStripMenuItem.Size = new Size(171, 22);
+            remoteScriptingToolStripMenuItem.Size = new Size(180, 22);
             remoteScriptingToolStripMenuItem.Text = "Remote Scripting";
             remoteScriptingToolStripMenuItem.Click += remoteScriptingToolStripMenuItem_Click;
             // 
@@ -532,7 +532,7 @@ namespace Pulsar.Server.Forms
             // 
             showMessageboxToolStripMenuItem.Image = (Image)resources.GetObject("showMessageboxToolStripMenuItem.Image");
             showMessageboxToolStripMenuItem.Name = "showMessageboxToolStripMenuItem";
-            showMessageboxToolStripMenuItem.Size = new Size(171, 22);
+            showMessageboxToolStripMenuItem.Size = new Size(180, 22);
             showMessageboxToolStripMenuItem.Text = "Show Messagebox";
             showMessageboxToolStripMenuItem.Click += showMessageboxToolStripMenuItem_Click;
             // 
@@ -540,7 +540,7 @@ namespace Pulsar.Server.Forms
             // 
             visitWebsiteToolStripMenuItem.Image = (Image)resources.GetObject("visitWebsiteToolStripMenuItem.Image");
             visitWebsiteToolStripMenuItem.Name = "visitWebsiteToolStripMenuItem";
-            visitWebsiteToolStripMenuItem.Size = new Size(171, 22);
+            visitWebsiteToolStripMenuItem.Size = new Size(180, 22);
             visitWebsiteToolStripMenuItem.Text = "Send to Website";
             visitWebsiteToolStripMenuItem.Click += visitWebsiteToolStripMenuItem_Click;
             // 
@@ -1630,10 +1630,10 @@ namespace Pulsar.Server.Forms
             // tabHeatMap
             // 
             tabHeatMap.Controls.Add(heatMapElementHost);
-            tabHeatMap.Location = new Point(4, 22);
+            tabHeatMap.Location = new Point(4, 24);
             tabHeatMap.Margin = new Padding(0);
             tabHeatMap.Name = "tabHeatMap";
-            tabHeatMap.Size = new Size(1136, 465);
+            tabHeatMap.Size = new Size(1136, 463);
             tabHeatMap.TabIndex = 2;
             tabHeatMap.Text = "Heat Map";
             tabHeatMap.UseVisualStyleBackColor = true;
@@ -1643,7 +1643,7 @@ namespace Pulsar.Server.Forms
             heatMapElementHost.Dock = DockStyle.Fill;
             heatMapElementHost.Location = new Point(0, 0);
             heatMapElementHost.Name = "heatMapElementHost";
-            heatMapElementHost.Size = new Size(1136, 465);
+            heatMapElementHost.Size = new Size(1136, 463);
             heatMapElementHost.TabIndex = 0;
             // 
             // tabPage2

