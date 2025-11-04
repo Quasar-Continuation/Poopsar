@@ -280,6 +280,11 @@ namespace Pulsar.Server.Controls.Wpf
                 return;
             }
 
+            if (FindVisualParent<ButtonBase>(source) != null)
+            {
+                return;
+            }
+
             _dragStartPoint = e.GetPosition(ClientsGrid);
             ClientsGrid.Focus();
 
