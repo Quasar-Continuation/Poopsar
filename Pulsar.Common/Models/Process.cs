@@ -13,5 +13,8 @@ namespace Pulsar.Common.Models
 
         [Key(3)]
         public string MainWindowTitle { get; set; }
+
+        [Key(4)]
+        public int? ParentId { get; set; }
     }
 }

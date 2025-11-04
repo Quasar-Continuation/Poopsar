@@ -23,6 +23,9 @@ namespace Pulsar.Server.Controls
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ListViewColumnSorter LvwColumnSorter { get; set; }
 
+        [DefaultValue(true)]
+        public bool AllowAutoSort { get; set; } = true;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="AeroListView"/> class.
         /// </summary>
@@ -120,6 +123,10 @@ namespace Pulsar.Server.Controls
         protected override void OnColumnClick(ColumnClickEventArgs e)
         {
             base.OnColumnClick(e);
+            if (!AllowAutoSort || this.LvwColumnSorter == null)
+            {
+                return;
+            }
             // Determine if clicked column is already the column that is being sorted.
             if (e.Column == this.LvwColumnSorter.SortColumn)
             {

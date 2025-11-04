@@ -1,4 +1,4 @@
-﻿using Pulsar.Server.Controls;
+﻿using System.Windows.Forms.Integration;
 
 namespace Pulsar.Server.Forms
 {
@@ -31,7 +31,6 @@ namespace Pulsar.Server.Forms
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            Pulsar.Server.Utilities.ListViewColumnSorter listViewColumnSorter1 = new Pulsar.Server.Utilities.ListViewColumnSorter();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FrmTaskManager));
             this.contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.killProcessToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -41,10 +40,7 @@ namespace Pulsar.Server.Forms
             this.lineToolStripMenuItem = new System.Windows.Forms.ToolStripSeparator();
             this.refreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel = new System.Windows.Forms.TableLayoutPanel();
-            this.lstTasks = new Pulsar.Server.Controls.AeroListView();
-            this.hProcessname = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.hPID = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.hTitle = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.processTreeHost = new System.Windows.Forms.Integration.ElementHost();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.processesToolStripStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.contextMenuStrip.SuspendLayout();
@@ -113,7 +109,7 @@ namespace Pulsar.Server.Forms
             // 
             this.tableLayoutPanel.ColumnCount = 1;
             this.tableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel.Controls.Add(this.lstTasks, 0, 0);
+            this.tableLayoutPanel.Controls.Add(this.processTreeHost, 0, 0);
             this.tableLayoutPanel.Controls.Add(this.statusStrip, 0, 1);
             this.tableLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel.Location = new System.Drawing.Point(0, 0);
@@ -124,42 +120,17 @@ namespace Pulsar.Server.Forms
             this.tableLayoutPanel.Size = new System.Drawing.Size(821, 493);
             this.tableLayoutPanel.TabIndex = 2;
             // 
-            // lstTasks
+            // processTreeHost
             // 
-            this.lstTasks.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.hProcessname,
-            this.hPID,
-            this.hTitle});
-            this.lstTasks.ContextMenuStrip = this.contextMenuStrip;
-            this.lstTasks.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lstTasks.FullRowSelect = true;
-            this.lstTasks.GridLines = true;
-            this.lstTasks.HideSelection = false;
-            this.lstTasks.Location = new System.Drawing.Point(3, 3);
-            listViewColumnSorter1.NeedNumberCompare = false;
-            listViewColumnSorter1.Order = System.Windows.Forms.SortOrder.None;
-            listViewColumnSorter1.SortColumn = 0;
-            this.lstTasks.LvwColumnSorter = listViewColumnSorter1;
-            this.lstTasks.Name = "lstTasks";
-            this.lstTasks.Size = new System.Drawing.Size(815, 465);
-            this.lstTasks.TabIndex = 1;
-            this.lstTasks.UseCompatibleStateImageBehavior = false;
-            this.lstTasks.View = System.Windows.Forms.View.Details;
-            this.lstTasks.ColumnClick += new System.Windows.Forms.ColumnClickEventHandler(this.lstTasks_ColumnClick);
-            // 
-            // hProcessname
-            // 
-            this.hProcessname.Text = "Processname";
-            this.hProcessname.Width = 202;
-            // 
-            // hPID
-            // 
-            this.hPID.Text = "PID";
-            // 
-            // hTitle
-            // 
-            this.hTitle.Text = "Title";
-            this.hTitle.Width = 549;
+            this.processTreeHost.BackColor = System.Drawing.Color.Transparent;
+            this.processTreeHost.ContextMenuStrip = this.contextMenuStrip;
+            this.processTreeHost.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.processTreeHost.Location = new System.Drawing.Point(3, 3);
+            this.processTreeHost.Name = "processTreeHost";
+            this.processTreeHost.Size = new System.Drawing.Size(815, 465);
+            this.processTreeHost.TabIndex = 1;
+            this.processTreeHost.Text = "processTreeHost";
+            this.processTreeHost.Child = null;
             // 
             // statusStrip
             // 
@@ -207,11 +178,8 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.ToolStripMenuItem killProcessToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem refreshToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem startProcessToolStripMenuItem;
-        private System.Windows.Forms.ColumnHeader hProcessname;
-        private System.Windows.Forms.ColumnHeader hPID;
-        private System.Windows.Forms.ColumnHeader hTitle;
         private System.Windows.Forms.ToolStripSeparator lineToolStripMenuItem;
-        private AeroListView lstTasks;
+        private ElementHost processTreeHost;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel;
         private System.Windows.Forms.StatusStrip statusStrip;
         private System.Windows.Forms.ToolStripStatusLabel processesToolStripStatusLabel;
