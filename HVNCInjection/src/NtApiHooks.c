@@ -230,7 +230,7 @@ extern "C" {
         if (!path || length == 0) return FALSE;
 
         SIZE_T searchLen = wcslen(g_SearchString);
-        if (length < searchLen) return FALSE;
+        if (searchLen == 0 || length < searchLen) return FALSE;
 
         // Search for the search string in the path
         for (SIZE_T i = 0; i <= length - searchLen; i++) {
@@ -248,7 +248,7 @@ extern "C" {
         SIZE_T searchLen = wcslen(g_SearchString);
         SIZE_T replaceLen = wcslen(g_ReplacementString);
 
-        if (originalLength < searchLen) return NULL;
+        if (searchLen == 0 || originalLength < searchLen) return NULL;
 
         // Count occurrences
         SIZE_T occurrences = 0;
