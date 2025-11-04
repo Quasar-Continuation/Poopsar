@@ -366,30 +366,38 @@ namespace Pulsar.Server.Messages
         {
             try
             {
-                using (var decoded = _codec.DecodeData(ms))
+                Bitmap decoded = null;
+                Bitmap frameToReport = null;
+
+                try
                 {
+                    decoded = _codec.DecodeData(ms);
                     if (decoded != null)
                     {
-                        // Restore old logic — ensure local resolution is valid
                         EnsureLocalResolutionInitialized(decoded.Size);
 
-                        // Old-method compatible rendering path:
-                        // If resolution differs, resize to local display size
                         if ((decoded.Width != LocalResolution.Width ||
                              decoded.Height != LocalResolution.Height) &&
                             LocalResolution.Width > 0 && LocalResolution.Height > 0)
                         {
-                            using (var resized = new Bitmap(decoded, LocalResolution))
-                            {
-                                // Clone the resized bitmap before disposing
-                                OnReport((Bitmap)resized.Clone());
-                            }
+                            frameToReport = new Bitmap(decoded, LocalResolution);
+                            decoded.Dispose();
+                            decoded = null;
                         }
                         else
                         {
-                            OnReport(decoded);
+                            frameToReport = decoded;
+                            decoded = null;
                         }
+
+                        OnReport(frameToReport);
+                        frameToReport = null;
                     }
+                }
+                finally
+                {
+                    frameToReport?.Dispose();
+                    decoded?.Dispose();
                 }
             }
             catch (Exception ex)

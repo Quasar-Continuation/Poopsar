@@ -1540,13 +1540,26 @@ namespace Pulsar.Server.Forms
 
             Favorites.ToggleFavorite(client.Value.UserAtPc);
 
-            lstClients.Invoke((MethodInvoker)SortClientsByFavoriteStatus);
-
-            var item = GetListViewItemByClient(client);
-            if (item != null)
+            lstClients.BeginInvoke((MethodInvoker)(() =>
             {
-                SyncWpfEntryFromListViewItem(item);
-            }
+                var item = lstClients.Items.Cast<ListViewItem>()
+                    .FirstOrDefault(lvi => lvi != null && client.Equals(lvi.Tag));
+
+                if (item != null)
+                {
+                    var starButton = lstClients.Controls.OfType<Button>()
+                        .FirstOrDefault(b => b.Tag is Client buttonClient && buttonClient.Equals(client));
+
+                    if (starButton != null)
+                    {
+                        starButton.Image = Favorites.IsFavorite(client.Value.UserAtPc)
+                            ? Properties.Resources.star_filled
+                            : Properties.Resources.star_empty;
+                    }
+
+                    SyncWpfEntryFromListViewItem(item);
+                }
+            }));
         }
 
         private ImageSource GetFlagImageSource(int imageIndex)

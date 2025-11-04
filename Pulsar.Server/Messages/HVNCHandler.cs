@@ -210,11 +210,38 @@ namespace Pulsar.Server.Messages
                 {
                     try
                     {
-                        var decoded = _codec.DecodeData(ms);
-                        if (decoded != null)
+                        Bitmap decoded = null;
+                        Bitmap frameToReport = null;
+
+                        try
                         {
-                            EnsureLocalResolutionInitialized(decoded.Size);
-                            OnReport(decoded);
+                            decoded = _codec.DecodeData(ms);
+                            if (decoded != null)
+                            {
+                                EnsureLocalResolutionInitialized(decoded.Size);
+
+                                if ((decoded.Width != LocalResolution.Width ||
+                                     decoded.Height != LocalResolution.Height) &&
+                                    LocalResolution.Width > 0 && LocalResolution.Height > 0)
+                                {
+                                    frameToReport = new Bitmap(decoded, LocalResolution);
+                                    decoded.Dispose();
+                                    decoded = null;
+                                }
+                                else
+                                {
+                                    frameToReport = decoded;
+                                    decoded = null;
+                                }
+
+                                OnReport(frameToReport);
+                                frameToReport = null;
+                            }
+                        }
+                        finally
+                        {
+                            frameToReport?.Dispose();
+                            decoded?.Dispose();
                         }
                     }
                     catch (Exception ex)
