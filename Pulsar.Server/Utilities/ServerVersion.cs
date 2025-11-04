@@ -2,7 +2,7 @@ namespace Pulsar.Server.Utilities
 {
     public static class ServerVersion
     {
-        public const string Current = "2.3.2";
+        public const string Current = "2.3.3";
 
         public static string Display => $"v{Current}";
     }
