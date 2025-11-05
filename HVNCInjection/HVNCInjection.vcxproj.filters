@@ -34,5 +34,8 @@
     <ClInclude Include="src\MinHook.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\NtApiHooksConfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

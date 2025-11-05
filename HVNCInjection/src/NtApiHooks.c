@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include "NtApiHooks.h"
+#include "NtApiHooksConfig.h"
 #include "MinHook.h"
 #include <stdio.h>
 #include <string.h>
@@ -21,30 +22,72 @@ extern "C" {
 
     // Helper function to log debug info
     void LogDebug(const WCHAR* message) {
+#if ENABLE_DEBUG_LOGGING
         if (g_LogFile != INVALID_HANDLE_VALUE) {
             DWORD written;
-            // Convert wide string to UTF-16 bytes
             DWORD messageLen = (DWORD)wcslen(message) * sizeof(WCHAR);
             WriteFile(g_LogFile, message, messageLen, &written, NULL);
 
-            // Write newline
             const WCHAR newline[] = L"\r\n";
             WriteFile(g_LogFile, newline, sizeof(newline) - sizeof(WCHAR), &written, NULL);
             FlushFileBuffers(g_LogFile);
         }
+#endif
     }
 
     void LogDebugA(const char* message) {
+#if ENABLE_DEBUG_LOGGING
         if (g_LogFile != INVALID_HANDLE_VALUE) {
             DWORD written;
             DWORD messageLen = (DWORD)strlen(message);
             WriteFile(g_LogFile, message, messageLen, &written, NULL);
 
-            // Write newline
             const char newline[] = "\r\n";
             WriteFile(g_LogFile, newline, sizeof(newline) - 1, &written, NULL);
             FlushFileBuffers(g_LogFile);
         }
+#endif
+    }
+
+    // Helper function for case-insensitive wide string comparison
+    int wcsnicmp_custom(const WCHAR* s1, const WCHAR* s2, SIZE_T count) {
+        for (SIZE_T i = 0; i < count; i++) {
+            WCHAR c1 = s1[i];
+            WCHAR c2 = s2[i];
+
+            // Convert to uppercase for comparison
+            if (c1 >= L'a' && c1 <= L'z') c1 = c1 - L'a' + L'A';
+            if (c2 >= L'a' && c2 <= L'z') c2 = c2 - L'a' + L'A';
+
+            // Also handle backslash vs forward slash
+            if (c1 == L'/') c1 = L'\\';
+            if (c2 == L'/') c2 = L'\\';
+
+            if (c1 != c2) return (c1 < c2) ? -1 : 1;
+        }
+        return 0;
+    }
+
+    // Helper function to normalize NT paths - skip \??\ prefix if present
+    const WCHAR* NormalizePath(const WCHAR* path, SIZE_T* adjustedLength) {
+        if (!path || !adjustedLength) return path;
+
+        SIZE_T length = *adjustedLength;
+
+        // Check for \??\ prefix (NT object namespace for DOS devices)
+        if (length >= 4 && path[0] == L'\\' && path[1] == L'?' && path[2] == L'?' && path[3] == L'\\') {
+            *adjustedLength = length - 4;
+            return path + 4;
+        }
+
+        // Check for \Device\ or \DEVICE\ prefix
+        if (length >= 8 &&
+            (wcsnicmp_custom(path, L"\\DEVICE\\", 8) == 0 || wcsnicmp_custom(path, L"\\Device\\", 8) == 0)) {
+            // Don't adjust - these are device paths, not file paths
+            return path;
+        }
+
+        return path;
     }
 
     // NT API typedefs
@@ -232,11 +275,37 @@ extern "C" {
         SIZE_T searchLen = wcslen(g_SearchString);
         if (searchLen == 0 || length < searchLen) return FALSE;
 
-        // Search for the search string in the path
-        for (SIZE_T i = 0; i <= length - searchLen; i++) {
-            if (wcsncmp(&path[i], g_SearchString, searchLen) == 0) {
+        // Normalize the path (strip \??\ prefix if present)
+        SIZE_T normalizedLength = length;
+        const WCHAR* normalizedPath = NormalizePath(path, &normalizedLength);
+
+        if (g_LogFile != INVALID_HANDLE_VALUE) {
+            WCHAR tempPath[512] = { 0 };
+            SIZE_T copyLen = normalizedLength < 511 ? normalizedLength : 511;
+            wcsncpy_s(tempPath, 512, normalizedPath, copyLen);
+            LogDebug(L"[NeedsRedirection] Checking normalized path: ");
+            LogDebug(tempPath);
+            LogDebug(L"[NeedsRedirection] Against search string: ");
+            LogDebug(g_SearchString);
+        }
+
+        if (normalizedLength < searchLen) return FALSE;
+
+        // Search for the search string in the normalized path (case-insensitive)
+        for (SIZE_T i = 0; i <= normalizedLength - searchLen; i++) {
+            if (wcsnicmp_custom(&normalizedPath[i], g_SearchString, searchLen) == 0) {
+                if (g_LogFile != INVALID_HANDLE_VALUE) {
+                    LogDebug(L"[NeedsRedirection] MATCH FOUND at position ");
+                    WCHAR posStr[32];
+                    wsprintfW(posStr, L"%zu", i);
+                    LogDebug(posStr);
+                }
                 return TRUE;
             }
+        }
+
+        if (g_LogFile != INVALID_HANDLE_VALUE) {
+            LogDebug(L"[NeedsRedirection] NO MATCH");
         }
         return FALSE;
     }
@@ -250,28 +319,41 @@ extern "C" {
 
         if (searchLen == 0 || originalLength < searchLen) return NULL;
 
-        // Count occurrences
+        // Normalize the path
+        SIZE_T normalizedLength = originalLength;
+        const WCHAR* normalizedPath = NormalizePath(originalPath, &normalizedLength);
+        SIZE_T prefixLength = originalLength - normalizedLength; // Length of \??\ or other prefix
+
+        if (normalizedLength < searchLen) return NULL;
+
+        // Count occurrences (case-insensitive) in normalized portion
         SIZE_T occurrences = 0;
-        for (SIZE_T i = 0; i <= originalLength - searchLen; i++) {
-            if (wcsncmp(&originalPath[i], g_SearchString, searchLen) == 0) {
+        for (SIZE_T i = 0; i <= normalizedLength - searchLen; i++) {
+            if (wcsnicmp_custom(&normalizedPath[i], g_SearchString, searchLen) == 0) {
                 occurrences++;
+                i += searchLen - 1; // Skip past this occurrence
             }
         }
 
         if (occurrences == 0) return NULL;
 
-        // Calculate new length
-        SIZE_T calcNewLength = originalLength + (occurrences * (replaceLen - searchLen));
+        // Calculate new length (prefix + modified path)
+        SIZE_T calcNewLength = prefixLength + normalizedLength + (occurrences * (replaceLen - searchLen));
         WCHAR* newPath = (WCHAR*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (calcNewLength + 1) * sizeof(WCHAR));
         if (!newPath) return NULL;
 
-        // Perform replacement
+        // Copy prefix (\??\ or other) if present
         SIZE_T destIdx = 0;
+        for (SIZE_T i = 0; i < prefixLength; i++) {
+            newPath[destIdx++] = originalPath[i];
+        }
+
+        // Perform replacement in normalized portion (case-insensitive)
         SIZE_T srcIdx = 0;
 
-        while (srcIdx < originalLength) {
-            if (srcIdx <= originalLength - searchLen &&
-                wcsncmp(&originalPath[srcIdx], g_SearchString, searchLen) == 0) {
+        while (srcIdx < normalizedLength) {
+            if (srcIdx <= normalizedLength - searchLen &&
+                wcsnicmp_custom(&normalizedPath[srcIdx], g_SearchString, searchLen) == 0) {
                 // Copy replacement string
                 for (SIZE_T j = 0; j < replaceLen; j++) {
                     newPath[destIdx++] = g_ReplacementString[j];
@@ -279,7 +361,7 @@ extern "C" {
                 srcIdx += searchLen;
             }
             else {
-                newPath[destIdx++] = originalPath[srcIdx++];
+                newPath[destIdx++] = normalizedPath[srcIdx++];
             }
         }
 
@@ -309,21 +391,35 @@ extern "C" {
         if (g_HooksInitialized && OriginalNtCreateFile && ObjectAttributes && ObjectAttributes->ObjectName && ObjectAttributes->ObjectName->Buffer) {
             SIZE_T pathLength = ObjectAttributes->ObjectName->Length / sizeof(WCHAR);
 
+            // Log all paths for debugging
+            if (g_LogFile != INVALID_HANDLE_VALUE && pathLength > 0) {
+                WCHAR tempPath[512] = { 0 };
+                SIZE_T copyLen = pathLength < 511 ? pathLength : 511;
+                wcsncpy_s(tempPath, 512, ObjectAttributes->ObjectName->Buffer, copyLen);
+                LogDebug(L"");
+                LogDebug(L"[NtCreateFile] Original Path: ");
+                LogDebug(tempPath);
+            }
+
             if (NeedsRedirection(ObjectAttributes->ObjectName->Buffer, pathLength)) {
                 SIZE_T newLength = 0;
                 buffer = ReplacePath(ObjectAttributes->ObjectName->Buffer, pathLength, &newLength);
 
                 if (buffer) {
-                    LogDebug(L"[NtCreateFile] REDIRECTING: ");
-                    LogDebug(ObjectAttributes->ObjectName->Buffer);
-                    LogDebug(L" -> ");
-                    LogDebug(buffer);
+                    WCHAR tempBuf[512] = { 0 };
+                    SIZE_T copyLen = newLength < 511 ? newLength : 511;
+                    wcsncpy_s(tempBuf, 512, buffer, copyLen);
+                    LogDebug(L"[NtCreateFile] *** REDIRECTING TO: ");
+                    LogDebug(tempBuf);
 
                     originalString = ObjectAttributes->ObjectName;
                     newString.Buffer = buffer;
                     newString.Length = (USHORT)(newLength * sizeof(WCHAR));
                     newString.MaximumLength = (USHORT)((newLength + 1) * sizeof(WCHAR));
                     ObjectAttributes->ObjectName = &newString;
+                }
+                else {
+                    LogDebug(L"[NtCreateFile] ReplacePath returned NULL");
                 }
             }
         }
@@ -355,16 +451,35 @@ extern "C" {
         if (ObjectAttributes && ObjectAttributes->ObjectName && ObjectAttributes->ObjectName->Buffer) {
             SIZE_T pathLength = ObjectAttributes->ObjectName->Length / sizeof(WCHAR);
 
+            // Log all paths for debugging
+            if (g_LogFile != INVALID_HANDLE_VALUE && pathLength > 0 && g_HooksInitialized) {
+                WCHAR tempPath[512] = { 0 };
+                SIZE_T copyLen = pathLength < 511 ? pathLength : 511;
+                wcsncpy_s(tempPath, 512, ObjectAttributes->ObjectName->Buffer, copyLen);
+                LogDebug(L"");
+                LogDebug(L"[NtOpenFile] Original Path: ");
+                LogDebug(tempPath);
+            }
+
             if (NeedsRedirection(ObjectAttributes->ObjectName->Buffer, pathLength)) {
                 SIZE_T newLength = 0;
                 buffer = ReplacePath(ObjectAttributes->ObjectName->Buffer, pathLength, &newLength);
 
                 if (buffer) {
+                    WCHAR tempBuf[512] = { 0 };
+                    SIZE_T copyLen = newLength < 511 ? newLength : 511;
+                    wcsncpy_s(tempBuf, 512, buffer, copyLen);
+                    LogDebug(L"[NtOpenFile] *** REDIRECTING TO: ");
+                    LogDebug(tempBuf);
+
                     originalString = ObjectAttributes->ObjectName;
                     newString.Buffer = buffer;
                     newString.Length = (USHORT)(newLength * sizeof(WCHAR));
                     newString.MaximumLength = (USHORT)((newLength + 1) * sizeof(WCHAR));
                     ObjectAttributes->ObjectName = &newString;
+                }
+                else {
+                    LogDebug(L"[NtOpenFile] ReplacePath returned NULL");
                 }
             }
         }
@@ -566,148 +681,168 @@ extern "C" {
 
     // Install all hooks
     void InstallNtApiHooks(LPVOID lpParameter) {
+        // Use a global try-catch to prevent any crashes
         __try {
-            // Disable logging - no disk writes
-            g_LogFile = INVALID_HANDLE_VALUE;
-
-            // LogDebugA("=== DLL Injection Started ===");
-
-            // Extract the replacement string from the parameter
+#if ENABLE_DEBUG_LOGGING
+            // Enable logging for debugging
+            WCHAR logPath[512];
             __try {
-                if (lpParameter) {
-                    LogDebugA("Parameter pointer received, attempting to read...");
-                    WCHAR* paramStr = (WCHAR*)lpParameter;
+                ExpandEnvironmentStringsW(L"%TEMP%\\rdi_hooks.log", logPath, 512);
+                g_LogFile = CreateFileW(logPath, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER) {
+                g_LogFile = INVALID_HANDLE_VALUE;
+            }
 
-                    // Find the delimiter '|' to split search and replacement strings
-                    SIZE_T len = 0;
-                    SIZE_T delimiterPos = (SIZE_T)-1;
-                    while (len < 511 && paramStr[len] != L'\0') {
-                        if (paramStr[len] == L'|' && delimiterPos == (SIZE_T)-1) {
-                            delimiterPos = len;
-                        }
-                        len++;
-                    }
+            if (g_LogFile != INVALID_HANDLE_VALUE) {
+                LogDebugA("=== DLL Injection Started ===");
+            }
+#else
+            g_LogFile = INVALID_HANDLE_VALUE;
+#endif
 
-                    if (len > 0 && len < 512 && delimiterPos != (SIZE_T)-1 && delimiterPos > 0 && delimiterPos < len - 1) {
-                        // Copy search string (before delimiter)
-                        wcsncpy_s(g_SearchString, 512, paramStr, delimiterPos);
-                        g_SearchString[delimiterPos] = L'\0';
+            // Initialize to empty strings to prevent crashes
+            g_SearchString[0] = L'\0';
+            g_ReplacementString[0] = L'\0';
 
-                        // Copy replacement string (after delimiter)
-                        wcscpy_s(g_ReplacementString, 512, &paramStr[delimiterPos + 1]);
+            // Try to get configuration from environment variables
+            __try {
+                WCHAR envSearchString[512] = { 0 };
+                WCHAR envReplaceString[512] = { 0 };
 
-                        LogDebug(L"Search string set to: ");
+                DWORD searchLen = GetEnvironmentVariableW(L"RDI_SEARCH_PATH", envSearchString, 512);
+                DWORD replaceLen = GetEnvironmentVariableW(L"RDI_REPLACE_PATH", envReplaceString, 512);
+
+                if (searchLen > 0 && searchLen < 512 && replaceLen > 0 && replaceLen < 512) {
+                    wcsncpy_s(g_SearchString, 512, envSearchString, searchLen);
+                    g_SearchString[searchLen] = L'\0';
+                    wcsncpy_s(g_ReplacementString, 512, envReplaceString, replaceLen);
+                    g_ReplacementString[replaceLen] = L'\0';
+
+                    if (g_LogFile != INVALID_HANDLE_VALUE) {
+                        LogDebug(L"========================================");
+                        LogDebug(L"[ENV] Search string from env: ");
                         LogDebug(g_SearchString);
-                        LogDebug(L"Replacement string set to: ");
+                        LogDebug(L"[ENV] Replacement string from env: ");
                         LogDebug(g_ReplacementString);
-                    }
-                    else {
-                        // No valid parameter - hooks will not redirect anything
-                        g_SearchString[0] = L'\0';
-                        g_ReplacementString[0] = L'\0';
-                        LogDebugA("Parameter format invalid, hooks disabled");
+
+                        char lenMsg[256];
+                        sprintf_s(lenMsg, 256, "[ENV] Search string length: %zu characters", wcslen(g_SearchString));
+                        LogDebugA(lenMsg);
+                        LogDebug(L"========================================");
                     }
                 }
                 else {
-                    // No parameter - hooks will not redirect anything
-                    g_SearchString[0] = L'\0';
-                    g_ReplacementString[0] = L'\0';
-                    LogDebugA("No parameter provided, hooks disabled");
+                    if (g_LogFile != INVALID_HANDLE_VALUE) {
+                        LogDebugA("Environment variables not found, hooks disabled");
+                    }
                 }
             }
             __except (EXCEPTION_EXECUTE_HANDLER) {
-                // Exception reading parameter - hooks will not redirect anything
+                if (g_LogFile != INVALID_HANDLE_VALUE) {
+                    LogDebugA("Exception reading environment variables");
+                }
                 g_SearchString[0] = L'\0';
                 g_ReplacementString[0] = L'\0';
-                LogDebugA("Exception reading parameter, hooks disabled");
             }
 
-            LogDebugA("Initializing MinHook...");
+            // Initialize MinHook (this must succeed)
+            if (g_LogFile != INVALID_HANDLE_VALUE) {
+                LogDebugA("Initializing MinHook...");
+            }
+
             if (MH_Initialize() != MH_OK) {
-                LogDebugA("ERROR: MinHook initialization failed!");
+                if (g_LogFile != INVALID_HANDLE_VALUE) {
+                    LogDebugA("ERROR: MinHook initialization failed!");
+                }
                 return;
             }
-            LogDebugA("MinHook initialized successfully");
+
+            if (g_LogFile != INVALID_HANDLE_VALUE) {
+                LogDebugA("MinHook initialized successfully");
+            }
 
             HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
             if (!ntdll) {
-                LogDebugA("ERROR: Failed to get ntdll.dll handle!");
+                if (g_LogFile != INVALID_HANDLE_VALUE) {
+                    LogDebugA("ERROR: Failed to get ntdll.dll handle!");
+                }
                 MH_Uninitialize();
                 return;
             }
-            LogDebugA("Got ntdll.dll handle");
 
-            // Hook NtCreateFile
+            if (g_LogFile != INVALID_HANDLE_VALUE) {
+                LogDebugA("Got ntdll.dll handle");
+            }
+
+            // Hook all the NT APIs
             FARPROC pNtCreateFile = GetProcAddress(ntdll, "NtCreateFile");
             if (pNtCreateFile) {
                 MH_CreateHook(pNtCreateFile, &HookedNtCreateFile, (LPVOID*)&OriginalNtCreateFile);
                 MH_EnableHook(pNtCreateFile);
-                LogDebugA("Hooked NtCreateFile");
+                if (g_LogFile != INVALID_HANDLE_VALUE) LogDebugA("Hooked NtCreateFile");
             }
 
-            // Hook NtOpenFile
             FARPROC pNtOpenFile = GetProcAddress(ntdll, "NtOpenFile");
             if (pNtOpenFile) {
                 MH_CreateHook(pNtOpenFile, &HookedNtOpenFile, (LPVOID*)&OriginalNtOpenFile);
                 MH_EnableHook(pNtOpenFile);
-                LogDebugA("Hooked NtOpenFile");
+                if (g_LogFile != INVALID_HANDLE_VALUE) LogDebugA("Hooked NtOpenFile");
             }
 
-            // Hook NtDeleteFile
             FARPROC pNtDeleteFile = GetProcAddress(ntdll, "NtDeleteFile");
             if (pNtDeleteFile) {
                 MH_CreateHook(pNtDeleteFile, &HookedNtDeleteFile, (LPVOID*)&OriginalNtDeleteFile);
                 MH_EnableHook(pNtDeleteFile);
-                LogDebugA("Hooked NtDeleteFile");
+                if (g_LogFile != INVALID_HANDLE_VALUE) LogDebugA("Hooked NtDeleteFile");
             }
 
-            // Hook NtSetInformationFile
             FARPROC pNtSetInformationFile = GetProcAddress(ntdll, "NtSetInformationFile");
             if (pNtSetInformationFile) {
                 MH_CreateHook(pNtSetInformationFile, &HookedNtSetInformationFile, (LPVOID*)&OriginalNtSetInformationFile);
                 MH_EnableHook(pNtSetInformationFile);
-                LogDebugA("Hooked NtSetInformationFile");
+                if (g_LogFile != INVALID_HANDLE_VALUE) LogDebugA("Hooked NtSetInformationFile");
             }
 
-            // Hook NtQueryAttributesFile
             FARPROC pNtQueryAttributesFile = GetProcAddress(ntdll, "NtQueryAttributesFile");
             if (pNtQueryAttributesFile) {
                 MH_CreateHook(pNtQueryAttributesFile, &HookedNtQueryAttributesFile, (LPVOID*)&OriginalNtQueryAttributesFile);
                 MH_EnableHook(pNtQueryAttributesFile);
-                LogDebugA("Hooked NtQueryAttributesFile");
+                if (g_LogFile != INVALID_HANDLE_VALUE) LogDebugA("Hooked NtQueryAttributesFile");
             }
 
-            // Hook NtQueryFullAttributesFile
             FARPROC pNtQueryFullAttributesFile = GetProcAddress(ntdll, "NtQueryFullAttributesFile");
             if (pNtQueryFullAttributesFile) {
                 MH_CreateHook(pNtQueryFullAttributesFile, &HookedNtQueryFullAttributesFile, (LPVOID*)&OriginalNtQueryFullAttributesFile);
                 MH_EnableHook(pNtQueryFullAttributesFile);
-                LogDebugA("Hooked NtQueryFullAttributesFile");
+                if (g_LogFile != INVALID_HANDLE_VALUE) LogDebugA("Hooked NtQueryFullAttributesFile");
             }
 
-            // Hook NtQueryDirectoryFile
             FARPROC pNtQueryDirectoryFile = GetProcAddress(ntdll, "NtQueryDirectoryFile");
             if (pNtQueryDirectoryFile) {
                 MH_CreateHook(pNtQueryDirectoryFile, &HookedNtQueryDirectoryFile, (LPVOID*)&OriginalNtQueryDirectoryFile);
                 MH_EnableHook(pNtQueryDirectoryFile);
-                LogDebugA("Hooked NtQueryDirectoryFile");
+                if (g_LogFile != INVALID_HANDLE_VALUE) LogDebugA("Hooked NtQueryDirectoryFile");
             }
 
-            // Hook NtQueryDirectoryFileEx
             FARPROC pNtQueryDirectoryFileEx = GetProcAddress(ntdll, "NtQueryDirectoryFileEx");
             if (pNtQueryDirectoryFileEx) {
                 MH_CreateHook(pNtQueryDirectoryFileEx, &HookedNtQueryDirectoryFileEx, (LPVOID*)&OriginalNtQueryDirectoryFileEx);
                 MH_EnableHook(pNtQueryDirectoryFileEx);
-                LogDebugA("Hooked NtQueryDirectoryFileEx");
+                if (g_LogFile != INVALID_HANDLE_VALUE) LogDebugA("Hooked NtQueryDirectoryFileEx");
             }
 
             g_HooksInitialized = TRUE;
-            LogDebugA("=== All hooks installed successfully ===");
+            if (g_LogFile != INVALID_HANDLE_VALUE) {
+                LogDebugA("=== All hooks installed successfully ===");
+            }
         }
         __except (EXCEPTION_EXECUTE_HANDLER) {
-            // If anything fails during initialization, fail silently
-            // This prevents crashing the target process
-            LogDebugA("EXCEPTION: Hook installation failed!");
+            if (g_LogFile != INVALID_HANDLE_VALUE) {
+                char excMsg[256];
+                sprintf_s(excMsg, 256, "CRITICAL EXCEPTION: Hook installation failed! Code: 0x%X", GetExceptionCode());
+                LogDebugA(excMsg);
+            }
         }
     }
 
