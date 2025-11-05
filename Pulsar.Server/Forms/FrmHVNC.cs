@@ -612,6 +612,12 @@ namespace Pulsar.Server.Forms
             fileSelectionForm.ShowDialog();
         }
 
+        private void startGenericChromiumToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            FrmHVNCPopUp genericBrowserForm = new FrmHVNCPopUp(_connectClient, GetHVNCInjectionDllBytes());
+            genericBrowserForm.ShowDialog();
+        }
+
         private void cLONEBROWSERPROFILEToolStripMenuItem_Click(object sender, EventArgs e)
         {
             cLONEBROWSERPROFILEToolStripMenuItem.Checked = !cLONEBROWSERPROFILEToolStripMenuItem.Checked;
