@@ -223,7 +223,7 @@ namespace Pulsar.Server.Messages
                                 decoded.Dispose();
                             }
 
-                            OnReport(frameToReport);.
+                            OnReport(frameToReport);
                         }
                     }
                     catch (Exception ex)
