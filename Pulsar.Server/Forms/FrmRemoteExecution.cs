@@ -8,6 +8,7 @@ using Pulsar.Server.Networking;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace Pulsar.Server.Forms
@@ -166,12 +167,20 @@ namespace Pulsar.Server.Forms
             using (OpenFileDialog ofd = new OpenFileDialog())
             {
                 ofd.Multiselect = false;
-                ofd.Filter = "Executable and Batch Files (*.exe;*.bat)|*.exe;*.bat";
+
+                // Check if any checkbox on the form is checked
+                bool anyChecked = this.Controls.OfType<CheckBox>().Any(cb => cb.Checked);
+
+                ofd.Filter = anyChecked
+                    ? "Executable Files (*.exe)|*.exe"
+                    : "All Files (*.*)|*.*";
+
                 if (ofd.ShowDialog() == DialogResult.OK)
                 {
-                    txtPath.Text = Path.Combine(ofd.InitialDirectory, ofd.FileName);
+                    txtPath.Text = ofd.FileName;
                 }
             }
+
         }
 
         private void radioLocalFile_CheckedChanged(object sender, EventArgs e)
@@ -297,12 +306,21 @@ namespace Pulsar.Server.Forms
             using (OpenFileDialog ofd = new OpenFileDialog())
             {
                 ofd.Multiselect = false;
-                ofd.Filter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*";
+
+                // Check if any checkbox on the form is checked
+                bool anyChecked = this.Controls.OfType<CheckBox>().Any(cb => cb.Checked);
+
+                ofd.Filter = anyChecked
+                    ? "Executable Files (*.exe)|*.exe"
+                    : "All Files (*.*)|*.*";
+
                 if (ofd.ShowDialog() == DialogResult.OK)
                 {
-                    txtRunPECustomPath.Text = ofd.FileName;
+                    txtPath.Text = ofd.FileName;
                 }
             }
+
+
         }
     }
 }
