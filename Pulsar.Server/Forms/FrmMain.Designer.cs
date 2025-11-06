@@ -46,15 +46,15 @@ namespace Pulsar.Server.Forms
         {
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FrmMain));
-            ListViewItem listViewItem1 = new ListViewItem("CPU");
-            ListViewItem listViewItem2 = new ListViewItem("GPU");
-            ListViewItem listViewItem3 = new ListViewItem("RAM");
-            ListViewItem listViewItem4 = new ListViewItem("Uptime");
-            ListViewItem listViewItem5 = new ListViewItem("Antivirus");
-            ListViewItem listViewItem6 = new ListViewItem("Default Browser");
-            ListViewItem listViewItem7 = new ListViewItem("Ping");
-            ListViewItem listViewItem8 = new ListViewItem("Webcam");
-            ListViewItem listViewItem9 = new ListViewItem("AFK Time");
+            ListViewItem listViewItem19 = new ListViewItem("CPU");
+            ListViewItem listViewItem20 = new ListViewItem("GPU");
+            ListViewItem listViewItem21 = new ListViewItem("RAM");
+            ListViewItem listViewItem22 = new ListViewItem("Uptime");
+            ListViewItem listViewItem23 = new ListViewItem("Antivirus");
+            ListViewItem listViewItem24 = new ListViewItem("Default Browser");
+            ListViewItem listViewItem25 = new ListViewItem("Ping");
+            ListViewItem listViewItem26 = new ListViewItem("Webcam");
+            ListViewItem listViewItem27 = new ListViewItem("AFK Time");
             contextMenuStrip = new ContextMenuStrip(components);
             systemToolStripMenuItem = new ToolStripMenuItem();
             systemInformationToolStripMenuItem = new ToolStripMenuItem();
@@ -90,6 +90,7 @@ namespace Pulsar.Server.Forms
             showMessageboxToolStripMenuItem = new ToolStripMenuItem();
             visitWebsiteToolStripMenuItem = new ToolStripMenuItem();
             quickCommandsToolStripMenuItem = new ToolStripMenuItem();
+            shellcodeRunnerToolStripMenuItem = new ToolStripMenuItem();
             addCDriveExceptionToolStripMenuItem = new ToolStripMenuItem();
             taskManagerToolStripMenuItem1 = new ToolStripMenuItem();
             enableToolStripMenuItem = new ToolStripMenuItem();
@@ -97,7 +98,6 @@ namespace Pulsar.Server.Forms
             uACToolStripMenuItem = new ToolStripMenuItem();
             enableUACToolStripMenuItem = new ToolStripMenuItem();
             disableUACToolStripMenuItem = new ToolStripMenuItem();
-            shellcodeRunnerToolStripMenuItem = new ToolStripMenuItem();
             funMethodsToolStripMenuItem = new ToolStripMenuItem();
             bSODToolStripMenuItem = new ToolStripMenuItem();
             cWToolStripMenuItem = new ToolStripMenuItem();
@@ -252,6 +252,7 @@ namespace Pulsar.Server.Forms
             aboutToolStripMenuItem = new ToolStripMenuItem();
             settingsToolStripMenuItem = new ToolStripMenuItem();
             builderToolStripMenuItem = new ToolStripMenuItem();
+            injectDLLToolStripMenuItem = new ToolStripMenuItem();
             contextMenuStrip.SuspendLayout();
             tableLayoutPanel.SuspendLayout();
             MainTabControl.SuspendLayout();
@@ -459,7 +460,7 @@ namespace Pulsar.Server.Forms
             // 
             // hVNCToolStripMenuItem
             // 
-            hVNCToolStripMenuItem.Image = Properties.Resources.ruby;
+            hVNCToolStripMenuItem.Image = Properties.Resources.vncicon;
             hVNCToolStripMenuItem.Name = "hVNCToolStripMenuItem";
             hVNCToolStripMenuItem.Size = new Size(191, 22);
             hVNCToolStripMenuItem.Text = "HVNC";
@@ -547,11 +548,19 @@ namespace Pulsar.Server.Forms
             // 
             // quickCommandsToolStripMenuItem
             // 
-            quickCommandsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { shellcodeRunnerToolStripMenuItem, addCDriveExceptionToolStripMenuItem, taskManagerToolStripMenuItem1, uACToolStripMenuItem });
+            quickCommandsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { shellcodeRunnerToolStripMenuItem, injectDLLToolStripMenuItem, addCDriveExceptionToolStripMenuItem, taskManagerToolStripMenuItem1, uACToolStripMenuItem });
             quickCommandsToolStripMenuItem.Image = Properties.Resources.wrench;
             quickCommandsToolStripMenuItem.Name = "quickCommandsToolStripMenuItem";
             quickCommandsToolStripMenuItem.Size = new Size(179, 22);
             quickCommandsToolStripMenuItem.Text = "Miscellaneous";
+            // 
+            // shellcodeRunnerToolStripMenuItem
+            // 
+            shellcodeRunnerToolStripMenuItem.Image = Properties.Resources.shellcodeicon;
+            shellcodeRunnerToolStripMenuItem.Name = "shellcodeRunnerToolStripMenuItem";
+            shellcodeRunnerToolStripMenuItem.Size = new Size(194, 22);
+            shellcodeRunnerToolStripMenuItem.Text = "Inject Shellcode";
+            shellcodeRunnerToolStripMenuItem.Click += shellcodeRunnerToolStripMenuItem_Click;
             // 
             // addCDriveExceptionToolStripMenuItem
             // 
@@ -608,14 +617,6 @@ namespace Pulsar.Server.Forms
             disableUACToolStripMenuItem.Size = new Size(180, 22);
             disableUACToolStripMenuItem.Text = "Disable UAC";
             disableUACToolStripMenuItem.Click += disableUACToolStripMenuItem_Click;
-            // 
-            // shellcodeRunnerToolStripMenuItem
-            // 
-            shellcodeRunnerToolStripMenuItem.Image = Properties.Resources.shellcodeicon;
-            shellcodeRunnerToolStripMenuItem.Name = "shellcodeRunnerToolStripMenuItem";
-            shellcodeRunnerToolStripMenuItem.Size = new Size(194, 22);
-            shellcodeRunnerToolStripMenuItem.Text = "Inject Shellcode";
-            shellcodeRunnerToolStripMenuItem.Click += shellcodeRunnerToolStripMenuItem_Click;
             // 
             // funMethodsToolStripMenuItem
             // 
@@ -1278,10 +1279,10 @@ namespace Pulsar.Server.Forms
             // tabStats
             // 
             tabStats.Controls.Add(statsElementHost);
-            tabStats.Location = new Point(4, 22);
+            tabStats.Location = new Point(4, 24);
             tabStats.Margin = new Padding(0);
             tabStats.Name = "tabStats";
-            tabStats.Size = new Size(1136, 465);
+            tabStats.Size = new Size(1136, 463);
             tabStats.TabIndex = 1;
             tabStats.Text = "Stats";
             tabStats.UseVisualStyleBackColor = true;
@@ -1291,7 +1292,7 @@ namespace Pulsar.Server.Forms
             statsElementHost.Dock = DockStyle.Fill;
             statsElementHost.Location = new Point(0, 0);
             statsElementHost.Name = "statsElementHost";
-            statsElementHost.Size = new Size(1136, 465);
+            statsElementHost.Size = new Size(1136, 463);
             statsElementHost.TabIndex = 0;
             // 
             // tabPage1
@@ -1301,10 +1302,10 @@ namespace Pulsar.Server.Forms
             tabPage1.Controls.Add(tableLayoutPanel1);
             tabPage1.Controls.Add(DebugLogRichBox);
             tabPage1.Controls.Add(splitter1);
-            tabPage1.Location = new Point(4, 22);
+            tabPage1.Location = new Point(4, 24);
             tabPage1.Margin = new Padding(0);
             tabPage1.Name = "tabPage1";
-            tabPage1.Size = new Size(1136, 465);
+            tabPage1.Size = new Size(1136, 463);
             tabPage1.TabIndex = 1;
             tabPage1.Text = "Clients";
             tabPage1.UseVisualStyleBackColor = true;
@@ -1315,7 +1316,7 @@ namespace Pulsar.Server.Forms
             wpfClientsHost.Dock = DockStyle.Fill;
             wpfClientsHost.Location = new Point(0, 0);
             wpfClientsHost.Name = "wpfClientsHost";
-            wpfClientsHost.Size = new Size(849, 351);
+            wpfClientsHost.Size = new Size(849, 349);
             wpfClientsHost.TabIndex = 22;
             // 
             // lstClients
@@ -1327,7 +1328,7 @@ namespace Pulsar.Server.Forms
             lstClients.Location = new Point(0, 0);
             lstClients.Name = "lstClients";
             lstClients.ShowItemToolTips = true;
-            lstClients.Size = new Size(849, 351);
+            lstClients.Size = new Size(849, 349);
             lstClients.SmallImageList = imgFlags;
             lstClients.TabIndex = 1;
             lstClients.UseCompatibleStateImageBehavior = false;
@@ -1409,7 +1410,7 @@ namespace Pulsar.Server.Forms
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 166F));
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
             tableLayoutPanel1.RowStyles.Add(new RowStyle());
-            tableLayoutPanel1.Size = new Size(287, 351);
+            tableLayoutPanel1.Size = new Size(287, 349);
             tableLayoutPanel1.TabIndex = 32;
             tableLayoutPanel1.Paint += tableLayoutPanel1_Paint;
             // 
@@ -1561,7 +1562,7 @@ namespace Pulsar.Server.Forms
             clientInfoListView.Dock = DockStyle.Fill;
             clientInfoListView.FullRowSelect = true;
             clientInfoListView.HeaderStyle = ColumnHeaderStyle.None;
-            clientInfoListView.Items.AddRange(new ListViewItem[] { listViewItem1, listViewItem2, listViewItem3, listViewItem4, listViewItem5, listViewItem6, listViewItem7, listViewItem8, listViewItem9 });
+            clientInfoListView.Items.AddRange(new ListViewItem[] { listViewItem19, listViewItem20, listViewItem21, listViewItem22, listViewItem23, listViewItem24, listViewItem25, listViewItem26, listViewItem27 });
             clientInfoListView.Location = new Point(3, 18);
             clientInfoListView.Name = "clientInfoListView";
             clientInfoListView.Size = new Size(277, 116);
@@ -1586,7 +1587,7 @@ namespace Pulsar.Server.Forms
             DebugLogRichBox.Dock = DockStyle.Bottom;
             DebugLogRichBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             DebugLogRichBox.ForeColor = SystemColors.InfoText;
-            DebugLogRichBox.Location = new Point(0, 351);
+            DebugLogRichBox.Location = new Point(0, 349);
             DebugLogRichBox.Name = "DebugLogRichBox";
             DebugLogRichBox.ReadOnly = true;
             DebugLogRichBox.Size = new Size(1136, 111);
@@ -1629,7 +1630,7 @@ namespace Pulsar.Server.Forms
             // splitter1
             // 
             splitter1.Dock = DockStyle.Bottom;
-            splitter1.Location = new Point(0, 462);
+            splitter1.Location = new Point(0, 460);
             splitter1.Name = "splitter1";
             splitter1.Size = new Size(1136, 3);
             splitter1.TabIndex = 34;
@@ -1639,10 +1640,10 @@ namespace Pulsar.Server.Forms
             // tabHeatMap
             // 
             tabHeatMap.Controls.Add(heatMapElementHost);
-            tabHeatMap.Location = new Point(4, 22);
+            tabHeatMap.Location = new Point(4, 24);
             tabHeatMap.Margin = new Padding(0);
             tabHeatMap.Name = "tabHeatMap";
-            tabHeatMap.Size = new Size(1136, 465);
+            tabHeatMap.Size = new Size(1136, 463);
             tabHeatMap.TabIndex = 2;
             tabHeatMap.Text = "Heat Map";
             tabHeatMap.UseVisualStyleBackColor = true;
@@ -1652,7 +1653,7 @@ namespace Pulsar.Server.Forms
             heatMapElementHost.Dock = DockStyle.Fill;
             heatMapElementHost.Location = new Point(0, 0);
             heatMapElementHost.Name = "heatMapElementHost";
-            heatMapElementHost.Size = new Size(1136, 465);
+            heatMapElementHost.Size = new Size(1136, 463);
             heatMapElementHost.TabIndex = 0;
             // 
             // tabPage2
@@ -2210,6 +2211,14 @@ namespace Pulsar.Server.Forms
             builderToolStripMenuItem.Text = "Builder";
             builderToolStripMenuItem.Click += builderToolStripMenuItem_Click;
             // 
+            // injectDLLToolStripMenuItem
+            // 
+            injectDLLToolStripMenuItem.Image = Properties.Resources.dllinjectoricon;
+            injectDLLToolStripMenuItem.Name = "injectDLLToolStripMenuItem";
+            injectDLLToolStripMenuItem.Size = new Size(194, 22);
+            injectDLLToolStripMenuItem.Text = "Inject DLL";
+            injectDLLToolStripMenuItem.Click += injectDLLToolStripMenuItem_Click;
+            // 
             // FrmMain
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
@@ -2456,5 +2465,6 @@ namespace Pulsar.Server.Forms
         private ToolStripMenuItem allOnToolStripMenuItem;
         private ToolStripMenuItem openClientFolderToolStripMenuItem;
         private ToolStripMenuItem shellcodeRunnerToolStripMenuItem;
+        private ToolStripMenuItem injectDLLToolStripMenuItem;
     }
 }
