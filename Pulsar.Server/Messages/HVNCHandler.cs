@@ -220,10 +220,21 @@ namespace Pulsar.Server.Messages
                                 (decoded.Width != LocalResolution.Width || decoded.Height != LocalResolution.Height))
                             {
                                 frameToReport = new Bitmap(decoded, LocalResolution);
+                            }
+
+                            Bitmap safeFrame = frameToReport.Clone(new Rectangle(0, 0, frameToReport.Width, frameToReport.Height), System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+
+                            if (!ReferenceEquals(frameToReport, decoded))
+                            {
+                                decoded.Dispose();
+                                frameToReport.Dispose();
+                            }
+                            else
+                            {
                                 decoded.Dispose();
                             }
 
-                            OnReport(frameToReport);
+                            OnReport(safeFrame);
                         }
                     }
                     catch (Exception ex)
