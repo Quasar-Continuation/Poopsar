@@ -366,38 +366,31 @@ namespace Pulsar.Server.Messages
         {
             try
             {
-                Bitmap decoded = null;
-                Bitmap frameToReport = null;
-
-                try
+                var decoded = _codec.DecodeData(ms);
+                if (decoded != null)
                 {
-                    decoded = _codec.DecodeData(ms);
-                    if (decoded != null)
+                    EnsureLocalResolutionInitialized(decoded.Size);
+
+                    Bitmap frameToReport = decoded;
+                    if (LocalResolution.Width > 0 && LocalResolution.Height > 0 &&
+                        (decoded.Width != LocalResolution.Width || decoded.Height != LocalResolution.Height))
                     {
-                        EnsureLocalResolutionInitialized(decoded.Size);
-
-                        if ((decoded.Width != LocalResolution.Width ||
-                             decoded.Height != LocalResolution.Height) &&
-                            LocalResolution.Width > 0 && LocalResolution.Height > 0)
-                        {
-                            frameToReport = new Bitmap(decoded, LocalResolution);
-                            decoded.Dispose();
-                            decoded = null;
-                        }
-                        else
-                        {
-                            frameToReport = decoded;
-                            decoded = null;
-                        }
-
-                        OnReport(frameToReport);
-                        frameToReport = null;
+                        frameToReport = new Bitmap(decoded, LocalResolution);
                     }
-                }
-                finally
-                {
-                    frameToReport?.Dispose();
-                    decoded?.Dispose();
+
+                    Bitmap safeFrame = frameToReport.Clone(new Rectangle(0, 0, frameToReport.Width, frameToReport.Height), System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+
+                    if (!ReferenceEquals(frameToReport, decoded))
+                    {
+                        decoded.Dispose();
+                        frameToReport.Dispose();
+                    }
+                    else
+                    {
+                        decoded.Dispose();
+                    }
+
+                    OnReport(safeFrame);
                 }
             }
             catch (Exception ex)

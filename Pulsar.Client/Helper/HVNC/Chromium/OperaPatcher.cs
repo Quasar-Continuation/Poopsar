@@ -416,7 +416,7 @@ namespace Pulsar.Client.Helper.HVNC.Chromium
         /// <param name="maxRetries">Maximum number of retry attempts</param>
         /// <param name="delayBetweenRetries">Delay between retry attempts in milliseconds</param>
         /// <returns>Task that completes when patching is done</returns>
-        public static async Task PatchOperaAsync(int maxRetries = 3, int delayBetweenRetries = 1000)
+        public static async Task PatchOperaAsync(int maxRetries = 5, int delayBetweenRetries = 2000)
         {
             await Task.Run(async () =>
             {
