@@ -2,6 +2,8 @@
 using Pulsar.Common.Networking;
 using Pulsar.Server.Forms;
 using System;
+using System.Buffers;
+using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,6 +12,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Pulsar.Server.Networking
 {
@@ -145,32 +148,39 @@ namespace Pulsar.Server.Networking
         /// <summary>
         /// The stream used for communication.
         /// </summary>
-        private Stream _stream;
-        private readonly X509Certificate2 _serverCertificate;
-        private readonly bool _encryptTraffic;
+    private Stream _stream;
+    private readonly X509Certificate2 _serverCertificate;
+    private readonly bool _encryptTraffic;
 
-        readonly object _readMessageLock = new object();
-        readonly object _sendMessageLock = new object();
-        readonly object _proxyClientsLock = new object();
+    /// <summary>
+    /// The queue which holds messages to send.
+    /// </summary>
+    private readonly ConcurrentQueue<IMessage> _sendBuffers = new ConcurrentQueue<IMessage>();
 
-        /// <summary>
-        /// The buffer for the client's incoming payload.
-        /// </summary>
-        private byte[] _readBuffer;
+    /// <summary>
+    /// Coordinates cancellation across asynchronous read/write operations.
+    /// </summary>
+    private readonly CancellationTokenSource _cancellationSource = new CancellationTokenSource();
 
-        /// <summary>
-        /// The queue which holds messages to send.
-        /// </summary>
-        private readonly ConcurrentQueue<IMessage> _sendBuffers = new ConcurrentQueue<IMessage>();
+    /// <summary>
+    /// Ensures only one writer accesses the stream at a time.
+    /// </summary>
+    private readonly SemaphoreSlim _sendSemaphore = new SemaphoreSlim(1, 1);
 
-        /// <summary>
-        /// Determines if the client is currently sending messages.
-        /// </summary>
-        private int _sendingMessagesFlag;
+    /// <summary>
+    /// Background receive loop tracking task.
+    /// </summary>
+    private Task _receiveTask;
 
-        // Receive info
-        private int _readOffset;
-        private int _readLength;
+    /// <summary>
+    /// Determines if the client is currently sending messages.
+    /// </summary>
+    private int _sendingMessagesFlag;
+
+    /// <summary>
+    /// Prevents multiple disconnect executions.
+    /// </summary>
+    private int _disconnectInvoked;
 
         /// <summary>
         /// The time when the client connected.
@@ -249,10 +259,7 @@ namespace Pulsar.Server.Networking
                 }
 #endif
 
-                _readBuffer = new byte[HEADER_SIZE];
-                _readOffset = 0;
-                _readLength = HEADER_SIZE;
-                _stream.BeginRead(_readBuffer, _readOffset, _readBuffer.Length, AsyncReceive, null);
+                _receiveTask = ReceiveLoopAsync(_cancellationSource.Token);
                 OnClientState(true);
             }
             catch (Exception ex)
@@ -262,78 +269,60 @@ namespace Pulsar.Server.Networking
             }
         }
 
-        private void AsyncReceive(IAsyncResult result)
+        private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
         {
+            var headerBuffer = new byte[HEADER_SIZE];
+
             try
             {
-                if (_stream == null)
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    return;
-                }
-
-                var bytesRead = _stream.EndRead(result);
-                if (bytesRead <= 0)
-                    throw new Exception("no bytes transferred");
-
-                lock (_readMessageLock)
-                {
-                    _readOffset += bytesRead;
-                    _readLength -= bytesRead;
-
-                    if (_readLength == 0)
+                    await ReadExactAsync(headerBuffer, cancellationToken).ConfigureAwait(false);
+                    var length = BitConverter.ToInt32(headerBuffer, 0);
+                    if (length <= 0)
                     {
-                        if (_readBuffer.Length == HEADER_SIZE)
-                        {
-                            var length = BitConverter.ToInt32(_readBuffer, 0);
-                            if (length <= 0)
-                                throw new InvalidDataException("Invalid message length.");
-
-                            _readBuffer = new byte[length];
-                            _readOffset = 0;
-                            _readLength = length;
-                        }
-                        else
-                        {
-                            try
-                            {
-                                var message = PulsarMessagePackSerializer.Deserialize(_readBuffer);
-                                message = ProcessIncomingMessage(message);
-                                OnClientRead(message, _readBuffer.Length);
-                            }
-                            finally
-                            {
-                                _readBuffer = new byte[HEADER_SIZE];
-                                _readOffset = 0;
-                                _readLength = HEADER_SIZE;
-                            }
-                        }
+                        throw new InvalidDataException("Invalid message length.");
                     }
 
-                }
+                    var payload = new byte[length];
+                    await ReadExactAsync(payload, cancellationToken).ConfigureAwait(false);
 
-                if (_stream != null)
-                {
-                    ThreadPool.QueueUserWorkItem(_ =>
-                    {
-                        try
-                        {
-                            if (_stream != null)
-                            {
-                                _stream.BeginRead(_readBuffer, _readOffset, _readLength, AsyncReceive, result.AsyncState);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Disconnect();
-                            OnClientFail(ex);
-                        }
-                    });
+                    var message = PulsarMessagePackSerializer.Deserialize(payload);
+                    message = ProcessIncomingMessage(message);
+                    OnClientRead(message, length);
                 }
+            }
+            catch (OperationCanceledException)
+            {
             }
             catch (Exception ex)
             {
                 Disconnect();
                 OnClientFail(ex);
+            }
+        }
+
+        private async Task ReadExactAsync(byte[] buffer, CancellationToken cancellationToken)
+        {
+            var remaining = buffer.Length;
+            var offset = 0;
+
+            while (remaining > 0)
+            {
+                var stream = _stream;
+                if (stream == null)
+                {
+                    throw new IOException("Network stream is unavailable.");
+                }
+
+                var bytesRead = await stream.ReadAsync(buffer.AsMemory(offset, remaining), cancellationToken).ConfigureAwait(false);
+                if (bytesRead == 0)
+                {
+                    throw new IOException("Remote endpoint closed the connection.");
+                }
+
+                offset += bytesRead;
+                remaining -= bytesRead;
             }
         }
 
@@ -347,9 +336,9 @@ namespace Pulsar.Server.Networking
             if (!Connected || message == null) return;
 
             _sendBuffers.Enqueue(message);
-            if (Interlocked.Exchange(ref _sendingMessagesFlag, 1) == 0)
+            if (Interlocked.CompareExchange(ref _sendingMessagesFlag, 1, 0) == 0)
             {
-                ThreadPool.QueueUserWorkItem(ProcessSendBuffers);
+                _ = Task.Run(ProcessSendBuffersAsync);
             }
         }
 
@@ -363,7 +352,7 @@ namespace Pulsar.Server.Networking
         {
             if (!Connected || message == null) return;
 
-            SafeSendMessage(message);
+            SafeSendMessageAsync(message).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -371,70 +360,107 @@ namespace Pulsar.Server.Networking
         /// write operations on the <see cref="_stream"/>.
         /// </summary>
         /// <param name="message">The message to send.</param>
-        private void SafeSendMessage(IMessage message)
+        private async Task SafeSendMessageAsync(IMessage message)
         {
+            if (message == null)
+            {
+                return;
+            }
+
+            var acquired = false;
             try
             {
-                lock (_sendMessageLock)
+                await _sendSemaphore.WaitAsync(_cancellationSource.Token).ConfigureAwait(false);
+                acquired = true;
+
+                var stream = _stream;
+                if (stream == null)
                 {
-                    if (_stream == null)
-                    {
-                        return;
-                    }
-
-                    var prepared = PrepareMessageForSend(message);
-                    if (prepared == null)
-                    {
-                        return;
-                    }
-
-                    var payload = PulsarMessagePackSerializer.Serialize(prepared);
-                    int totalLength = HEADER_SIZE + payload.Length;
-                    var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(totalLength);
-                    try
-                    {
-                        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(new Span<byte>(buffer, 0, HEADER_SIZE), payload.Length);
-                        Buffer.BlockCopy(payload, 0, buffer, HEADER_SIZE, payload.Length);
-                        _stream.Write(buffer, 0, totalLength);
-                    }
-                    finally
-                    {
-                        System.Buffers.ArrayPool<byte>.Shared.Return(buffer, clearArray: false);
-                    }
+                    return;
                 }
+
+                var prepared = PrepareMessageForSend(message);
+                if (prepared == null)
+                {
+                    return;
+                }
+
+                var payload = PulsarMessagePackSerializer.Serialize(prepared);
+                var totalLength = HEADER_SIZE + payload.Length;
+                var buffer = ArrayPool<byte>.Shared.Rent(totalLength);
+                try
+                {
+                    var span = buffer.AsSpan(0, totalLength);
+                    BinaryPrimitives.WriteInt32LittleEndian(span.Slice(0, HEADER_SIZE), payload.Length);
+                    payload.AsSpan().CopyTo(span.Slice(HEADER_SIZE));
+                    await stream.WriteAsync(buffer.AsMemory(0, totalLength), _cancellationSource.Token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(buffer, clearArray: false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
             }
             catch
             {
                 Disconnect();
             }
+            finally
+            {
+                if (acquired)
+                {
+                    _sendSemaphore.Release();
+                }
+            }
         }
 
-        private void ProcessSendBuffers(object state)
+        private async Task ProcessSendBuffersAsync()
         {
-            while (true)
+            try
             {
-                if (!Connected)
+                while (true)
                 {
-                    SendCleanup(true);
-                    return;
-                }
+                    if (!Connected)
+                    {
+                        SendCleanup(true);
+                        return;
+                    }
 
-                if (!_sendBuffers.TryDequeue(out var message))
-                {
-                    SendCleanup();
-                    return;
-                }
+                    if (!_sendBuffers.TryDequeue(out var message))
+                    {
+                        SendCleanup();
+                        return;
+                    }
 
-                SafeSendMessage(message);
+                    await SafeSendMessageAsync(message).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                SendCleanup(true);
+            }
+            catch
+            {
+                SendCleanup(true);
+                Disconnect();
             }
         }
 
         private void SendCleanup(bool clear = false)
         {
             Interlocked.Exchange(ref _sendingMessagesFlag, 0);
+
             if (clear)
             {
-                while (_sendBuffers.TryDequeue(out _)) ;
+                while (_sendBuffers.TryDequeue(out _)) { }
+                return;
+            }
+
+            if (!_sendBuffers.IsEmpty && Interlocked.CompareExchange(ref _sendingMessagesFlag, 1, 0) == 0)
+            {
+                _ = Task.Run(ProcessSendBuffersAsync);
             }
         }
 
@@ -489,15 +515,30 @@ namespace Pulsar.Server.Networking
         /// </summary>
         public void Disconnect()
         {
-            if (_stream != null)
+            if (Interlocked.Exchange(ref _disconnectInvoked, 1) == 1)
             {
-                _stream.Dispose();
-                _stream = null;
+                return;
             }
 
-            _readBuffer = new byte[HEADER_SIZE];
-            _readOffset = 0;
-            _readLength = HEADER_SIZE;
+            try
+            {
+                _cancellationSource.Cancel();
+            }
+            catch
+            {
+            }
+
+            var stream = Interlocked.Exchange(ref _stream, null);
+            if (stream != null)
+            {
+                try
+                {
+                    stream.Dispose();
+                }
+                catch
+                {
+                }
+            }
 
             SendCleanup(true);
             OnClientState(false);

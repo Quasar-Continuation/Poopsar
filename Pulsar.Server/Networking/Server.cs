@@ -10,6 +10,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Pulsar.Server.Networking
@@ -189,10 +191,15 @@ namespace Pulsar.Server.Networking
         private readonly List<Socket> _handles = new List<Socket>();
         private readonly object _handlesLock = new object();
 
-        /// <summary>
-        /// Accept event args, one per listening socket.
-        /// </summary>
-        private readonly Dictionary<Socket, SocketAsyncEventArgs> _acceptArgs = new Dictionary<Socket, SocketAsyncEventArgs>();
+    /// <summary>
+    /// Tracks the accept loop tasks for each listening socket.
+    /// </summary>
+    private readonly Dictionary<Socket, Task> _acceptLoops = new Dictionary<Socket, Task>();
+
+    /// <summary>
+    /// Cancellation token source controlling the active accept loops.
+    /// </summary>
+    private CancellationTokenSource _listenCancellation;
 
         /// <summary>
         /// The server certificate.
@@ -298,33 +305,42 @@ namespace Pulsar.Server.Networking
         public void ListenMany(IEnumerable<ushort> ports, bool ipv6, bool enableUPnP)
         {
             var startNow = !Listening;
+            var token = EnsureListeningToken();
 
             foreach (var port in ports.Distinct())
             {
+                bool alreadyListening;
                 lock (_handlesLock)
                 {
-                    if (_handles.Any(h => (h.LocalEndPoint as IPEndPoint)?.Port == port))
-                        continue;
-            }
+                    alreadyListening = _handles.Any(h => (h.LocalEndPoint as IPEndPoint)?.Port == port);
+                }
+
+                if (alreadyListening)
+                {
+                    continue;
+                }
+
                 Socket handle;
-            if (Socket.OSSupportsIPv6 && ipv6)
-            {
+                if (Socket.OSSupportsIPv6 && ipv6)
+                {
                     handle = new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp);
                     handle.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, 0);
                     handle.Bind(new IPEndPoint(IPAddress.IPv6Any, port));
-            }
-            else
-            {
+                }
+                else
+                {
                     handle = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                     handle.Bind(new IPEndPoint(IPAddress.Any, port));
-            }
+                }
 
                 handle.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 handle.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
                 handle.Listen(1000);
+
                 lock (_handlesLock)
                 {
                     _handles.Add(handle);
+                    _acceptLoops[handle] = AcceptClientsAsync(handle, token);
                 }
 
                 if (enableUPnP)
@@ -334,110 +350,146 @@ namespace Pulsar.Server.Networking
                     upnp.CreatePortMapAsync(port);
                 }
 
-                var item = new SocketAsyncEventArgs();
-                item.Completed += AcceptClient;
-                _acceptArgs[handle] = item;
-
                 Port = port; // keep last started port for compatibility
 
-                if (!handle.AcceptAsync(item))
-                    AcceptClient(handle, item);
-
-            var mainForm = GetMainFormSafe();
-            if (mainForm != null)
-            {
-                try
+                var mainForm = GetMainFormSafe();
+                if (mainForm != null)
                 {
-                    if (mainForm.InvokeRequired)
+                    try
                     {
-                        mainForm.BeginInvoke(new Action(() =>
+                        if (mainForm.InvokeRequired)
                         {
-                            try
-                            {
-                                mainForm.EventLog($"Started listening for connections on port: {port}", "info");
-                                UpdateServerStatusIcon(true);
-                            }
-                            catch (Exception)
-                            {
-                            }
-                        }));
-                    }
-                    else
-                    {
-                        mainForm.EventLog($"Started listening for connections on port: {port}", "info");
-                        UpdateServerStatusIcon(true);
-                    }
-                }
-                catch (Exception)
-                {
-                }
-                }
-            }
-
-            if (startNow && _handles.Count > 0)
-            {
-                OnServerState(true);
-            }
-        }
-
-        /// <summary>
-        /// Accepts and begins authenticating an incoming client.
-        /// </summary>
-        /// <param name="s">The listening socket.</param>
-        /// <param name="e">Asynchronous socket event.</param>
-        private void AcceptClient(object s, SocketAsyncEventArgs e)
-        {
-            var listenSocket = s as Socket;
-            if (listenSocket == null)
-            {
-                // Try to recover the listen socket from our map
-                listenSocket = _acceptArgs.Keys.FirstOrDefault();
-            }
-
-            try
-            {
-                do
-                {
-                    switch (e.SocketError)
-                    {
-                        case SocketError.Success:
-                            try
-                            {
-                                Socket clientSocket = e.AcceptSocket;
-                                clientSocket.SetKeepAliveEx(KeepAliveInterval, KeepAliveTime);
-                                clientSocket.NoDelay = true;
-
-                                var networkStream = new NetworkStream(clientSocket, true);
-                                var client = new Client(networkStream, (IPEndPoint)clientSocket.RemoteEndPoint, ServerCertificate);
-                                AddClient(client);
-                                OnClientState(client, true);
-                            }
-                            catch (Exception)
+                            mainForm.BeginInvoke(new Action(() =>
                             {
                                 try
                                 {
-                                    e.AcceptSocket?.Close();
+                                    mainForm.EventLog($"Started listening for connections on port: {port}", "info");
+                                    UpdateServerStatusIcon(true);
                                 }
-                                catch
+                                catch (Exception)
                                 {
                                 }
-                            }
-                            break;
-                        case SocketError.ConnectionReset:
-                            break;
-                        default:
-                            throw new SocketException((int)e.SocketError);
+                            }));
+                        }
+                        else
+                        {
+                            mainForm.EventLog($"Started listening for connections on port: {port}", "info");
+                            UpdateServerStatusIcon(true);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+            }
+
+            lock (_handlesLock)
+            {
+                if (startNow && _handles.Count > 0)
+                {
+                    OnServerState(true);
+                }
+            }
+        }
+
+        private CancellationToken EnsureListeningToken()
+        {
+            lock (_handlesLock)
+            {
+                if (_listenCancellation == null || _listenCancellation.IsCancellationRequested)
+                {
+                    _listenCancellation?.Dispose();
+                    _listenCancellation = new CancellationTokenSource();
+                }
+
+                return _listenCancellation.Token;
+            }
+        }
+
+        private async Task AcceptClientsAsync(Socket listenSocket, CancellationToken cancellationToken)
+        {
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    Socket clientSocket;
+                    try
+                    {
+                        clientSocket = await listenSocket.AcceptAsync(cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        break;
+                    }
+                    catch (SocketException ex)
+                    {
+                        if (!cancellationToken.IsCancellationRequested)
+                        {
+                            Debug.WriteLine($"[SERVER] AcceptAsync failed: {ex.SocketErrorCode}");
+                            await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken).ConfigureAwait(false);
+                        }
+                        continue;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (!cancellationToken.IsCancellationRequested)
+                        {
+                            Debug.WriteLine($"[SERVER] AcceptAsync encountered an unexpected error: {ex.Message}");
+                            await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken).ConfigureAwait(false);
+                        }
+                        continue;
                     }
 
-                    e.AcceptSocket = null; // enable reuse
-                } while (listenSocket != null && !listenSocket.AcceptAsync(e));
+                    if (clientSocket == null)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        clientSocket.SetKeepAliveEx(KeepAliveInterval, KeepAliveTime);
+                        clientSocket.NoDelay = true;
+
+                        NetworkStream networkStream = null;
+                        try
+                        {
+                            networkStream = new NetworkStream(clientSocket, ownsSocket: true);
+                            var client = new Client(networkStream, (IPEndPoint)clientSocket.RemoteEndPoint, ServerCertificate);
+                            networkStream = null; // ownership transferred to Client
+                            AddClient(client);
+                            OnClientState(client, true);
+                        }
+                        finally
+                        {
+                            networkStream?.Dispose();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[SERVER] Failed to initialize client connection: {ex.Message}");
+                        try
+                        {
+                            clientSocket.Dispose();
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }
             }
-            catch (ObjectDisposedException)
+            catch (OperationCanceledException)
             {
             }
-            catch (Exception)
+            finally
             {
-                Disconnect();
+                lock (_handlesLock)
+                {
+                    _acceptLoops.Remove(listenSocket);
+                }
             }
         }
 
@@ -484,6 +536,8 @@ namespace Pulsar.Server.Networking
             if (ProcessingDisconnect) return;
             ProcessingDisconnect = true;
 
+            StopAcceptLoops();
+
             List<Socket> toClose;
             lock (_handlesLock)
             {
@@ -494,12 +548,6 @@ namespace Pulsar.Server.Networking
             {
                 try { handle.Close(); } catch { }
             }
-
-            foreach (var kvp in _acceptArgs.ToList())
-            {
-                try { kvp.Value.Dispose(); } catch { }
-            }
-            _acceptArgs.Clear();
 
             foreach (var upnpKvp in _upnpByPort.ToList())
             {
@@ -529,6 +577,56 @@ namespace Pulsar.Server.Networking
             ProcessingDisconnect = false;
             OnServerState(false);
             UpdateServerStatusIcon(false);
+        }
+
+        private void StopAcceptLoops()
+        {
+            CancellationTokenSource cancellation = null;
+            Task[] acceptTasks = Array.Empty<Task>();
+
+            lock (_handlesLock)
+            {
+                if (_listenCancellation != null)
+                {
+                    cancellation = _listenCancellation;
+                    _listenCancellation = null;
+                }
+
+                if (_acceptLoops.Count > 0)
+                {
+                    acceptTasks = _acceptLoops.Values.Where(t => t != null).ToArray();
+                    _acceptLoops.Clear();
+                }
+            }
+
+            if (cancellation != null)
+            {
+                try
+                {
+                    cancellation.Cancel();
+                }
+                catch
+                {
+                }
+                finally
+                {
+                    cancellation.Dispose();
+                }
+            }
+
+            if (acceptTasks.Length > 0)
+            {
+                try
+                {
+                    Task.WaitAll(acceptTasks, TimeSpan.FromSeconds(2));
+                }
+                catch (AggregateException)
+                {
+                }
+                catch (OperationCanceledException)
+                {
+                }
+            }
         }
 
         /// <summary>

