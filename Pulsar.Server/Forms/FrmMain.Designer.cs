@@ -46,15 +46,15 @@ namespace Pulsar.Server.Forms
         {
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FrmMain));
-            ListViewItem listViewItem19 = new ListViewItem("CPU");
-            ListViewItem listViewItem20 = new ListViewItem("GPU");
-            ListViewItem listViewItem21 = new ListViewItem("RAM");
-            ListViewItem listViewItem22 = new ListViewItem("Uptime");
-            ListViewItem listViewItem23 = new ListViewItem("Antivirus");
-            ListViewItem listViewItem24 = new ListViewItem("Default Browser");
-            ListViewItem listViewItem25 = new ListViewItem("Ping");
-            ListViewItem listViewItem26 = new ListViewItem("Webcam");
-            ListViewItem listViewItem27 = new ListViewItem("AFK Time");
+            ListViewItem listViewItem1 = new ListViewItem("CPU");
+            ListViewItem listViewItem2 = new ListViewItem("GPU");
+            ListViewItem listViewItem3 = new ListViewItem("RAM");
+            ListViewItem listViewItem4 = new ListViewItem("Uptime");
+            ListViewItem listViewItem5 = new ListViewItem("Antivirus");
+            ListViewItem listViewItem6 = new ListViewItem("Default Browser");
+            ListViewItem listViewItem7 = new ListViewItem("Ping");
+            ListViewItem listViewItem8 = new ListViewItem("Webcam");
+            ListViewItem listViewItem9 = new ListViewItem("AFK Time");
             contextMenuStrip = new ContextMenuStrip(components);
             systemToolStripMenuItem = new ToolStripMenuItem();
             systemInformationToolStripMenuItem = new ToolStripMenuItem();
@@ -66,8 +66,6 @@ namespace Pulsar.Server.Forms
             reverseProxyToolStripMenuItem = new ToolStripMenuItem();
             registryEditorToolStripMenuItem = new ToolStripMenuItem();
             remoteExecuteToolStripMenuItem = new ToolStripMenuItem();
-            localFileToolStripMenuItem = new ToolStripMenuItem();
-            webFileToolStripMenuItem = new ToolStripMenuItem();
             ctxtLine = new ToolStripSeparator();
             actionsToolStripMenuItem = new ToolStripMenuItem();
             shutdownToolStripMenuItem = new ToolStripMenuItem();
@@ -81,9 +79,6 @@ namespace Pulsar.Server.Forms
             hVNCToolStripMenuItem = new ToolStripMenuItem();
             keyloggerToolStripMenuItem = new ToolStripMenuItem();
             passwordRecoveryToolStripMenuItem = new ToolStripMenuItem();
-            virtualMonitorToolStripMenuItem = new ToolStripMenuItem();
-            installVirtualMonitorToolStripMenuItem1 = new ToolStripMenuItem();
-            uninstallVirtualMonitorToolStripMenuItem = new ToolStripMenuItem();
             userSupportToolStripMenuItem = new ToolStripMenuItem();
             remoteChatToolStripMenuItem = new ToolStripMenuItem();
             remoteScriptingToolStripMenuItem = new ToolStripMenuItem();
@@ -91,6 +86,7 @@ namespace Pulsar.Server.Forms
             visitWebsiteToolStripMenuItem = new ToolStripMenuItem();
             quickCommandsToolStripMenuItem = new ToolStripMenuItem();
             shellcodeRunnerToolStripMenuItem = new ToolStripMenuItem();
+            injectDLLToolStripMenuItem = new ToolStripMenuItem();
             addCDriveExceptionToolStripMenuItem = new ToolStripMenuItem();
             taskManagerToolStripMenuItem1 = new ToolStripMenuItem();
             enableToolStripMenuItem = new ToolStripMenuItem();
@@ -98,6 +94,9 @@ namespace Pulsar.Server.Forms
             uACToolStripMenuItem = new ToolStripMenuItem();
             enableUACToolStripMenuItem = new ToolStripMenuItem();
             disableUACToolStripMenuItem = new ToolStripMenuItem();
+            virtualMonitorToolStripMenuItem1 = new ToolStripMenuItem();
+            installToolStripMenuItem = new ToolStripMenuItem();
+            uninstallToolStripMenuItem1 = new ToolStripMenuItem();
             funMethodsToolStripMenuItem = new ToolStripMenuItem();
             bSODToolStripMenuItem = new ToolStripMenuItem();
             cWToolStripMenuItem = new ToolStripMenuItem();
@@ -252,7 +251,6 @@ namespace Pulsar.Server.Forms
             aboutToolStripMenuItem = new ToolStripMenuItem();
             settingsToolStripMenuItem = new ToolStripMenuItem();
             builderToolStripMenuItem = new ToolStripMenuItem();
-            injectDLLToolStripMenuItem = new ToolStripMenuItem();
             contextMenuStrip.SuspendLayout();
             tableLayoutPanel.SuspendLayout();
             MainTabControl.SuspendLayout();
@@ -281,7 +279,7 @@ namespace Pulsar.Server.Forms
             // 
             contextMenuStrip.Items.AddRange(new ToolStripItem[] { systemToolStripMenuItem, surveillanceToolStripMenuItem, userSupportToolStripMenuItem, quickCommandsToolStripMenuItem, funMethodsToolStripMenuItem, connectionToolStripMenuItem, lineToolStripMenuItem, openClientFolderToolStripMenuItem, selectAllToolStripMenuItem });
             contextMenuStrip.Name = "ctxtMenu";
-            contextMenuStrip.Size = new Size(180, 186);
+            contextMenuStrip.Size = new Size(181, 208);
             contextMenuStrip.Opening += contextMenuStrip_Opening;
             // 
             // systemToolStripMenuItem
@@ -289,7 +287,7 @@ namespace Pulsar.Server.Forms
             systemToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { systemInformationToolStripMenuItem, fileManagerToolStripMenuItem, startupManagerToolStripMenuItem, taskManagerToolStripMenuItem, remoteShellToolStripMenuItem, connectionsToolStripMenuItem, reverseProxyToolStripMenuItem, registryEditorToolStripMenuItem, remoteExecuteToolStripMenuItem, ctxtLine, actionsToolStripMenuItem });
             systemToolStripMenuItem.Image = Properties.Resources.cog;
             systemToolStripMenuItem.Name = "systemToolStripMenuItem";
-            systemToolStripMenuItem.Size = new Size(179, 22);
+            systemToolStripMenuItem.Size = new Size(180, 22);
             systemToolStripMenuItem.Text = "Administration";
             systemToolStripMenuItem.Click += systemToolStripMenuItem_Click;
             // 
@@ -297,7 +295,7 @@ namespace Pulsar.Server.Forms
             // 
             systemInformationToolStripMenuItem.Image = (Image)resources.GetObject("systemInformationToolStripMenuItem.Image");
             systemInformationToolStripMenuItem.Name = "systemInformationToolStripMenuItem";
-            systemInformationToolStripMenuItem.Size = new Size(178, 22);
+            systemInformationToolStripMenuItem.Size = new Size(180, 22);
             systemInformationToolStripMenuItem.Text = "System Information";
             systemInformationToolStripMenuItem.Click += systemInformationToolStripMenuItem_Click;
             // 
@@ -305,7 +303,7 @@ namespace Pulsar.Server.Forms
             // 
             fileManagerToolStripMenuItem.Image = (Image)resources.GetObject("fileManagerToolStripMenuItem.Image");
             fileManagerToolStripMenuItem.Name = "fileManagerToolStripMenuItem";
-            fileManagerToolStripMenuItem.Size = new Size(178, 22);
+            fileManagerToolStripMenuItem.Size = new Size(180, 22);
             fileManagerToolStripMenuItem.Text = "File Manager";
             fileManagerToolStripMenuItem.Click += fileManagerToolStripMenuItem_Click;
             // 
@@ -313,7 +311,7 @@ namespace Pulsar.Server.Forms
             // 
             startupManagerToolStripMenuItem.Image = Properties.Resources.application_edit;
             startupManagerToolStripMenuItem.Name = "startupManagerToolStripMenuItem";
-            startupManagerToolStripMenuItem.Size = new Size(178, 22);
+            startupManagerToolStripMenuItem.Size = new Size(180, 22);
             startupManagerToolStripMenuItem.Text = "Startup Manager";
             startupManagerToolStripMenuItem.Click += startupManagerToolStripMenuItem_Click;
             // 
@@ -321,7 +319,7 @@ namespace Pulsar.Server.Forms
             // 
             taskManagerToolStripMenuItem.Image = Properties.Resources.application_cascade;
             taskManagerToolStripMenuItem.Name = "taskManagerToolStripMenuItem";
-            taskManagerToolStripMenuItem.Size = new Size(178, 22);
+            taskManagerToolStripMenuItem.Size = new Size(180, 22);
             taskManagerToolStripMenuItem.Text = "Task Manager";
             taskManagerToolStripMenuItem.Click += taskManagerToolStripMenuItem_Click;
             // 
@@ -329,7 +327,7 @@ namespace Pulsar.Server.Forms
             // 
             remoteShellToolStripMenuItem.Image = (Image)resources.GetObject("remoteShellToolStripMenuItem.Image");
             remoteShellToolStripMenuItem.Name = "remoteShellToolStripMenuItem";
-            remoteShellToolStripMenuItem.Size = new Size(178, 22);
+            remoteShellToolStripMenuItem.Size = new Size(180, 22);
             remoteShellToolStripMenuItem.Text = "Remote Shell";
             remoteShellToolStripMenuItem.Click += remoteShellToolStripMenuItem_Click;
             // 
@@ -337,7 +335,7 @@ namespace Pulsar.Server.Forms
             // 
             connectionsToolStripMenuItem.Image = Properties.Resources.transmit_blue;
             connectionsToolStripMenuItem.Name = "connectionsToolStripMenuItem";
-            connectionsToolStripMenuItem.Size = new Size(178, 22);
+            connectionsToolStripMenuItem.Size = new Size(180, 22);
             connectionsToolStripMenuItem.Text = "TCP Connections";
             connectionsToolStripMenuItem.Click += connectionsToolStripMenuItem_Click;
             // 
@@ -345,7 +343,7 @@ namespace Pulsar.Server.Forms
             // 
             reverseProxyToolStripMenuItem.Image = Properties.Resources.server_link;
             reverseProxyToolStripMenuItem.Name = "reverseProxyToolStripMenuItem";
-            reverseProxyToolStripMenuItem.Size = new Size(178, 22);
+            reverseProxyToolStripMenuItem.Size = new Size(180, 22);
             reverseProxyToolStripMenuItem.Text = "Reverse Proxy";
             reverseProxyToolStripMenuItem.Click += reverseProxyToolStripMenuItem_Click;
             // 
@@ -353,45 +351,29 @@ namespace Pulsar.Server.Forms
             // 
             registryEditorToolStripMenuItem.Image = Properties.Resources.registry;
             registryEditorToolStripMenuItem.Name = "registryEditorToolStripMenuItem";
-            registryEditorToolStripMenuItem.Size = new Size(178, 22);
+            registryEditorToolStripMenuItem.Size = new Size(180, 22);
             registryEditorToolStripMenuItem.Text = "Registry Editor";
             registryEditorToolStripMenuItem.Click += registryEditorToolStripMenuItem_Click;
             // 
             // remoteExecuteToolStripMenuItem
             // 
-            remoteExecuteToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { localFileToolStripMenuItem, webFileToolStripMenuItem });
             remoteExecuteToolStripMenuItem.Image = Properties.Resources.lightning;
             remoteExecuteToolStripMenuItem.Name = "remoteExecuteToolStripMenuItem";
-            remoteExecuteToolStripMenuItem.Size = new Size(178, 22);
+            remoteExecuteToolStripMenuItem.Size = new Size(180, 22);
             remoteExecuteToolStripMenuItem.Text = "Remote Execute";
-            // 
-            // localFileToolStripMenuItem
-            // 
-            localFileToolStripMenuItem.Image = Properties.Resources.drive_go;
-            localFileToolStripMenuItem.Name = "localFileToolStripMenuItem";
-            localFileToolStripMenuItem.Size = new Size(132, 22);
-            localFileToolStripMenuItem.Text = "Local File...";
-            localFileToolStripMenuItem.Click += localFileToolStripMenuItem_Click;
-            // 
-            // webFileToolStripMenuItem
-            // 
-            webFileToolStripMenuItem.Image = Properties.Resources.world_go;
-            webFileToolStripMenuItem.Name = "webFileToolStripMenuItem";
-            webFileToolStripMenuItem.Size = new Size(132, 22);
-            webFileToolStripMenuItem.Text = "Web File...";
-            webFileToolStripMenuItem.Click += webFileToolStripMenuItem_Click;
+            remoteExecuteToolStripMenuItem.Click += remoteExecuteToolStripMenuItem_Click;
             // 
             // ctxtLine
             // 
             ctxtLine.Name = "ctxtLine";
-            ctxtLine.Size = new Size(175, 6);
+            ctxtLine.Size = new Size(177, 6);
             // 
             // actionsToolStripMenuItem
             // 
             actionsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { shutdownToolStripMenuItem, restartToolStripMenuItem, standbyToolStripMenuItem });
             actionsToolStripMenuItem.Image = Properties.Resources.actions;
             actionsToolStripMenuItem.Name = "actionsToolStripMenuItem";
-            actionsToolStripMenuItem.Size = new Size(178, 22);
+            actionsToolStripMenuItem.Size = new Size(180, 22);
             actionsToolStripMenuItem.Text = "Actions";
             // 
             // shutdownToolStripMenuItem
@@ -420,10 +402,10 @@ namespace Pulsar.Server.Forms
             // 
             // surveillanceToolStripMenuItem
             // 
-            surveillanceToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { remoteDesktopToolStripMenuItem2, webcamToolStripMenuItem, remoteSystemAudioToolStripMenuItem, audioToolStripMenuItem, hVNCToolStripMenuItem, keyloggerToolStripMenuItem, passwordRecoveryToolStripMenuItem, virtualMonitorToolStripMenuItem });
+            surveillanceToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { remoteDesktopToolStripMenuItem2, webcamToolStripMenuItem, remoteSystemAudioToolStripMenuItem, audioToolStripMenuItem, hVNCToolStripMenuItem, keyloggerToolStripMenuItem, passwordRecoveryToolStripMenuItem });
             surveillanceToolStripMenuItem.Image = Properties.Resources.monitoring;
             surveillanceToolStripMenuItem.Name = "surveillanceToolStripMenuItem";
-            surveillanceToolStripMenuItem.Size = new Size(179, 22);
+            surveillanceToolStripMenuItem.Size = new Size(180, 22);
             surveillanceToolStripMenuItem.Text = "Monitoring";
             // 
             // remoteDesktopToolStripMenuItem2
@@ -482,43 +464,19 @@ namespace Pulsar.Server.Forms
             passwordRecoveryToolStripMenuItem.Text = "Password Recovery";
             passwordRecoveryToolStripMenuItem.Click += passwordRecoveryToolStripMenuItem_Click;
             // 
-            // virtualMonitorToolStripMenuItem
-            // 
-            virtualMonitorToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { installVirtualMonitorToolStripMenuItem1, uninstallVirtualMonitorToolStripMenuItem });
-            virtualMonitorToolStripMenuItem.Image = Properties.Resources.monitor;
-            virtualMonitorToolStripMenuItem.Name = "virtualMonitorToolStripMenuItem";
-            virtualMonitorToolStripMenuItem.Size = new Size(191, 22);
-            virtualMonitorToolStripMenuItem.Text = "Virtual Monitor";
-            // 
-            // installVirtualMonitorToolStripMenuItem1
-            // 
-            installVirtualMonitorToolStripMenuItem1.Image = Properties.Resources.monitor;
-            installVirtualMonitorToolStripMenuItem1.Name = "installVirtualMonitorToolStripMenuItem1";
-            installVirtualMonitorToolStripMenuItem1.Size = new Size(203, 22);
-            installVirtualMonitorToolStripMenuItem1.Text = "Install Virtual Monitor";
-            installVirtualMonitorToolStripMenuItem1.Click += installVirtualMonitorToolStripMenuItem1_Click;
-            // 
-            // uninstallVirtualMonitorToolStripMenuItem
-            // 
-            uninstallVirtualMonitorToolStripMenuItem.Image = Properties.Resources.monitor;
-            uninstallVirtualMonitorToolStripMenuItem.Name = "uninstallVirtualMonitorToolStripMenuItem";
-            uninstallVirtualMonitorToolStripMenuItem.Size = new Size(203, 22);
-            uninstallVirtualMonitorToolStripMenuItem.Text = "Uninstall Virtual Monitor";
-            uninstallVirtualMonitorToolStripMenuItem.Click += uninstallVirtualMonitorToolStripMenuItem_Click;
-            // 
             // userSupportToolStripMenuItem
             // 
             userSupportToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { remoteChatToolStripMenuItem, remoteScriptingToolStripMenuItem, showMessageboxToolStripMenuItem, visitWebsiteToolStripMenuItem });
             userSupportToolStripMenuItem.Image = Properties.Resources.user;
             userSupportToolStripMenuItem.Name = "userSupportToolStripMenuItem";
-            userSupportToolStripMenuItem.Size = new Size(179, 22);
+            userSupportToolStripMenuItem.Size = new Size(180, 22);
             userSupportToolStripMenuItem.Text = "User Support";
             // 
             // remoteChatToolStripMenuItem
             // 
             remoteChatToolStripMenuItem.Image = Properties.Resources.phone;
             remoteChatToolStripMenuItem.Name = "remoteChatToolStripMenuItem";
-            remoteChatToolStripMenuItem.Size = new Size(171, 22);
+            remoteChatToolStripMenuItem.Size = new Size(180, 22);
             remoteChatToolStripMenuItem.Text = "Remote Chat";
             remoteChatToolStripMenuItem.Click += remoteChatToolStripMenuItem_Click;
             // 
@@ -526,7 +484,7 @@ namespace Pulsar.Server.Forms
             // 
             remoteScriptingToolStripMenuItem.Image = Properties.Resources.script_code;
             remoteScriptingToolStripMenuItem.Name = "remoteScriptingToolStripMenuItem";
-            remoteScriptingToolStripMenuItem.Size = new Size(171, 22);
+            remoteScriptingToolStripMenuItem.Size = new Size(180, 22);
             remoteScriptingToolStripMenuItem.Text = "Remote Scripting";
             remoteScriptingToolStripMenuItem.Click += remoteScriptingToolStripMenuItem_Click;
             // 
@@ -534,7 +492,7 @@ namespace Pulsar.Server.Forms
             // 
             showMessageboxToolStripMenuItem.Image = (Image)resources.GetObject("showMessageboxToolStripMenuItem.Image");
             showMessageboxToolStripMenuItem.Name = "showMessageboxToolStripMenuItem";
-            showMessageboxToolStripMenuItem.Size = new Size(171, 22);
+            showMessageboxToolStripMenuItem.Size = new Size(180, 22);
             showMessageboxToolStripMenuItem.Text = "Show Messagebox";
             showMessageboxToolStripMenuItem.Click += showMessageboxToolStripMenuItem_Click;
             // 
@@ -542,16 +500,16 @@ namespace Pulsar.Server.Forms
             // 
             visitWebsiteToolStripMenuItem.Image = (Image)resources.GetObject("visitWebsiteToolStripMenuItem.Image");
             visitWebsiteToolStripMenuItem.Name = "visitWebsiteToolStripMenuItem";
-            visitWebsiteToolStripMenuItem.Size = new Size(171, 22);
+            visitWebsiteToolStripMenuItem.Size = new Size(180, 22);
             visitWebsiteToolStripMenuItem.Text = "Send to Website";
             visitWebsiteToolStripMenuItem.Click += visitWebsiteToolStripMenuItem_Click;
             // 
             // quickCommandsToolStripMenuItem
             // 
-            quickCommandsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { shellcodeRunnerToolStripMenuItem, injectDLLToolStripMenuItem, addCDriveExceptionToolStripMenuItem, taskManagerToolStripMenuItem1, uACToolStripMenuItem });
+            quickCommandsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { shellcodeRunnerToolStripMenuItem, injectDLLToolStripMenuItem, addCDriveExceptionToolStripMenuItem, taskManagerToolStripMenuItem1, uACToolStripMenuItem, virtualMonitorToolStripMenuItem1 });
             quickCommandsToolStripMenuItem.Image = Properties.Resources.wrench;
             quickCommandsToolStripMenuItem.Name = "quickCommandsToolStripMenuItem";
-            quickCommandsToolStripMenuItem.Size = new Size(179, 22);
+            quickCommandsToolStripMenuItem.Size = new Size(180, 22);
             quickCommandsToolStripMenuItem.Text = "Miscellaneous";
             // 
             // shellcodeRunnerToolStripMenuItem
@@ -561,6 +519,14 @@ namespace Pulsar.Server.Forms
             shellcodeRunnerToolStripMenuItem.Size = new Size(194, 22);
             shellcodeRunnerToolStripMenuItem.Text = "Inject Shellcode";
             shellcodeRunnerToolStripMenuItem.Click += shellcodeRunnerToolStripMenuItem_Click;
+            // 
+            // injectDLLToolStripMenuItem
+            // 
+            injectDLLToolStripMenuItem.Image = Properties.Resources.dllinjectoricon;
+            injectDLLToolStripMenuItem.Name = "injectDLLToolStripMenuItem";
+            injectDLLToolStripMenuItem.Size = new Size(194, 22);
+            injectDLLToolStripMenuItem.Text = "Inject DLL";
+            injectDLLToolStripMenuItem.Click += injectDLLToolStripMenuItem_Click;
             // 
             // addCDriveExceptionToolStripMenuItem
             // 
@@ -618,12 +584,36 @@ namespace Pulsar.Server.Forms
             disableUACToolStripMenuItem.Text = "Disable UAC";
             disableUACToolStripMenuItem.Click += disableUACToolStripMenuItem_Click;
             // 
+            // virtualMonitorToolStripMenuItem1
+            // 
+            virtualMonitorToolStripMenuItem1.DropDownItems.AddRange(new ToolStripItem[] { installToolStripMenuItem, uninstallToolStripMenuItem1 });
+            virtualMonitorToolStripMenuItem1.Image = Properties.Resources.virtualmonitoricon;
+            virtualMonitorToolStripMenuItem1.Name = "virtualMonitorToolStripMenuItem1";
+            virtualMonitorToolStripMenuItem1.Size = new Size(194, 22);
+            virtualMonitorToolStripMenuItem1.Text = "Virtual Monitor";
+            // 
+            // installToolStripMenuItem
+            // 
+            installToolStripMenuItem.Image = Properties.Resources.application_go;
+            installToolStripMenuItem.Name = "installToolStripMenuItem";
+            installToolStripMenuItem.Size = new Size(180, 22);
+            installToolStripMenuItem.Text = "Install";
+            installToolStripMenuItem.Click += installToolStripMenuItem_Click;
+            // 
+            // uninstallToolStripMenuItem1
+            // 
+            uninstallToolStripMenuItem1.Image = Properties.Resources.application_delete;
+            uninstallToolStripMenuItem1.Name = "uninstallToolStripMenuItem1";
+            uninstallToolStripMenuItem1.Size = new Size(180, 22);
+            uninstallToolStripMenuItem1.Text = "Uninstall";
+            uninstallToolStripMenuItem1.Click += uninstallToolStripMenuItem1_Click;
+            // 
             // funMethodsToolStripMenuItem
             // 
             funMethodsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { bSODToolStripMenuItem, cWToolStripMenuItem, swapMouseButtonsToolStripMenuItem, hideTaskBarToolStripMenuItem, disableEnableKeyboardToolStripMenuItem, monitorsToolStripMenuItem, cDTrayToolStripMenuItem });
             funMethodsToolStripMenuItem.Image = Properties.Resources.emoticon_evilgrin;
             funMethodsToolStripMenuItem.Name = "funMethodsToolStripMenuItem";
-            funMethodsToolStripMenuItem.Size = new Size(179, 22);
+            funMethodsToolStripMenuItem.Size = new Size(180, 22);
             funMethodsToolStripMenuItem.Text = "Fun Stuff";
             // 
             // bSODToolStripMenuItem
@@ -735,7 +725,7 @@ namespace Pulsar.Server.Forms
             connectionToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { elevatedToolStripMenuItem, winREToolStripMenuItem, nicknameToolStripMenuItem, blockIPToolStripMenuItem, updateToolStripMenuItem, reconnectToolStripMenuItem, disconnectToolStripMenuItem, uninstallToolStripMenuItem });
             connectionToolStripMenuItem.Image = (Image)resources.GetObject("connectionToolStripMenuItem.Image");
             connectionToolStripMenuItem.Name = "connectionToolStripMenuItem";
-            connectionToolStripMenuItem.Size = new Size(179, 22);
+            connectionToolStripMenuItem.Size = new Size(180, 22);
             connectionToolStripMenuItem.Text = "Client Management";
             // 
             // elevatedToolStripMenuItem
@@ -743,7 +733,7 @@ namespace Pulsar.Server.Forms
             elevatedToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { elevateClientPermissionsToolStripMenuItem, elevateToSystemToolStripMenuItem, deElevateFromSystemToolStripMenuItem, uACBypassToolStripMenuItem });
             elevatedToolStripMenuItem.Image = Properties.Resources.uac_shield;
             elevatedToolStripMenuItem.Name = "elevatedToolStripMenuItem";
-            elevatedToolStripMenuItem.Size = new Size(133, 22);
+            elevatedToolStripMenuItem.Size = new Size(180, 22);
             elevatedToolStripMenuItem.Text = "Elevated";
             // 
             // elevateClientPermissionsToolStripMenuItem
@@ -783,7 +773,7 @@ namespace Pulsar.Server.Forms
             winREToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { installWinresetSurvivalToolStripMenuItem, removeWinresetSurvivalToolStripMenuItem, winRECustomFileForSurvivalToolStripMenuItem });
             winREToolStripMenuItem.Image = Properties.Resources.anchor;
             winREToolStripMenuItem.Name = "winREToolStripMenuItem";
-            winREToolStripMenuItem.Size = new Size(133, 22);
+            winREToolStripMenuItem.Size = new Size(180, 22);
             winREToolStripMenuItem.Text = "WinRE";
             // 
             // installWinresetSurvivalToolStripMenuItem
@@ -814,7 +804,7 @@ namespace Pulsar.Server.Forms
             // 
             nicknameToolStripMenuItem.Image = Properties.Resources.textfield_rename;
             nicknameToolStripMenuItem.Name = "nicknameToolStripMenuItem";
-            nicknameToolStripMenuItem.Size = new Size(133, 22);
+            nicknameToolStripMenuItem.Size = new Size(180, 22);
             nicknameToolStripMenuItem.Text = "Nickname";
             nicknameToolStripMenuItem.Click += nicknameToolStripMenuItem_Click;
             // 
@@ -822,7 +812,7 @@ namespace Pulsar.Server.Forms
             // 
             blockIPToolStripMenuItem.Image = Properties.Resources.delete;
             blockIPToolStripMenuItem.Name = "blockIPToolStripMenuItem";
-            blockIPToolStripMenuItem.Size = new Size(133, 22);
+            blockIPToolStripMenuItem.Size = new Size(180, 22);
             blockIPToolStripMenuItem.Text = "Block IP";
             blockIPToolStripMenuItem.Click += blockIPToolStripMenuItem_Click;
             // 
@@ -830,7 +820,7 @@ namespace Pulsar.Server.Forms
             // 
             updateToolStripMenuItem.Image = (Image)resources.GetObject("updateToolStripMenuItem.Image");
             updateToolStripMenuItem.Name = "updateToolStripMenuItem";
-            updateToolStripMenuItem.Size = new Size(133, 22);
+            updateToolStripMenuItem.Size = new Size(180, 22);
             updateToolStripMenuItem.Text = "Update";
             updateToolStripMenuItem.Click += updateToolStripMenuItem_Click;
             // 
@@ -838,7 +828,7 @@ namespace Pulsar.Server.Forms
             // 
             reconnectToolStripMenuItem.Image = (Image)resources.GetObject("reconnectToolStripMenuItem.Image");
             reconnectToolStripMenuItem.Name = "reconnectToolStripMenuItem";
-            reconnectToolStripMenuItem.Size = new Size(133, 22);
+            reconnectToolStripMenuItem.Size = new Size(180, 22);
             reconnectToolStripMenuItem.Text = "Reconnect";
             reconnectToolStripMenuItem.Click += reconnectToolStripMenuItem_Click;
             // 
@@ -846,7 +836,7 @@ namespace Pulsar.Server.Forms
             // 
             disconnectToolStripMenuItem.Image = (Image)resources.GetObject("disconnectToolStripMenuItem.Image");
             disconnectToolStripMenuItem.Name = "disconnectToolStripMenuItem";
-            disconnectToolStripMenuItem.Size = new Size(133, 22);
+            disconnectToolStripMenuItem.Size = new Size(180, 22);
             disconnectToolStripMenuItem.Text = "Disconnect";
             disconnectToolStripMenuItem.Click += disconnectToolStripMenuItem_Click;
             // 
@@ -854,20 +844,20 @@ namespace Pulsar.Server.Forms
             // 
             uninstallToolStripMenuItem.Image = (Image)resources.GetObject("uninstallToolStripMenuItem.Image");
             uninstallToolStripMenuItem.Name = "uninstallToolStripMenuItem";
-            uninstallToolStripMenuItem.Size = new Size(133, 22);
+            uninstallToolStripMenuItem.Size = new Size(180, 22);
             uninstallToolStripMenuItem.Text = "Uninstall";
             uninstallToolStripMenuItem.Click += uninstallToolStripMenuItem_Click;
             // 
             // lineToolStripMenuItem
             // 
             lineToolStripMenuItem.Name = "lineToolStripMenuItem";
-            lineToolStripMenuItem.Size = new Size(176, 6);
+            lineToolStripMenuItem.Size = new Size(177, 6);
             // 
             // openClientFolderToolStripMenuItem
             // 
             openClientFolderToolStripMenuItem.Image = Properties.Resources.lovefolder;
             openClientFolderToolStripMenuItem.Name = "openClientFolderToolStripMenuItem";
-            openClientFolderToolStripMenuItem.Size = new Size(179, 22);
+            openClientFolderToolStripMenuItem.Size = new Size(180, 22);
             openClientFolderToolStripMenuItem.Text = "Open Client Folder";
             openClientFolderToolStripMenuItem.Click += openClientFolderToolStripMenuItem_Click;
             // 
@@ -875,7 +865,7 @@ namespace Pulsar.Server.Forms
             // 
             selectAllToolStripMenuItem.Image = Properties.Resources.selectall;
             selectAllToolStripMenuItem.Name = "selectAllToolStripMenuItem";
-            selectAllToolStripMenuItem.Size = new Size(179, 22);
+            selectAllToolStripMenuItem.Size = new Size(180, 22);
             selectAllToolStripMenuItem.Text = "Select All Clients";
             selectAllToolStripMenuItem.Click += selectAllToolStripMenuItem_Click;
             // 
@@ -1562,7 +1552,7 @@ namespace Pulsar.Server.Forms
             clientInfoListView.Dock = DockStyle.Fill;
             clientInfoListView.FullRowSelect = true;
             clientInfoListView.HeaderStyle = ColumnHeaderStyle.None;
-            clientInfoListView.Items.AddRange(new ListViewItem[] { listViewItem19, listViewItem20, listViewItem21, listViewItem22, listViewItem23, listViewItem24, listViewItem25, listViewItem26, listViewItem27 });
+            clientInfoListView.Items.AddRange(new ListViewItem[] { listViewItem1, listViewItem2, listViewItem3, listViewItem4, listViewItem5, listViewItem6, listViewItem7, listViewItem8, listViewItem9 });
             clientInfoListView.Location = new Point(3, 18);
             clientInfoListView.Name = "clientInfoListView";
             clientInfoListView.Size = new Size(277, 116);
@@ -2211,14 +2201,6 @@ namespace Pulsar.Server.Forms
             builderToolStripMenuItem.Text = "Builder";
             builderToolStripMenuItem.Click += builderToolStripMenuItem_Click;
             // 
-            // injectDLLToolStripMenuItem
-            // 
-            injectDLLToolStripMenuItem.Image = Properties.Resources.dllinjectoricon;
-            injectDLLToolStripMenuItem.Name = "injectDLLToolStripMenuItem";
-            injectDLLToolStripMenuItem.Size = new Size(194, 22);
-            injectDLLToolStripMenuItem.Text = "Inject DLL";
-            injectDLLToolStripMenuItem.Click += injectDLLToolStripMenuItem_Click;
-            // 
             // FrmMain
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
@@ -2306,8 +2288,6 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.ToolStripMenuItem showMessageboxToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem visitWebsiteToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem remoteExecuteToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem localFileToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem webFileToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem pluginManagerToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem remoteDesktopToolStripMenuItem2;
         private ToolStripMenuItem funMethodsToolStripMenuItem;
@@ -2355,9 +2335,6 @@ namespace Pulsar.Server.Forms
         private ToolStripMenuItem removeWinresetSurvivalToolStripMenuItem;
         private ToolStripMenuItem winREToolStripMenuItem1;
         private ToolStripMenuItem remoteSystemAudioToolStripMenuItem;
-        private ToolStripMenuItem virtualMonitorToolStripMenuItem;
-        private ToolStripMenuItem installVirtualMonitorToolStripMenuItem1;
-        private ToolStripMenuItem uninstallVirtualMonitorToolStripMenuItem;
         private ToolStripMenuItem winRECustomFileForSurvivalToolStripMenuItem;
         private ToolStripMenuItem taskManagerToolStripMenuItem1;
         private ToolStripMenuItem enableToolStripMenuItem;
@@ -2466,5 +2443,8 @@ namespace Pulsar.Server.Forms
         private ToolStripMenuItem openClientFolderToolStripMenuItem;
         private ToolStripMenuItem shellcodeRunnerToolStripMenuItem;
         private ToolStripMenuItem injectDLLToolStripMenuItem;
+        private ToolStripMenuItem virtualMonitorToolStripMenuItem1;
+        private ToolStripMenuItem installToolStripMenuItem;
+        private ToolStripMenuItem uninstallToolStripMenuItem1;
     }
 }

