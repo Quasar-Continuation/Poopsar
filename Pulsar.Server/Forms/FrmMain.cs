@@ -5413,6 +5413,14 @@ namespace Pulsar.Server.Forms
                 frmRe.Show();
             }
         }
+
+        private void lockScreenToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                c.Send(new DoShutdownAction { Action = ShutdownAction.Lockscreen });
+            }
+        }
     }
 
     public class NotificationEntry
