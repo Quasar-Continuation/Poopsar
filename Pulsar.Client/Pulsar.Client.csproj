@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 	<PropertyGroup>
-		<TargetFramework>net481</TargetFramework>
+		<TargetFramework>net48</TargetFramework>
 		<OutputType>WinExe</OutputType>
 		<AssemblyName>Client</AssemblyName>
 		<UseWindowsForms>true</UseWindowsForms>
