@@ -42,8 +42,5 @@ namespace Pulsar.Common.Messages.Preview
 
         [Key(12)]
         public string AFKTime { get; set; }
-
-        [Key(13)]
-        public RemoteDesktopImageFormat ImageFormat { get; set; } = RemoteDesktopImageFormat.Png;
     }
 }
