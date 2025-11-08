@@ -210,16 +210,7 @@ namespace Pulsar.Server.Messages
                         if (decoded != null)
                         {
                             EnsureLocalResolutionInitialized(decoded.Size);
-
-                            var rect = new Rectangle(0, 0, decoded.Width, decoded.Height);
-                            var format = decoded.PixelFormat != System.Drawing.Imaging.PixelFormat.Undefined
-                                ? decoded.PixelFormat
-                                : System.Drawing.Imaging.PixelFormat.Format32bppArgb;
-
-                            Bitmap safeFrame = decoded.Clone(rect, format);
-                            decoded.Dispose();
-
-                            OnReport(safeFrame);
+                            OnReport(decoded);
                         }
                     }
                     catch (Exception ex)

