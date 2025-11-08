@@ -4,9 +4,6 @@
 		<OutputType>Library</OutputType>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 		<Configurations>Debug;Release;ReleaseWithDonut</Configurations>
-		<UseWindowsForms Condition="'$(TargetFramework)' == 'net9.0-windows'">true</UseWindowsForms>
-		<CustomResourceTypesSupport Condition="'$(TargetFramework)' == 'net9.0-windows'">true</CustomResourceTypesSupport>
-		<EnableWindowsTargeting Condition="'$(TargetFramework)' == 'net9.0-windows'">true</EnableWindowsTargeting>
 		<Platforms>AnyCPU;x64</Platforms>
 	</PropertyGroup>
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -15,9 +12,9 @@
 		<DocumentationFile></DocumentationFile>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-	  <OutputPath>..\bin\Debug\</OutputPath>
-	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-	  <DocumentationFile />
+		<OutputPath>..\bin\Debug\</OutputPath>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<DocumentationFile />
 	</PropertyGroup>
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
 		<DebugType>none</DebugType>
@@ -25,24 +22,24 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-	  <DebugType>none</DebugType>
-	  <OutputPath>..\bin\Release\</OutputPath>
-	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<DebugType>none</DebugType>
+		<OutputPath>..\bin\Release\</OutputPath>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseWithDonut|AnyCPU'">
-	  <DebugType>none</DebugType>
-	  <OutputPath>..\bin\Release\</OutputPath>
-	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<DebugType>none</DebugType>
+		<OutputPath>..\bin\Release\</OutputPath>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseWithDonut|x64'">
-	  <DebugType>none</DebugType>
-	  <OutputPath>..\bin\Release\</OutputPath>
-	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<DebugType>none</DebugType>
+		<OutputPath>..\bin\Release\</OutputPath>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 	<ItemGroup>
-	  <Compile Remove="Messages\Administration\RemoteExecute\**" />
-	  <EmbeddedResource Remove="Messages\Administration\RemoteExecute\**" />
-	  <None Remove="Messages\Administration\RemoteExecute\**" />
+		<Compile Remove="Messages\Administration\RemoteExecute\**" />
+		<EmbeddedResource Remove="Messages\Administration\RemoteExecute\**" />
+		<None Remove="Messages\Administration\RemoteExecute\**" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)' == 'net472'">
 		<Reference Include="System.Core" />
@@ -61,13 +58,10 @@
 		<PackageReference Include="System.ServiceModel.NetTcp" Version="8.1.2" />
 		<PackageReference Include="System.ServiceModel.Security" Version="6.0.0" />
 		<PackageReference Include="System.ServiceModel.Federation" Version="8.1.2" />
-	</ItemGroup>	
+		<PackageReference Include="System.Windows.Forms" Version="4.0.0" />
+	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="MessagePack">
-			<Version>3.1.4</Version>
-		</PackageReference>
-		<PackageReference Include="System.Runtime.CompilerServices.Unsafe">
-			<Version>6.1.2</Version>
-		</PackageReference>
+		<PackageReference Include="MessagePack" Version="3.1.4" />
+		<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
 	</ItemGroup>
 </Project>
