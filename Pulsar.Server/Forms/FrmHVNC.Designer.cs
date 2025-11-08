@@ -301,7 +301,7 @@ namespace Pulsar.Server.Forms
             // 
             // cLONEBROWSERPROFILEToolStripMenuItem
             // 
-            this.cLONEBROWSERPROFILEToolStripMenuItem.Checked = false;
+            this.cLONEBROWSERPROFILEToolStripMenuItem.Checked = true;
             this.cLONEBROWSERPROFILEToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Unchecked;
             this.cLONEBROWSERPROFILEToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
             this.cLONEBROWSERPROFILEToolStripMenuItem.Name = "cLONEBROWSERPROFILEToolStripMenuItem";
