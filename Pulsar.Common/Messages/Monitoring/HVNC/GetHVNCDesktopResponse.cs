@@ -27,8 +27,5 @@ namespace Pulsar.Common.Messages.Monitoring.HVNC
 
         [Key(7)]
         public float Fps { get; set; } = -1f;
-
-        [Key(8)]
-        public RemoteDesktopImageFormat ImageFormat { get; set; } = RemoteDesktopImageFormat.Png;
     }
 }

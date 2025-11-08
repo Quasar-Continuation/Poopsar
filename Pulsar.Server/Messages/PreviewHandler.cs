@@ -115,55 +115,26 @@ namespace Pulsar.Server.Messages
             lock (_syncLock)
             {
 
-                if (_codec == null
-                    || _codec.ImageQuality != message.Quality
-                    || _codec.Monitor != message.Monitor
-                    || _codec.Resolution != message.Resolution
-                    || _codec.CompressionFormat != message.ImageFormat)
+                if (_codec == null || _codec.ImageQuality != message.Quality || _codec.Monitor != message.Monitor || _codec.Resolution != message.Resolution)
                 {
                     _codec?.Dispose();
-                    _codec = new UnsafeStreamCodec(message.Quality, message.Monitor, message.Resolution, message.ImageFormat);
+                    _codec = new UnsafeStreamCodec(message.Quality, message.Monitor, message.Resolution);
                 }
 
                 using (MemoryStream ms = new MemoryStream(message.Image))
                 {
-                    Bitmap decoded = null;
-                    Bitmap boxmap = null;
-
                     try
                     {
-                        decoded = _codec.DecodeData(ms);
-                        if (decoded != null)
-                        {
-                            Size targetSize = LocalResolution;
-                            bool shouldScale = targetSize.Width > 0 && targetSize.Height > 0 && decoded.Size != targetSize;
+                        Bitmap boxmap = new Bitmap(_codec.DecodeData(ms), LocalResolution);
+                        OnReport(boxmap);
 
-                            boxmap = shouldScale ? new Bitmap(decoded, targetSize) : decoded;
-
-                            if (shouldScale)
-                            {
-                                decoded.Dispose();
-                                decoded = null;
-                            }
-
-                            OnReport(boxmap);
-
-                            var previousImage = _box.Image;
-                            _box.Image = boxmap;
-                            boxmap = null; // ownership transferred to PictureBox
-
-                            previousImage?.Dispose();
-                        }
+                        _box.Image = boxmap;
                     }
                     catch (Exception ex)
                     {
                         Debug.WriteLine("Error decoding image: " + ex.Message);
                     }
-                    finally
-                    {
-                        boxmap?.Dispose();
-                        decoded?.Dispose();
-                    }
+
                 }
 
                 message.Image = null;

@@ -25,7 +25,7 @@ namespace Pulsar.Common.Messages.Webcam
         [Key(6)]
         public int FramesRequested { get; set; } = 1;
 
-    [Key(7)]
-    public bool IsBufferedMode { get; set; } = true;
+        [Key(7)]
+        public bool IsBufferedMode { get; set; } = true;
     }
 }

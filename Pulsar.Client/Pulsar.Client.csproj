@@ -22,11 +22,11 @@
 		<PlatformTarget>AnyCPU</PlatformTarget>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseWithDonut|AnyCPU'">
-	  <DebugType>none</DebugType>
-	  <OutputPath>..\bin\Release\</OutputPath>
-	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-	  <PlatformTarget>AnyCPU</PlatformTarget>
-	  <Optimize>True</Optimize>
+		<DebugType>none</DebugType>
+		<OutputPath>..\bin\Release\</OutputPath>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<PlatformTarget>AnyCPU</PlatformTarget>
+		<Optimize>True</Optimize>
 	</PropertyGroup>
 	<PropertyGroup>
 		<StartupObject>Pulsar.Client.Program</StartupObject>
@@ -77,26 +77,20 @@
 		<PackageReference Include="AForge.Video" Version="2.2.5" />
 		<PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
 		<PackageReference Include="Costura.Fody" Version="6.0.0">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; compile; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; compile; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Fody" Version="6.9.2">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="MouseKeyHook">
-			<Version>5.7.1</Version>
-		</PackageReference>
+		<PackageReference Include="MouseKeyHook" Version="5.7.1" />
 		<PackageReference Include="NAudio.Core" Version="2.2.1" />
 		<PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
 		<PackageReference Include="NAudio.WinForms" Version="2.2.1" />
-		<PackageReference Include="NAudio.WinMM" Version="2.2.1" />		
-		<PackageReference Include="MessagePack">
-			<Version>3.1.4</Version>
-		</PackageReference>
-		<PackageReference Include="System.Runtime.CompilerServices.Unsafe">
-			<Version>6.1.2</Version>
-		</PackageReference>
+		<PackageReference Include="NAudio.WinMM" Version="2.2.1" />
+		<PackageReference Include="MessagePack" Version="3.1.4" />
+		<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
 		<PackageReference Include="SharpDX" Version="4.2.0" />
 		<PackageReference Include="SharpDX.D3DCompiler" Version="4.2.0" />
 		<PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
