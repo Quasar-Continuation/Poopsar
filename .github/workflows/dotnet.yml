@@ -24,6 +24,9 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
       - name: Get Version
         run: |
           $version = (Get-Content Pulsar.Server/Utilities/ServerVersion.cs | Select-String 'Current = "([^"]+)"').Matches.Groups[1].Value
@@ -33,27 +36,24 @@ jobs:
       - name: Restore Dependencies
         run: dotnet restore Pulsar.sln
 
-      - name: Build Client
-        run: dotnet build Pulsar.Client/Pulsar.Client.csproj --configuration Release --no-restore
+      - name: Build Solution
+        run: msbuild Pulsar.sln /p:Configuration=Release /p:Platform="Any CPU"
 
-      - name: Publish Server
-        run: dotnet publish Pulsar.Server/Pulsar.Server.csproj --configuration Release --output "./publish/server" --no-restore
+      - name: Build HVNCInjection (x64)
+        run: msbuild HVNCInjection/HVNCInjection.vcxproj /p:Configuration=Release /p:Platform=x64
+
+      - name: Build HVNCInjection (x86)
+        run: msbuild HVNCInjection/HVNCInjection.vcxproj /p:Configuration=Release /p:Platform=Win32
 
       - name: Prepare Build Output
         run: |
-          New-Item -ItemType Directory -Path "./build_output" -Force
-          Copy-Item -Path "./publish/server/*" -Destination "./build_output/" -Recurse -Force
-          if (Test-Path "./bin/Release/net9.0-windows/client.bin") {
-            Copy-Item -Path "./bin/Release/net9.0-windows/client.bin" -Destination "./build_output/client.bin" -Force
-          } elseif (Test-Path "./bin/Release/net472/Client.exe") {
-            Copy-Item -Path "./bin/Release/net472/Client.exe" -Destination "./build_output/client.bin" -Force
+          if (Test-Path "./bin/Release/net9.0-windows") {
+            Compress-Archive -Path "./bin/Release/net9.0-windows/*" -DestinationPath "pulsar-net-win64-${{ env.VERSION }}.zip"
+            Write-Host "Zipped net9.0-windows output"
           } else {
-            Write-Host "Warning: Client executable not found"
+            Write-Host "Error: net9.0-windows output not found"
+            exit 1
           }
-        shell: pwsh
-
-      - name: Zip Build Output
-        run: Compress-Archive -Path "./build_output/*" -DestinationPath "pulsar-net-win64-${{ env.VERSION }}.zip"
         shell: pwsh
 
       - name: Upload Build Artifact

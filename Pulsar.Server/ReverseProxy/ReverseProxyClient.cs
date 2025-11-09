@@ -77,6 +77,7 @@ namespace Pulsar.Server.ReverseProxy
         private bool _isIPv6NameType;
         private bool _isDomainNameType;
         private bool _disconnectIsSend;
+        private bool _disposed;
 
         public ProxyType Type { get; private set; }
         private ReverseProxyServer Server;
@@ -107,6 +108,9 @@ namespace Pulsar.Server.ReverseProxy
 
         private void AsyncReceive(IAsyncResult ar)
         {
+            if (_disposed)
+                return;
+
             try
             {
                 int received = Handle.EndReceive(ar);
@@ -126,6 +130,11 @@ namespace Pulsar.Server.ReverseProxy
 
                 LengthReceived += received;
                 _handshakeStream.Write(_buffer, 0, received);
+            }
+            catch (ObjectDisposedException)
+            {
+                // Socket was disposed, ignore
+                return;
             }
             catch
             {
@@ -267,6 +276,9 @@ namespace Pulsar.Server.ReverseProxy
                     }
             }
 
+            if (_disposed)
+                return;
+
             try
             {
                 Handle.BeginReceive(_buffer, 0, _buffer.Length, SocketFlags.None, AsyncReceive, null);
@@ -279,11 +291,20 @@ namespace Pulsar.Server.ReverseProxy
 
         public void Disconnect()
         {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+
             if (!_disconnectIsSend)
             {
                 _disconnectIsSend = true;
                 //send to the Server we've been disconnected
-                Client.Send(new ReverseProxyDisconnect { ConnectionId = ConnectionId });
+                try
+                {
+                    Client.Send(new ReverseProxyDisconnect { ConnectionId = ConnectionId });
+                }
+                catch { }
             }
 
             try
@@ -304,8 +325,14 @@ namespace Pulsar.Server.ReverseProxy
         /// <param name="payload"></param>
         public void SendToClient(byte[] payload)
         {
+            if (_disposed)
+                return;
+
             lock (Handle)
             {
+                if (_disposed)
+                    return;
+
                 try
                 {
                     LengthSent += payload.Length;
@@ -440,6 +467,9 @@ namespace Pulsar.Server.ReverseProxy
 
         private void AsyncReceiveProxy(IAsyncResult ar)
         {
+            if (_disposed)
+                return;
+
             try
             {
                 int received = Handle.EndReceive(ar);
@@ -459,6 +489,11 @@ namespace Pulsar.Server.ReverseProxy
                 LengthSent += payload.Length;
                 PacketsSended++;
             }
+            catch (ObjectDisposedException)
+            {
+                // Socket was disposed, ignore
+                return;
+            }
             catch
             {
                 Disconnect();
@@ -468,6 +503,9 @@ namespace Pulsar.Server.ReverseProxy
             PacketsReceived++;
 
             Server.CallonUpdateConnection(this);
+
+            if (_disposed)
+                return;
 
             try
             {

@@ -16,6 +16,7 @@ namespace Pulsar.Client.ReverseProxy
         public Networking.Client Client { get; private set; }
         private byte[] _buffer;
         private bool _disconnectIsSend;
+        private bool _disposed;
 
         public ReverseProxyClient(ReverseProxyConnect command, Networking.Client client)
         {
@@ -84,6 +85,9 @@ namespace Pulsar.Client.ReverseProxy
         {
             //Receive here data from e.g. a WebServer
 
+            if (_disposed)
+                return;
+
             try
             {
                 int received = Handle.EndReceive(ar);
@@ -98,11 +102,19 @@ namespace Pulsar.Client.ReverseProxy
                 Array.Copy(_buffer, payload, received);
                 Client.Send(new ReverseProxyData { ConnectionId = ConnectionId, Data = payload });
             }
+            catch (ObjectDisposedException)
+            {
+                // Socket was disposed, ignore
+                return;
+            }
             catch
             {
                 Disconnect();
                 return;
             }
+
+            if (_disposed)
+                return;
 
             try
             {
@@ -117,11 +129,20 @@ namespace Pulsar.Client.ReverseProxy
 
         public void Disconnect()
         {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+
             if (!_disconnectIsSend)
             {
                 _disconnectIsSend = true;
                 //send to the Server we've been disconnected
-                Client.Send(new ReverseProxyDisconnect { ConnectionId = ConnectionId });
+                try
+                {
+                    Client.Send(new ReverseProxyDisconnect { ConnectionId = ConnectionId });
+                }
+                catch { }
             }
 
             try
@@ -135,6 +156,9 @@ namespace Pulsar.Client.ReverseProxy
 
         public void SendToTargetServer(byte[] data)
         {
+            if (_disposed)
+                return;
+
             try
             {
                 Handle.Send(data);
