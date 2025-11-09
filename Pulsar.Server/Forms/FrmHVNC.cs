@@ -362,10 +362,23 @@ namespace Pulsar.Server.Forms
             if (WindowState == FormWindowState.Minimized)
                 return;
 
+            // Resize picDesktop to fill the form minus top panel
+            picDesktop.Left = 0;
+            picDesktop.Top = panelTop.Bottom; // right below top panel
+            picDesktop.Width = this.ClientSize.Width;
+            picDesktop.Height = this.ClientSize.Height - panelTop.Height;
+
+            // Keep top panel width in sync
+            panelTop.Width = this.ClientSize.Width;
+
+            // Optionally update the HVNC handler with new resolution
             _hVNCHandler.LocalResolution = picDesktop.Size;
-            btnShow.Left = (this.Width - btnShow.Width) / 2;
-            btnShow.Top = this.Height - btnShow.Height - 40;
+
+            // Reposition btnShow if panel is hidden
+            btnShow.Left = (this.ClientSize.Width - btnShow.Width) / 2;
+            btnShow.Top = this.ClientSize.Height - btnShow.Height - 40;
         }
+
 
         private void btnStart_Click(object sender, EventArgs e)
         {
