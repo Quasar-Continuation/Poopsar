@@ -2,18 +2,21 @@
 using Pulsar.Server.Utilities;
 using System;
 using System.Diagnostics;
+using System.Drawing.Imaging;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace Pulsar.Server.Forms
 {
     public partial class FrmAbout : Form
     {
-    private readonly string _repositoryUrl = @"https://github.com/Quasar-Continuation/Pulsar";
-    private readonly string _telegramUrl = @"https://t.me/novashadowisgay";
+        private readonly string _repositoryUrl = @"https://github.com/Quasar-Continuation/Pulsar";
+        private readonly string _telegramUrl = @"https://t.me/novashadowisgay";
         private const string ContributorsMessage = """
 Thanks to the contributors below for making this project possible:
 
 - **[KingKDot](https://github.com/KingKDot)** – Lead Developer
+- **[TheChosenSkywalker](https://github.com/thechosenskywalker)** – Lead Developer
 - **[Twobit](https://github.com/officialtwobit)** – Multi-Feature Wizard
 - **[Lucky](https://t.me/V_Lucky_V)** – HVNC Specialist
 - **[fedx](https://github.com/fedx-988)** – README Designer & Discord RPC
@@ -34,7 +37,7 @@ Thanks to the contributors below for making this project possible:
             InitializeComponent();
 
             DarkModeManager.ApplyDarkMode(this);
-			ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
+            ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
 
             lblVersion.Text = ServerVersion.Display;
             rtxtContent.Text = Properties.Resources.License;
@@ -85,6 +88,25 @@ Thanks to the contributors below for making this project possible:
                     MessageBox.Show($"Unable to open link.\n\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+        }
+        private Image SetOpacity(Image image, float opacity)
+        {
+            Bitmap bmp = new Bitmap(image.Width, image.Height);
+            using (Graphics g = Graphics.FromImage(bmp))
+            {
+                ColorMatrix matrix = new ColorMatrix();
+                matrix.Matrix33 = opacity; // 0.1 for 10%
+                ImageAttributes attributes = new ImageAttributes();
+                attributes.SetColorMatrix(matrix, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+                g.DrawImage(image, new Rectangle(0, 0, bmp.Width, bmp.Height),
+                            0, 0, image.Width, image.Height, GraphicsUnit.Pixel, attributes);
+            }
+            return bmp;
+        }
+
+        private void FrmAbout_Load(object sender, EventArgs e)
+        {
+            pictureBox1.Image = SetOpacity(pictureBox1.Image, 0.1f);
         }
     }
 }
