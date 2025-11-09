@@ -613,6 +613,26 @@ namespace Pulsar.Server.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap maximizewindowicon {
+            get {
+                object obj = ResourceManager.GetObject("maximizewindowicon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap minimizewindowicon {
+            get {
+                object obj = ResourceManager.GetObject("minimizewindowicon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap money_dollar {
             get {
                 object obj = ResourceManager.GetObject("money_dollar", resourceCulture);
@@ -1116,6 +1136,16 @@ namespace Pulsar.Server.Properties {
         internal static System.Drawing.Bitmap webcam {
             get {
                 object obj = ResourceManager.GetObject("webcam", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap windowstateicon {
+            get {
+                object obj = ResourceManager.GetObject("windowstateicon", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

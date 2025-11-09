@@ -22,6 +22,8 @@ namespace Pulsar.Client.Helper
         public const uint SWP_NOZORDER = 0x0004;
         public const uint SWP_NOSIZE = 0x0001;
         public const uint SWP_SHOWWINDOW = 0x0040;
+        [DllImport("user32.dll")]
+        public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool SetWindowPos(

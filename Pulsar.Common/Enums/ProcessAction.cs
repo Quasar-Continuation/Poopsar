@@ -5,6 +5,7 @@
         Start,
         End,
         SetTopMost,
+        None,
         Suspend
     }
 }

@@ -46,11 +46,12 @@ namespace Pulsar.Client.Messages
         }
 
         public bool CanExecute(IMessage message) => message is GetProcesses ||
-                                                     message is DoProcessStart ||
-                                                     message is DoProcessEnd ||
-                                                     message is DoProcessDump ||
-                                                     message is DoSetTopMost ||
-                                                     message is DoSuspendProcess;
+                                                   message is DoProcessStart ||
+                                                   message is DoProcessEnd ||
+                                                   message is DoProcessDump ||
+                                                   message is DoSetTopMost ||
+                                                   message is DoSuspendProcess ||
+                                                   message is DoSetWindowState;
 
         public bool CanExecuteFrom(ISender sender) => true;
 
@@ -76,6 +77,9 @@ namespace Pulsar.Client.Messages
                 case DoSetTopMost msg:
                     Execute(sender, msg);
                     break;
+                case DoSetWindowState msg:
+                    Execute(sender, msg);
+                    break;
             }
         }
 
@@ -85,6 +89,30 @@ namespace Pulsar.Client.Messages
             catch { /* ignore failures */ }
         }
 
+        private void Execute(ISender client, DoSetWindowState message)
+        {
+            try
+            {
+                Process proc = Process.GetProcessById(message.Pid);
+                if (proc == null || proc.MainWindowHandle == IntPtr.Zero)
+                {
+                    client.Send(new DoProcessResponse { Action = ProcessAction.None, Result = false });
+                    SendStatus($"SetWindowState failed: PID {message.Pid} not found or has no main window");
+                    return;
+                }
+
+                int nCmd = message.Minimize ? 6 /*SW_MINIMIZE*/ : 9 /*SW_RESTORE*/;
+                bool result = Utilities.NativeMethods.ShowWindow(proc.MainWindowHandle, nCmd);
+
+                client.Send(new DoProcessResponse { Action = ProcessAction.None, Result = result });
+                SendStatus($"Window {(message.Minimize ? "minimized" : "restored")} for PID {message.Pid}");
+            }
+            catch
+            {
+                client.Send(new DoProcessResponse { Action = ProcessAction.None, Result = false });
+                SendStatus($"SetWindowState failed for PID {message.Pid}");
+            }
+        }
         private void Execute(ISender client, DoSetTopMost message)
         {
             try

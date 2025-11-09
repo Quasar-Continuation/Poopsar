@@ -49,7 +49,6 @@ namespace Pulsar.Server.Messages
 
         private void Execute(ISender client, DoProcessResponse message)
         {
-            // Safely invoke event on the original SynchronizationContext
             SynchronizationContext.Post(_ => ProcessActionPerformed?.Invoke(this, message.Action, message.Result), null);
         }
 
@@ -118,6 +117,15 @@ namespace Pulsar.Server.Messages
             _client.Send(new DoSetTopMost { Pid = pid, Enable = enable });
         }
 
+        public void SetWindowState(int pid, bool minimize)
+        {
+            _client.Send(new DoSetWindowState
+            {
+                Pid = pid,
+                Minimize = minimize
+            });
+        }
+
         public void RefreshProcesses()
         {
             _client.Send(new GetProcesses());
@@ -152,7 +160,6 @@ namespace Pulsar.Server.Messages
         {
             if (!disposing) return;
 
-            // Clear event handlers to prevent memory leaks
             ProcessActionPerformed = null;
             OnResponseReceived = null;
             LastProcessesResponse = null;
