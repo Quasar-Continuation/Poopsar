@@ -37,13 +37,7 @@ jobs:
         run: dotnet restore Pulsar.sln
 
       - name: Build Solution
-        run: msbuild Pulsar.sln /p:Configuration=Release /p:Platform="Any CPU"
-
-      - name: Build HVNCInjection (x64)
-        run: msbuild HVNCInjection/HVNCInjection.vcxproj /p:Configuration=Release /p:Platform=x64
-
-      - name: Build HVNCInjection (x86)
-        run: msbuild HVNCInjection/HVNCInjection.vcxproj /p:Configuration=Release /p:Platform=Win32
+        run: msbuild Pulsar.sln /p:Configuration=Release /p:Platform=AnyCPU
 
       - name: Prepare Build Output
         run: |
