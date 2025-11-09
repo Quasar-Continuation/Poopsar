@@ -46,6 +46,7 @@ namespace Pulsar.Server.Forms
             processTreeHost = new ElementHost();
             statusStrip = new System.Windows.Forms.StatusStrip();
             processesToolStripStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
+            toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
             contextMenuStrip.SuspendLayout();
             tableLayoutPanel.SuspendLayout();
             statusStrip.SuspendLayout();
@@ -155,7 +156,7 @@ namespace Pulsar.Server.Forms
             // statusStrip
             // 
             statusStrip.Dock = System.Windows.Forms.DockStyle.Fill;
-            statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { processesToolStripStatusLabel });
+            statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { processesToolStripStatusLabel, toolStripStatusLabel1 });
             statusStrip.Location = new System.Drawing.Point(0, 471);
             statusStrip.Name = "statusStrip";
             statusStrip.Size = new System.Drawing.Size(821, 22);
@@ -167,6 +168,12 @@ namespace Pulsar.Server.Forms
             processesToolStripStatusLabel.Name = "processesToolStripStatusLabel";
             processesToolStripStatusLabel.Size = new System.Drawing.Size(70, 17);
             processesToolStripStatusLabel.Text = "Processes: 0";
+            // 
+            // toolStripStatusLabel1
+            // 
+            toolStripStatusLabel1.Name = "toolStripStatusLabel1";
+            toolStripStatusLabel1.Size = new System.Drawing.Size(10, 17);
+            toolStripStatusLabel1.Text = "‎ ";
             // 
             // FrmTaskManager
             // 
@@ -206,5 +213,6 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.ToolStripMenuItem topmostWindowToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem topmostOnToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem topmostOffToolStripMenuItem;
+        private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel1;
     }
 }
