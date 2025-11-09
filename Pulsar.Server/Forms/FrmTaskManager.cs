@@ -223,12 +223,14 @@ namespace Pulsar.Server.Forms
             if (this.IsDisposed) return;
 
             if (this.InvokeRequired)
-                await this.InvokeAsync(() => _processTreeView.UpdateProcesses(data.Processes, _sortColumn, _sortAscending, _ratPid));
+                await this.InvokeAsync(() =>
+                    _processTreeView.UpdateProcesses(data.Processes, _sortColumn, _sortAscending, _ratPid));
             else
                 _processTreeView.UpdateProcesses(data.Processes, _sortColumn, _sortAscending, _ratPid);
 
             UpdateStatusLabel(data.ProcessCount);
         }
+
 
         private void UpdateStatusLabel(int processCount)
         {

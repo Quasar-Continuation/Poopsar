@@ -56,6 +56,28 @@ namespace Pulsar.Server.Controls.Wpf
             foreach (var root in _viewModel.RootNodes)
                 Add(root);
         }
+        private HashSet<int> _expandedNodeIds = new();
+
+        public void SaveExpandedNodes()
+        {
+            _expandedNodeIds.Clear();
+            foreach (var node in FlattenAllNodes())
+                if (node.IsExpanded)
+                    _expandedNodeIds.Add(node.Model.Id);
+        }
+
+        private IEnumerable<ProcessTreeNode> FlattenAllNodes()
+        {
+            var list = new List<ProcessTreeNode>();
+            void Add(ProcessTreeNode n)
+            {
+                list.Add(n);
+                foreach (var c in n.Children) Add(c);
+            }
+            foreach (var root in _viewModel.RootNodes)
+                Add(root);
+            return list;
+        }
 
         // Call this to find the next match for the given query.
         // Query supports multiple words; all words must be matched (AND) across any of the fields.
@@ -171,18 +193,26 @@ namespace Pulsar.Server.Controls.Wpf
                 Clear(root);
         }
 
+        private void RestoreExpandedNodes()
+        {
+            foreach (var node in FlattenAllNodes())
+                node.IsExpanded = _expandedNodeIds.Contains(node.Model.Id);
+        }
 
         public void UpdateProcesses(IEnumerable<Process> processes, ProcessTreeSortColumn sortColumn, bool ascending, int? ratPid)
         {
-            // Save currently selected process IDs
+            // Save current selections and expanded state
             var selectedIds = SelectedProcesses.Select(p => p.Id).ToArray();
+            SaveExpandedNodes();
 
             _viewModel.Apply(processes, sortColumn, ascending, ratPid);
-            _viewModel.ExpandAll();
+            // Remove ExpandAll(), we want to restore only previous expansions
+            RestoreExpandedNodes();
 
-            // Restore selection after update
+            // Restore selection
             SelectProcessesById(selectedIds);
         }
+
 
 
         public void ExpandRoots()
