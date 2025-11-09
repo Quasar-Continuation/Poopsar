@@ -80,8 +80,6 @@ namespace Pulsar.Client.Messages
                     break;
             }
         }
-        [DllImport("user32.dll", SetLastError = true)]
-        public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
         private void Execute(ISender client, DoSetTopMost message)
         {
@@ -99,6 +97,15 @@ namespace Pulsar.Client.Messages
                 const uint SWP_NOSIZE = 0x0001;
                 const uint SWP_NOMOVE = 0x0002;
                 const uint SWP_SHOWWINDOW = 0x0040;
+
+                // Bring window to foreground and restore if minimized
+                Utilities.NativeMethods.SetForegroundWindow(proc.MainWindowHandle);
+
+                // Check if window is minimized and restore it
+                if (Utilities.NativeMethods.IsIconic(proc.MainWindowHandle))
+                {
+                    Utilities.NativeMethods.ShowWindow(proc.MainWindowHandle, 9); // SW_RESTORE = 9
+                }
 
                 IntPtr hWndInsertAfter = new IntPtr(message.Enable ? HWND_TOPMOST : HWND_NOTOPMOST);
                 bool result = Utilities.NativeMethods.SetWindowPos(
