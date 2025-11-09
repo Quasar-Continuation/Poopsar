@@ -248,8 +248,26 @@ namespace Pulsar.Server.Forms
         {
             panelTop.Visible = visible;
             btnShow.Visible = !visible;
+
+            if (visible)
+            {
+                // Restore picture below panel
+                picDesktop.Top = panelTop.Bottom;
+                picDesktop.Height = this.ClientSize.Height - panelTop.Height;
+            }
+            else
+            {
+                // Expand picture to fill the whole window
+                picDesktop.Top = 0;
+                picDesktop.Height = this.ClientSize.Height;
+            }
+
+            // Keep full width either way
+            picDesktop.Width = this.ClientSize.Width;
+
             this.ActiveControl = picDesktop;
         }
+
 
         /// <summary>
         /// Called whenever the remote displays changed.
@@ -362,22 +380,24 @@ namespace Pulsar.Server.Forms
             if (WindowState == FormWindowState.Minimized)
                 return;
 
-            // Resize picDesktop to fill the form minus top panel
-            picDesktop.Left = 0;
-            picDesktop.Top = panelTop.Bottom; // right below top panel
-            picDesktop.Width = this.ClientSize.Width;
-            picDesktop.Height = this.ClientSize.Height - panelTop.Height;
-
-            // Keep top panel width in sync
             panelTop.Width = this.ClientSize.Width;
+            picDesktop.Width = this.ClientSize.Width;
 
-            // Optionally update the HVNC handler with new resolution
-            _hVNCHandler.LocalResolution = picDesktop.Size;
+            if (panelTop.Visible)
+            {
+                picDesktop.Top = panelTop.Bottom;
+                picDesktop.Height = this.ClientSize.Height - panelTop.Height;
+            }
+            else
+            {
+                picDesktop.Top = 0;
+                picDesktop.Height = this.ClientSize.Height;
+            }
 
-            // Reposition btnShow if panel is hidden
             btnShow.Left = (this.ClientSize.Width - btnShow.Width) / 2;
             btnShow.Top = this.ClientSize.Height - btnShow.Height - 40;
         }
+
 
 
         private void btnStart_Click(object sender, EventArgs e)
