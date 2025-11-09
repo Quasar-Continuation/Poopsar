@@ -35,6 +35,8 @@ namespace Pulsar.Server.Forms
             contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(components);
             killProcessToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             suspendProcessToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            beginSuspendToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            endSuspendToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             minimizeMaximizeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             minimizedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             maximizedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -73,11 +75,28 @@ namespace Pulsar.Server.Forms
             // 
             // suspendProcessToolStripMenuItem
             // 
+            suspendProcessToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { beginSuspendToolStripMenuItem, endSuspendToolStripMenuItem });
             suspendProcessToolStripMenuItem.Image = Properties.Resources.wait;
             suspendProcessToolStripMenuItem.Name = "suspendProcessToolStripMenuItem";
             suspendProcessToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
             suspendProcessToolStripMenuItem.Text = "Suspend Process";
             suspendProcessToolStripMenuItem.Click += suspendProcessToolStripMenuItem_Click;
+            // 
+            // beginSuspendToolStripMenuItem
+            // 
+            beginSuspendToolStripMenuItem.Image = Properties.Resources.anchor;
+            beginSuspendToolStripMenuItem.Name = "beginSuspendToolStripMenuItem";
+            beginSuspendToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            beginSuspendToolStripMenuItem.Text = "Begin Suspend";
+            beginSuspendToolStripMenuItem.Click += beginSuspendToolStripMenuItem_Click;
+            // 
+            // endSuspendToolStripMenuItem
+            // 
+            endSuspendToolStripMenuItem.Image = Properties.Resources.actions;
+            endSuspendToolStripMenuItem.Name = "endSuspendToolStripMenuItem";
+            endSuspendToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            endSuspendToolStripMenuItem.Text = "End Suspend";
+            endSuspendToolStripMenuItem.Click += endSuspendToolStripMenuItem_Click;
             // 
             // minimizeMaximizeToolStripMenuItem
             // 
@@ -115,7 +134,7 @@ namespace Pulsar.Server.Forms
             // 
             topmostOnToolStripMenuItem.Image = Properties.Resources.startbutton;
             topmostOnToolStripMenuItem.Name = "topmostOnToolStripMenuItem";
-            topmostOnToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            topmostOnToolStripMenuItem.Size = new System.Drawing.Size(141, 22);
             topmostOnToolStripMenuItem.Text = "Topmost On";
             topmostOnToolStripMenuItem.Click += topmostOnToolStripMenuItem_Click;
             // 
@@ -123,7 +142,7 @@ namespace Pulsar.Server.Forms
             // 
             topmostOffToolStripMenuItem.Image = Properties.Resources.stopbutton;
             topmostOffToolStripMenuItem.Name = "topmostOffToolStripMenuItem";
-            topmostOffToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            topmostOffToolStripMenuItem.Size = new System.Drawing.Size(141, 22);
             topmostOffToolStripMenuItem.Text = "Topmost Off";
             topmostOffToolStripMenuItem.Click += topmostOffToolStripMenuItem_Click;
             // 
@@ -265,5 +284,7 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.ToolStripMenuItem minimizeMaximizeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem minimizedToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem maximizedToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem beginSuspendToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem endSuspendToolStripMenuItem;
     }
 }

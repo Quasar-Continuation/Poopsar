@@ -141,10 +141,12 @@ namespace Pulsar.Server.Messages
             _client.Send(new DoProcessDump { Pid = pid });
         }
 
-        public void SuspendProcess(int pid)
+        public void SuspendProcess(int pid, bool suspend)
         {
-            _client.Send(new DoSuspendProcess { Pid = pid });
+            var message = new DoSuspendProcess { Pid = pid, Suspend = suspend };
+            _client.Send(message);
         }
+
 
         #endregion
 

@@ -405,8 +405,14 @@ namespace Pulsar.Server.Forms
         private void dumpMemoryToolStripMenuItem_Click(object sender, EventArgs e) =>
             PerformOnSelectedProcesses(p => _taskManagerHandler.DumpProcess(p.Id));
 
+        // Suspend selected processes
         private void suspendProcessToolStripMenuItem_Click(object sender, EventArgs e) =>
-            PerformOnSelectedProcesses(p => _taskManagerHandler.SuspendProcess(p.Id));
+            PerformOnSelectedProcesses(p => _taskManagerHandler.SuspendProcess(p.Id, true));
+
+        // Resume selected processes
+        private void resumeProcessToolStripMenuItem_Click(object sender, EventArgs e) =>
+            PerformOnSelectedProcesses(p => _taskManagerHandler.SuspendProcess(p.Id, false));
+
 
         private void topmostOnToolStripMenuItem_Click(object sender, EventArgs e) =>
             PerformOnSelectedProcesses(p => _taskManagerHandler.SetTopMost(p.Id, true));
@@ -486,6 +492,20 @@ namespace Pulsar.Server.Forms
                 toolStripStatusLabel1.ForeColor = _originalLabelColor;
                 _countdownTimer.Start(); // resume ticking
             }
+        }
+        private void SetSuspendStateForSelectedProcesses(bool suspend)
+        {
+            PerformOnSelectedProcesses(p => _taskManagerHandler.SuspendProcess(p.Id, suspend));
+        }
+
+        private void beginSuspendToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SetSuspendStateForSelectedProcesses(true);
+        }
+
+        private void endSuspendToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SetSuspendStateForSelectedProcesses(false);
         }
 
     }

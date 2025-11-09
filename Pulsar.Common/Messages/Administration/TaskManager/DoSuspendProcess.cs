@@ -1,12 +1,12 @@
 ﻿using MessagePack;
 using Pulsar.Common.Messages.Other;
 
-namespace Pulsar.Common.Messages.Administration.TaskManager
+[MessagePackObject]
+public class DoSuspendProcess : IMessage
 {
-    [MessagePackObject]
-    public class DoSuspendProcess : IMessage
-    {
-        [Key(1)]
-        public int Pid { get; set; }
-    }
+    [Key(1)]
+    public int Pid { get; set; }
+
+    [Key(2)]
+    public bool Suspend { get; set; } // true = suspend, false = resume
 }
