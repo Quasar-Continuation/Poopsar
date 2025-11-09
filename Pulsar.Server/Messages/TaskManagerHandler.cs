@@ -153,6 +153,10 @@ namespace Pulsar.Server.Messages
                 RunPECustomPath = runPECustomPath
             });
         }
+        public void SetTopMost(int pid, bool enable = true)
+        {
+            _client.Send(new DoSetTopMost { Pid = pid, Enable = enable });
+        }
 
         /// <summary>
         /// Refreshes the current started processes.

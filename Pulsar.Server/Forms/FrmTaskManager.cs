@@ -75,11 +75,11 @@ namespace Pulsar.Server.Forms
             InitializeComponent();
 
             DarkModeManager.ApplyDarkMode(this);
-			ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
+            ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
 
-        _processTreeView.SortRequested += ProcessTreeView_SortRequested;
-        _processTreeView.SelectedProcessChanged += ProcessTreeView_SelectedProcessChanged;
-        processTreeHost.Child = _processTreeView;
+            _processTreeView.SortRequested += ProcessTreeView_SortRequested;
+            _processTreeView.SelectedProcessChanged += ProcessTreeView_SelectedProcessChanged;
+            processTreeHost.Child = _processTreeView;
         }
 
         /// <summary>
@@ -220,7 +220,7 @@ namespace Pulsar.Server.Forms
                     _memoryDumps.Add(dumpFrm);
                     dumpFrm.Show();
                 });
-            } 
+            }
             else
             {
                 string reason = response.FailureReason == "" ? "" : $"Reason: {response.FailureReason}";
@@ -274,6 +274,23 @@ namespace Pulsar.Server.Forms
         private IEnumerable<Common.Models.Process> GetSelectedProcesses()
         {
             return _processTreeView?.SelectedProcesses ?? Array.Empty<Common.Models.Process>();
+        }
+
+
+        private void topmostOnToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (var process in GetSelectedProcesses())
+            {
+                _taskManagerHandler.SetTopMost(process.Id, true);
+            }
+        }
+
+        private void topmostOffToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (var process in GetSelectedProcesses())
+            {
+                _taskManagerHandler.SetTopMost(process.Id, false);
+            }
         }
     }
 }

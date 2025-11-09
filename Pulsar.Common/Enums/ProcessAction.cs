@@ -4,6 +4,7 @@
     {
         Start,
         End,
+        SetTopMost,
         Suspend
     }
 }
