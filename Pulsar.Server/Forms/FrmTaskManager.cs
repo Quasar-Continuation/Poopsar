@@ -1,4 +1,5 @@
 ﻿using Pulsar.Common.Enums;
+using Pulsar.Common.Messages;
 using Pulsar.Common.Messages.Administration.TaskManager;
 using Pulsar.Common.Models;
 using Pulsar.Server.Controls;
@@ -10,8 +11,8 @@ using Pulsar.Server.Networking;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
-using Pulsar.Common.Messages;
 
 namespace Pulsar.Server.Forms
 {
@@ -23,14 +24,21 @@ namespace Pulsar.Server.Forms
         private List<FrmMemoryDump> _memoryDumps = new();
         private int? _ratPid = null;
         private readonly ProcessTreeView _processTreeView;
-        private Common.Models.Process[] _currentProcesses = Array.Empty<Common.Models.Process>();
+        private Pulsar.Common.Models.Process[] _currentProcesses = Array.Empty<Pulsar.Common.Models.Process>();
         private ProcessTreeSortColumn _sortColumn = ProcessTreeSortColumn.Name;
         private bool _sortAscending = true;
 
-        private readonly Timer _countdownTimer;
-        private int _countdownValue = 5;
+        private readonly System.Windows.Forms.Timer _countdownTimer;
+        private int _countdownValue = 7;
         private bool _pauseAutoRefresh = false;
         private System.Drawing.Color _originalLabelColor;
+
+        // Ultra-light update management
+        private DateTime _lastUpdateTime = DateTime.MinValue;
+        private readonly TimeSpan _minimumUpdateInterval = TimeSpan.FromMilliseconds(500);
+        private readonly Queue<Pulsar.Common.Models.Process[]> _updateQueue = new Queue<Pulsar.Common.Models.Process[]>();
+        private bool _isProcessingQueue = false;
+        private readonly object _queueLock = new object();
 
         public static FrmTaskManager CreateNewOrGetExisting(Client client)
         {
@@ -47,7 +55,6 @@ namespace Pulsar.Server.Forms
             _taskManagerHandler = new TaskManagerHandler(client);
             _processTreeView = new ProcessTreeView();
 
-            RegisterMessageHandler();
             InitializeComponent();
             DarkModeManager.ApplyDarkMode(this);
             ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
@@ -56,13 +63,13 @@ namespace Pulsar.Server.Forms
             _processTreeView.SelectedProcessChanged += ProcessTreeView_SelectedProcessChanged;
             processTreeHost.Child = _processTreeView;
 
-            // Save original label color
             _originalLabelColor = toolStripStatusLabel1.ForeColor;
 
-            // Countdown timer for refresh
-            _countdownTimer = new Timer { Interval = 1000 }; // ticks every second
+            _countdownTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             _countdownTimer.Tick += CountdownTimer_Tick;
             _countdownTimer.Start();
+
+            RegisterMessageHandler();
         }
 
         private void CountdownTimer_Tick(object sender, EventArgs e)
@@ -72,34 +79,37 @@ namespace Pulsar.Server.Forms
             if (_countdownValue == 2)
                 toolStripStatusLabel1.ForeColor = System.Drawing.Color.Yellow;
             else if (_countdownValue == 1)
-                toolStripStatusLabel1.ForeColor = System.Drawing.Color.Red;
+                toolStripStatusLabel1.ForeColor = System.Drawing.Color.Green;
             else
                 toolStripStatusLabel1.ForeColor = _originalLabelColor;
 
-            // Only decrement if not at 0
             if (_countdownValue > 0)
+            {
                 _countdownValue--;
+            }
             else
             {
                 if (!_pauseAutoRefresh)
-                    _taskManagerHandler.RefreshProcesses();
+                    _ = Task.Run(() => _taskManagerHandler.RefreshProcesses());
 
-                // Keep the red visible for one tick (1 second)
-                _countdownValue = 5;
+                _countdownValue = 7; // reset to 7 seconds
                 toolStripStatusLabel1.ForeColor = _originalLabelColor;
             }
         }
 
-
         private void RegisterMessageHandler()
         {
             _connectClient.ClientState += ClientDisconnected;
+
             _taskManagerHandler.ProgressChanged += (s, processes) =>
             {
-                TasksChanged(s, processes, _taskManagerHandler.LastProcessesResponse?.RatPid);
+                QueueProcessUpdate(processes, _taskManagerHandler.LastProcessesResponse?.RatPid);
             };
+
             _taskManagerHandler.ProcessActionPerformed += ProcessActionPerformed;
             _taskManagerHandler.OnResponseReceived += CreateMemoryDump;
+
+            // Register with MessageHandler if exists
             MessageHandler.Register(_taskManagerHandler);
         }
 
@@ -114,14 +124,122 @@ namespace Pulsar.Server.Forms
 
         private void ClientDisconnected(Client client, bool connected)
         {
-            if (!connected) this.Invoke((MethodInvoker)this.Close);
+            if (!connected)
+            {
+                this.Invoke((MethodInvoker)this.Close);
+            }
         }
 
-        private void TasksChanged(object sender, Common.Models.Process[] processes, int? ratPid)
+        private void QueueProcessUpdate(Pulsar.Common.Models.Process[] processes, int? ratPid)
         {
-            _ratPid = ratPid;
-            _currentProcesses = processes ?? Array.Empty<Common.Models.Process>();
-            RenderProcesses();
+            lock (_queueLock)
+            {
+                _ratPid = ratPid;
+
+                _updateQueue.Clear();
+                _updateQueue.Enqueue(processes ?? Array.Empty<Pulsar.Common.Models.Process>());
+
+                if (!_isProcessingQueue)
+                {
+                    _isProcessingQueue = true;
+                    _ = Task.Run(ProcessUpdateQueue);
+                }
+            }
+        }
+
+        private async Task ProcessUpdateQueue()
+        {
+            while (true)
+            {
+                Pulsar.Common.Models.Process[] processesToUpdate = null;
+
+                lock (_queueLock)
+                {
+                    if (_updateQueue.Count == 0)
+                    {
+                        _isProcessingQueue = false;
+                        break;
+                    }
+                    processesToUpdate = _updateQueue.Dequeue();
+                }
+
+                if (processesToUpdate != null)
+                    await ProcessAndUpdateAsync(processesToUpdate);
+
+                await Task.Delay(10);
+            }
+        }
+
+        private async Task ProcessAndUpdateAsync(Pulsar.Common.Models.Process[] processes)
+        {
+            var timeSinceLastUpdate = DateTime.Now - _lastUpdateTime;
+            if (timeSinceLastUpdate < _minimumUpdateInterval)
+            {
+                await Task.Delay(_minimumUpdateInterval - timeSinceLastUpdate);
+            }
+
+            var processedData = await Task.Run(() => ProcessDataInBackground(processes));
+            await UpdateUIAsync(processedData);
+
+            _lastUpdateTime = DateTime.Now;
+        }
+
+        private ProcessDataResult ProcessDataInBackground(Pulsar.Common.Models.Process[] processes)
+        {
+            var sortedProcesses = SortProcesses(processes, _sortColumn, _sortAscending);
+
+            return new ProcessDataResult
+            {
+                Processes = sortedProcesses,
+                ProcessCount = processes.Length,
+                RatPid = _ratPid
+            };
+        }
+
+        private Pulsar.Common.Models.Process[] SortProcesses(Pulsar.Common.Models.Process[] processes, ProcessTreeSortColumn sortColumn, bool ascending)
+        {
+            if (processes == null || processes.Length == 0)
+                return processes;
+
+            try
+            {
+                IEnumerable<Pulsar.Common.Models.Process> ordered = sortColumn switch
+                {
+                    ProcessTreeSortColumn.Pid => processes.OrderBy(p => p.Id),
+                    ProcessTreeSortColumn.WindowTitle => processes.OrderBy(p => p.MainWindowTitle ?? ""),
+                    _ => processes.OrderBy(p => p.Name ?? "")
+                };
+
+                return ascending ? ordered.ToArray() : ordered.Reverse().ToArray();
+            }
+            catch
+            {
+                return processes;
+            }
+        }
+
+        private async Task UpdateUIAsync(ProcessDataResult data)
+        {
+            if (this.IsDisposed) return;
+
+            if (this.InvokeRequired)
+                await this.InvokeAsync(() => _processTreeView.UpdateProcesses(data.Processes, _sortColumn, _sortAscending, _ratPid));
+            else
+                _processTreeView.UpdateProcesses(data.Processes, _sortColumn, _sortAscending, _ratPid);
+
+            UpdateStatusLabel(data.ProcessCount);
+        }
+
+        private void UpdateStatusLabel(int processCount)
+        {
+            string sortLabel = _sortColumn switch
+            {
+                ProcessTreeSortColumn.Pid => "PID",
+                ProcessTreeSortColumn.WindowTitle => "Title",
+                _ => "Name"
+            };
+            string orderLabel = _sortAscending ? "asc" : "desc";
+            processesToolStripStatusLabel.Text = $"Processes: {processCount} | Sort: {sortLabel} ({orderLabel})";
         }
 
         private void ProcessActionPerformed(object sender, ProcessAction action, bool result)
@@ -132,13 +250,17 @@ namespace Pulsar.Server.Forms
                 ProcessAction.End => result ? "Process ended successfully" : "Failed to end process",
                 _ => string.Empty
             };
-            processesToolStripStatusLabel.Text = text;
+
+            if (this.InvokeRequired)
+                this.Invoke((MethodInvoker)(() => processesToolStripStatusLabel.Text = text));
+            else
+                processesToolStripStatusLabel.Text = text;
         }
 
         private void FrmTaskManager_Load(object sender, EventArgs e)
         {
             this.Text = WindowHelper.GetWindowTitle("Task Manager", _connectClient);
-            _taskManagerHandler.RefreshProcesses();
+            _ = Task.Run(() => _taskManagerHandler.RefreshProcesses());
         }
 
         private void FrmTaskManager_FormClosing(object sender, FormClosingEventArgs e)
@@ -147,29 +269,21 @@ namespace Pulsar.Server.Forms
             UnregisterMessageHandler();
         }
 
-        private IEnumerable<Common.Models.Process> GetSelectedProcesses() =>
-            _processTreeView?.SelectedProcesses ?? Array.Empty<Common.Models.Process>();
-
-        private void RenderProcesses()
-        {
-            processTreeHost.Enabled = _taskManagerHandler != null;
-            _processTreeView.UpdateProcesses(_currentProcesses, _sortColumn, _sortAscending, _ratPid);
-
-            string sortLabel = _sortColumn switch
-            {
-                ProcessTreeSortColumn.Pid => "PID",
-                ProcessTreeSortColumn.WindowTitle => "Title",
-                _ => "Name"
-            };
-            string orderLabel = _sortAscending ? "asc" : "desc";
-            processesToolStripStatusLabel.Text = $"Processes: {_currentProcesses.Length} | Sort: {sortLabel} ({orderLabel})";
-        }
+        private IEnumerable<Pulsar.Common.Models.Process> GetSelectedProcesses() =>
+            _processTreeView?.SelectedProcesses ?? Array.Empty<Pulsar.Common.Models.Process>();
 
         private void ProcessTreeView_SortRequested(object sender, SortRequestedEventArgs e)
         {
-            if (_sortColumn == e.Column) _sortAscending = !_sortAscending;
-            else { _sortColumn = e.Column; _sortAscending = true; }
-            RenderProcesses();
+            if (_sortColumn == e.Column)
+                _sortAscending = !_sortAscending;
+            else
+            {
+                _sortColumn = e.Column;
+                _sortAscending = true;
+            }
+
+            if (_currentProcesses.Length > 0)
+                _ = Task.Run(() => ProcessAndUpdateAsync(_currentProcesses));
         }
 
         private void ProcessTreeView_SelectedProcessChanged(object sender, EventArgs e) { }
@@ -194,7 +308,7 @@ namespace Pulsar.Server.Forms
 
         public void SetAutoRefreshEnabled(bool enabled) => _pauseAutoRefresh = !enabled;
 
-        private void PerformOnSelectedProcesses(Action<Common.Models.Process> action)
+        private void PerformOnSelectedProcesses(Action<Pulsar.Common.Models.Process> action)
         {
             _pauseAutoRefresh = true;
             try
@@ -210,7 +324,6 @@ namespace Pulsar.Server.Forms
         }
 
         #region Menu Actions
-
         private void killProcessToolStripMenuItem_Click(object sender, EventArgs e) =>
             PerformOnSelectedProcesses(p => _taskManagerHandler.EndProcess(p.Id));
 
@@ -235,7 +348,101 @@ namespace Pulsar.Server.Forms
 
         private void topmostOffToolStripMenuItem_Click(object sender, EventArgs e) =>
             PerformOnSelectedProcesses(p => _taskManagerHandler.SetTopMost(p.Id, false));
-
         #endregion
+
+        private string _lastSearchKeyword = ""; // Stores last search
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            // Handle Ctrl + F globally
+            if (keyData == (Keys.Control | Keys.F))
+            {
+                ShowSearchDialog();
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        private void ShowSearchDialog()
+        {
+            string prompt = "Search by name, window title, or PID. Enter keywords separated by spaces. Leave text selected and click Enter/OK to find next.";
+
+            string keyword = Microsoft.VisualBasic.Interaction.InputBox(
+                prompt,
+                "Find Process",
+                _lastSearchKeyword);
+
+            if (string.IsNullOrWhiteSpace(keyword))
+                keyword = _lastSearchKeyword;
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                _lastSearchKeyword = keyword.Trim();
+                _processTreeView.FlattenNodes();
+                _processTreeView.FindNext(_lastSearchKeyword);
+            }
+        }
+
+
+
+
+        // Optional: keep your menu item wired up too
+        private void searchToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ShowSearchDialog();
+        }
+
+        private void enableDisableAutoRefreshToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            // Toggle auto-refresh
+            _pauseAutoRefresh = !_pauseAutoRefresh;
+
+            // Toggle menu item checkmark
+            if (sender is ToolStripMenuItem menuItem)
+                menuItem.Checked = !_pauseAutoRefresh;
+
+            // Update status label
+            if (_pauseAutoRefresh)
+            {
+                toolStripStatusLabel1.Text = "Auto refresh disabled";
+                toolStripStatusLabel1.ForeColor = System.Drawing.Color.Red;
+                _countdownTimer.Stop(); // stop ticking
+            }
+            else
+            {
+                toolStripStatusLabel1.Text = $"Refreshing in {_countdownValue}s...";
+                toolStripStatusLabel1.ForeColor = _originalLabelColor;
+                _countdownTimer.Start(); // resume ticking
+            }
+        }
+
+    }
+
+    public class ProcessDataResult
+    {
+        public Pulsar.Common.Models.Process[] Processes { get; set; } = Array.Empty<Pulsar.Common.Models.Process>();
+        public int ProcessCount { get; set; }
+        public int? RatPid { get; set; }
+    }
+
+    public static class ControlExtensions
+    {
+        public static Task InvokeAsync(this Control control, Action action)
+        {
+            var tcs = new TaskCompletionSource<object>();
+            control.BeginInvoke((Action)(() =>
+            {
+                try
+                {
+                    action();
+                    tcs.SetResult(null);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            }));
+            return tcs.Task;
+        }
     }
 }

