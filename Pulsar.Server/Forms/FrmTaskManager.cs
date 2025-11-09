@@ -75,10 +75,8 @@ namespace Pulsar.Server.Forms
         {
             if (_processTreeView == null) return;
 
-            // Flatten the tree so all nodes are accessible
             _processTreeView.FlattenNodes();
 
-            // Access the internal list of nodes via FlattenNodes
             var allNodesField = typeof(ProcessTreeView)
                 .GetField("_allNodes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             if (allNodesField == null) return;
@@ -86,17 +84,19 @@ namespace Pulsar.Server.Forms
             var allNodes = allNodesField.GetValue(_processTreeView) as List<ProcessTreeNode>;
             if (allNodes == null || allNodes.Count == 0) return;
 
-            // Find the first explorer.exe
-            var node = allNodes.FirstOrDefault(n =>
-                string.Equals(n.Name, "explorer.exe", StringComparison.OrdinalIgnoreCase));
+            // Find the main explorer.exe: the one that has child processes
+            var node = allNodes
+                .Where(n => string.Equals(n.Name, "explorer.exe", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(n => n.Children.Count) // choose the one with most children
+                .FirstOrDefault();
 
             if (node != null)
             {
-                // Expand the node and its ancestors
+                // Expand the node's ancestors so the tree path is visible
                 void ExpandAncestors(ProcessTreeNode target)
                 {
                     var rootNodesProperty = typeof(ProcessTreeView)
-                        .GetProperty("RootNodes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.GetProperty);
+                        .GetProperty("RootNodes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
                     var rootNodes = rootNodesProperty?.GetValue(_processTreeView) as IEnumerable<ProcessTreeNode> ?? Enumerable.Empty<ProcessTreeNode>();
 
@@ -113,7 +113,7 @@ namespace Pulsar.Server.Forms
                         {
                             if (TryExpandPath(child, targetNode))
                             {
-                                current.IsExpanded = true; // expand ancestor
+                                current.IsExpanded = true;
                                 return true;
                             }
                         }
@@ -122,9 +122,10 @@ namespace Pulsar.Server.Forms
                 }
 
                 ExpandAncestors(node);
-                node.IsExpanded = true; // expand the explorer.exe node itself
+                node.IsExpanded = true; // only expand the main explorer.exe node
             }
         }
+
 
 
 
