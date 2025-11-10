@@ -42,6 +42,7 @@
             label1 = new System.Windows.Forms.Label();
             cntTxtContent = new System.Windows.Forms.RichTextBox();
             pictureBox1 = new System.Windows.Forms.PictureBox();
+            button1 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)picIcon).BeginInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
@@ -157,9 +158,9 @@
             label1.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
             label1.Location = new System.Drawing.Point(12, 108);
             label1.Name = "label1";
-            label1.Size = new System.Drawing.Size(74, 15);
+            label1.Size = new System.Drawing.Size(354, 15);
             label1.TabIndex = 9;
-            label1.Text = "Contributors";
+            label1.Text = "Thanks to the contributors below for making this project possible:";
             // 
             // cntTxtContent
             // 
@@ -182,6 +183,17 @@
             pictureBox1.TabIndex = 11;
             pictureBox1.TabStop = false;
             // 
+            // button1
+            // 
+            button1.DialogResult = System.Windows.Forms.DialogResult.Cancel;
+            button1.Location = new System.Drawing.Point(15, 370);
+            button1.Name = "button1";
+            button1.Size = new System.Drawing.Size(188, 23);
+            button1.TabIndex = 12;
+            button1.Text = "&Message From Devs";
+            button1.UseVisualStyleBackColor = true;
+            button1.Click += button1_Click;
+            // 
             // FrmAbout
             // 
             AcceptButton = btnOkay;
@@ -189,6 +201,7 @@
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             CancelButton = btnOkay;
             ClientSize = new System.Drawing.Size(525, 405);
+            Controls.Add(button1);
             Controls.Add(cntTxtContent);
             Controls.Add(label1);
             Controls.Add(lblSubTitle);
@@ -232,5 +245,6 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.RichTextBox cntTxtContent;
         private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.Button button1;
     }
 }

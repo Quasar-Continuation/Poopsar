@@ -281,7 +281,7 @@
 		</None>
 	</ItemGroup>
 		<ItemGroup>
-			<Content Include="Build\DeferredAssemblies\**\*">
+			<Content Include="Build\DeferredAssemblies\\*">
 				<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			</Content>
 		</ItemGroup>
@@ -289,7 +289,7 @@
 		<ProjectReference Include="..\Pulsar.Common\Pulsar.Common.csproj" />
 	</ItemGroup>
 		<ItemGroup>
-			<Content Include="DeferredAssemblies\**\*">
+			<Content Include="DeferredAssemblies\\*">
 				<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			</Content>
 		</ItemGroup>
