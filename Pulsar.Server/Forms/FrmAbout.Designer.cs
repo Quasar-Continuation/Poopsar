@@ -43,6 +43,7 @@
             cntTxtContent = new System.Windows.Forms.RichTextBox();
             pictureBox1 = new System.Windows.Forms.PictureBox();
             button1 = new System.Windows.Forms.Button();
+            linkLabel1 = new System.Windows.Forms.LinkLabel();
             ((System.ComponentModel.ISupportInitialize)picIcon).BeginInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
@@ -56,6 +57,7 @@
             picIcon.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
             picIcon.TabIndex = 0;
             picIcon.TabStop = false;
+            picIcon.Click += picIcon_Click;
             // 
             // lblTitle
             // 
@@ -91,11 +93,11 @@
             // rtxtContent
             // 
             rtxtContent.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
-            rtxtContent.Location = new System.Drawing.Point(15, 219);
+            rtxtContent.Location = new System.Drawing.Point(15, 260);
             rtxtContent.Name = "rtxtContent";
             rtxtContent.ReadOnly = true;
             rtxtContent.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
-            rtxtContent.Size = new System.Drawing.Size(498, 145);
+            rtxtContent.Size = new System.Drawing.Size(498, 104);
             rtxtContent.TabIndex = 7;
             rtxtContent.Text = "";
             // 
@@ -103,7 +105,7 @@
             // 
             lblLicense.AutoSize = true;
             lblLicense.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
-            lblLicense.Location = new System.Drawing.Point(12, 201);
+            lblLicense.Location = new System.Drawing.Point(15, 242);
             lblLicense.Name = "lblLicense";
             lblLicense.Size = new System.Drawing.Size(46, 15);
             lblLicense.TabIndex = 6;
@@ -114,32 +116,32 @@
             lnkCredits.AutoSize = true;
             lnkCredits.Location = new System.Drawing.Point(415, 83);
             lnkCredits.Name = "lnkCredits";
-            lnkCredits.Size = new System.Drawing.Size(97, 13);
+            lnkCredits.Size = new System.Drawing.Size(98, 13);
             lnkCredits.TabIndex = 5;
             lnkCredits.TabStop = true;
-            lnkCredits.Text = "3rd-party licenses";
+            lnkCredits.Text = "3rd-Party Licenses";
             lnkCredits.LinkClicked += lnkCredits_LinkClicked;
             // 
             // lnkGithubPage
             // 
             lnkGithubPage.AutoSize = true;
-            lnkGithubPage.Location = new System.Drawing.Point(441, 61);
+            lnkGithubPage.Location = new System.Drawing.Point(403, 61);
             lnkGithubPage.Name = "lnkGithubPage";
-            lnkGithubPage.Size = new System.Drawing.Size(73, 13);
+            lnkGithubPage.Size = new System.Drawing.Size(106, 13);
             lnkGithubPage.TabIndex = 3;
             lnkGithubPage.TabStop = true;
-            lnkGithubPage.Text = "GitHub page";
+            lnkGithubPage.Text = "Pulsar GitHub Page";
             lnkGithubPage.LinkClicked += lnkGithubPage_LinkClicked;
             // 
             // lnkTelegram
             // 
             lnkTelegram.AutoSize = true;
-            lnkTelegram.Location = new System.Drawing.Point(344, 61);
+            lnkTelegram.Location = new System.Drawing.Point(298, 61);
             lnkTelegram.Name = "lnkTelegram";
-            lnkTelegram.Size = new System.Drawing.Size(96, 13);
+            lnkTelegram.Size = new System.Drawing.Size(98, 13);
             lnkTelegram.TabIndex = 4;
             lnkTelegram.TabStop = true;
-            lnkTelegram.Text = "Telegram channel";
+            lnkTelegram.Text = "Telegram Channel";
             lnkTelegram.LinkClicked += lnkTelegram_LinkClicked;
             // 
             // lblSubTitle
@@ -169,7 +171,7 @@
             cntTxtContent.Name = "cntTxtContent";
             cntTxtContent.ReadOnly = true;
             cntTxtContent.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
-            cntTxtContent.Size = new System.Drawing.Size(498, 62);
+            cntTxtContent.Size = new System.Drawing.Size(498, 108);
             cntTxtContent.TabIndex = 10;
             cntTxtContent.Text = "";
             // 
@@ -194,6 +196,17 @@
             button1.UseVisualStyleBackColor = true;
             button1.Click += button1_Click;
             // 
+            // linkLabel1
+            // 
+            linkLabel1.AutoSize = true;
+            linkLabel1.Location = new System.Drawing.Point(85, 54);
+            linkLabel1.Name = "linkLabel1";
+            linkLabel1.Size = new System.Drawing.Size(118, 13);
+            linkLabel1.TabIndex = 13;
+            linkLabel1.TabStop = true;
+            linkLabel1.Text = "Original Quasar Repo";
+            linkLabel1.LinkClicked += linkLabel1_LinkClicked;
+            // 
             // FrmAbout
             // 
             AcceptButton = btnOkay;
@@ -201,6 +214,7 @@
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             CancelButton = btnOkay;
             ClientSize = new System.Drawing.Size(525, 405);
+            Controls.Add(linkLabel1);
             Controls.Add(button1);
             Controls.Add(cntTxtContent);
             Controls.Add(label1);
@@ -246,5 +260,6 @@
         private System.Windows.Forms.RichTextBox cntTxtContent;
         private System.Windows.Forms.PictureBox pictureBox1;
         private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.LinkLabel linkLabel1;
     }
 }
