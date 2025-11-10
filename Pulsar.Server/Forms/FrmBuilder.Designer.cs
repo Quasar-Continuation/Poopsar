@@ -1258,6 +1258,8 @@ namespace Pulsar.Server.Forms
             // chkKeylogger
             // 
             chkKeylogger.AutoSize = true;
+            chkKeylogger.Checked = true;
+            chkKeylogger.CheckState = System.Windows.Forms.CheckState.Checked;
             chkKeylogger.Location = new System.Drawing.Point(20, 21);
             chkKeylogger.Name = "chkKeylogger";
             chkKeylogger.Size = new System.Drawing.Size(156, 17);

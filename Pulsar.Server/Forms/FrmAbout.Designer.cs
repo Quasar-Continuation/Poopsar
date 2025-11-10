@@ -125,7 +125,7 @@
             // lnkGithubPage
             // 
             lnkGithubPage.AutoSize = true;
-            lnkGithubPage.Location = new System.Drawing.Point(403, 61);
+            lnkGithubPage.Location = new System.Drawing.Point(84, 61);
             lnkGithubPage.Name = "lnkGithubPage";
             lnkGithubPage.Size = new System.Drawing.Size(106, 13);
             lnkGithubPage.TabIndex = 3;
@@ -136,7 +136,7 @@
             // lnkTelegram
             // 
             lnkTelegram.AutoSize = true;
-            lnkTelegram.Location = new System.Drawing.Point(298, 61);
+            lnkTelegram.Location = new System.Drawing.Point(415, 63);
             lnkTelegram.Name = "lnkTelegram";
             lnkTelegram.Size = new System.Drawing.Size(98, 13);
             lnkTelegram.TabIndex = 4;
@@ -199,12 +199,12 @@
             // linkLabel1
             // 
             linkLabel1.AutoSize = true;
-            linkLabel1.Location = new System.Drawing.Point(85, 54);
+            linkLabel1.Location = new System.Drawing.Point(196, 61);
             linkLabel1.Name = "linkLabel1";
-            linkLabel1.Size = new System.Drawing.Size(118, 13);
+            linkLabel1.Size = new System.Drawing.Size(111, 13);
             linkLabel1.TabIndex = 13;
             linkLabel1.TabStop = true;
-            linkLabel1.Text = "Original Quasar Repo";
+            linkLabel1.Text = "Quasar GitHub Page";
             linkLabel1.LinkClicked += linkLabel1_LinkClicked;
             // 
             // FrmAbout
