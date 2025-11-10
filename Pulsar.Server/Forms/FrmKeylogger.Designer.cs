@@ -49,7 +49,7 @@
             lstLogs.GridLines = true;
             lstLogs.Location = new System.Drawing.Point(0, 31);
             lstLogs.Name = "lstLogs";
-            lstLogs.Size = new System.Drawing.Size(96, 431);
+            lstLogs.Size = new System.Drawing.Size(155, 431);
             lstLogs.TabIndex = 0;
             lstLogs.UseCompatibleStateImageBehavior = false;
             lstLogs.View = System.Windows.Forms.View.Details;
@@ -78,9 +78,9 @@
             // 
             // btnGetLogs
             // 
-            btnGetLogs.Location = new System.Drawing.Point(0, 5);
+            btnGetLogs.Location = new System.Drawing.Point(2, 5);
             btnGetLogs.Name = "btnGetLogs";
-            btnGetLogs.Size = new System.Drawing.Size(96, 23);
+            btnGetLogs.Size = new System.Drawing.Size(153, 23);
             btnGetLogs.TabIndex = 9;
             btnGetLogs.Text = "Get Log Files";
             // 
@@ -88,16 +88,16 @@
             // 
             rtbLogViewer.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             rtbLogViewer.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
-            rtbLogViewer.Location = new System.Drawing.Point(102, 32);
+            rtbLogViewer.Location = new System.Drawing.Point(161, 32);
             rtbLogViewer.Name = "rtbLogViewer";
             rtbLogViewer.ReadOnly = true;
-            rtbLogViewer.Size = new System.Drawing.Size(760, 427);
+            rtbLogViewer.Size = new System.Drawing.Size(701, 427);
             rtbLogViewer.TabIndex = 8;
             rtbLogViewer.Text = "";
             // 
             // button1
             // 
-            button1.Location = new System.Drawing.Point(102, 6);
+            button1.Location = new System.Drawing.Point(161, 5);
             button1.Name = "button1";
             button1.Size = new System.Drawing.Size(58, 23);
             button1.TabIndex = 1;
@@ -108,7 +108,7 @@
             // 
             checkBox1.Checked = true;
             checkBox1.CheckState = System.Windows.Forms.CheckState.Checked;
-            checkBox1.Location = new System.Drawing.Point(166, 5);
+            checkBox1.Location = new System.Drawing.Point(225, 5);
             checkBox1.Name = "checkBox1";
             checkBox1.Size = new System.Drawing.Size(104, 24);
             checkBox1.TabIndex = 0;

