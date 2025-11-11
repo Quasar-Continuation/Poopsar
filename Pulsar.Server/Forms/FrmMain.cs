@@ -95,6 +95,8 @@ namespace Pulsar.Server.Forms
         private static readonly string PulsarStuffDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PulsarStuff");
         private readonly string AutoTasksFilePath = Path.Combine(PulsarStuffDir, "autotasks.json");
         private readonly string NotificationStateFilePath = Path.Combine(PulsarStuffDir, "notifications.json");
+        private const int MaxNotificationHistoryEntries = 2000;
+        private const long NotificationHistoryPruneThresholdBytes = 20L * 1024 * 1024; // 20 MB
         private readonly List<NotificationEntry> _notificationHistory = new();
         private readonly object _notificationLock = new();
         private Font _notificationUnreadFont;
@@ -197,6 +199,7 @@ namespace Pulsar.Server.Forms
             MessageHandler.Unregister(_getCryptoAddressHander);
             _getCryptoAddressHander.AddressReceived -= OnAddressReceived;
             MessageHandler.Unregister(_deferredAssemblyHandler);
+            MessageHandler.Unregister(_universalPluginResponseHandler);
         }
 
         public void UpdateWindowTitle()
@@ -437,7 +440,30 @@ namespace Pulsar.Server.Forms
 
                 UnregisterMessageHandler();
 
+                _pluginManager?.Dispose();
                 _clientPluginCatalog?.Dispose();
+
+                if (_pluginManager != null)
+                    _pluginManager.PluginsChanged -= OnPluginsChanged;
+                if (_clientPluginCatalog != null)
+                    _clientPluginCatalog.PluginsChanged -= OnClientPluginsChanged;
+
+                _visibleClients.Clear();
+                _clientEntryMap.Clear();
+                _clientListViewItems.Clear();
+                foreach (var button in _clientStarButtons.Values)
+                {
+                    if (!button.IsDisposed)
+                        button.Dispose();
+                }
+                _clientStarButtons.Clear();
+                _flagImageCache.Clear();
+                _notificationHistory.Clear();
+                _autoTaskBehaviors.Clear();
+                _autoTaskBehaviorsByTitle.Clear();
+                _executedTaskClientCombinations.Clear();
+                _clientsWithPluginsLoaded.Clear();
+                _clientAutoPluginState.Clear();
 
                 if (_previewImageHandler != null)
                 {
@@ -446,7 +472,10 @@ namespace Pulsar.Server.Forms
                 }
 
                 if (_discordRpc != null)
+                {
                     _discordRpc.Enabled = false;  // Disable Discord RPC on close
+                    (_discordRpc as IDisposable)?.Dispose();
+                }
 
                 if (notifyIcon != null)
                 {
@@ -3074,6 +3103,8 @@ namespace Pulsar.Server.Forms
                 _notificationHistory.Add(entry);
                 var item = CreateNotificationListViewItem(entry);
                 lstNoti.Items.Add(item);
+
+                TrimNotificationHistoryLocked();
             }
 
             UpdateNotificationStatusLabel();
@@ -3219,8 +3250,23 @@ namespace Pulsar.Server.Forms
                         Directory.CreateDirectory(PulsarStuffDir);
                     }
 
-                    string json = JsonConvert.SerializeObject(_notificationHistory, Formatting.Indented);
-                    File.WriteAllText(NotificationStateFilePath, json);
+                    TrimNotificationHistoryLocked();
+
+                    using var stream = File.Create(NotificationStateFilePath);
+                    using var writer = new StreamWriter(stream);
+                    using var jsonWriter = new JsonTextWriter(writer)
+                    {
+                        Formatting = Formatting.Indented
+                    };
+
+                    var serializer = JsonSerializer.CreateDefault();
+
+                    jsonWriter.WriteStartArray();
+                    foreach (var entry in _notificationHistory)
+                    {
+                        serializer.Serialize(jsonWriter, entry);
+                    }
+                    jsonWriter.WriteEndArray();
                 }
             }
             catch (Exception ex)
@@ -3238,6 +3284,8 @@ namespace Pulsar.Server.Forms
 
             try
             {
+                bool historyTrimmed = false;
+
                 lock (_notificationLock)
                 {
                     _notificationHistory.Clear();
@@ -3245,17 +3293,39 @@ namespace Pulsar.Server.Forms
 
                     if (File.Exists(NotificationStateFilePath))
                     {
-                        var existing = JsonConvert.DeserializeObject<List<NotificationEntry>>(File.ReadAllText(NotificationStateFilePath));
-                        if (existing != null)
+                        try
                         {
-                            _notificationHistory.AddRange(existing.OrderBy(n => n.Timestamp));
+                            var fileInfo = new FileInfo(NotificationStateFilePath);
+                            if (fileInfo.Length > NotificationHistoryPruneThresholdBytes)
+                            {
+                                EventLog($"Notifications file is {fileInfo.Length / (1024 * 1024)} MB. Only the most recent {MaxNotificationHistoryEntries:N0} entries will be loaded.", "info");
+                            }
+
+                            var loaded = ReadNotificationEntries(NotificationStateFilePath);
+                            if (loaded.Count > 0)
+                            {
+                                _notificationHistory.AddRange(loaded.OrderBy(n => n.Timestamp));
+                            }
+                        }
+                        catch (JsonException jsonEx)
+                        {
+                            EventLog($"Failed to parse notifications: {jsonEx.Message}", "error");
                         }
                     }
 
+                    historyTrimmed = TrimNotificationHistoryLocked();
+
+                    lstNoti.BeginUpdate();
                     foreach (var entry in _notificationHistory)
                     {
                         lstNoti.Items.Add(CreateNotificationListViewItem(entry));
                     }
+                    lstNoti.EndUpdate();
+                }
+
+                if (historyTrimmed)
+                {
+                    SaveNotificationHistory();
                 }
             }
             catch (Exception ex)
@@ -3264,6 +3334,65 @@ namespace Pulsar.Server.Forms
             }
 
             UpdateNotificationStatusLabel();
+        }
+
+        private static List<NotificationEntry> ReadNotificationEntries(string filePath)
+        {
+            var queue = new Queue<NotificationEntry>(MaxNotificationHistoryEntries);
+
+            using var stream = File.OpenRead(filePath);
+            using var reader = new StreamReader(stream);
+            using var jsonReader = new JsonTextReader(reader);
+            var serializer = JsonSerializer.CreateDefault();
+
+            while (jsonReader.Read())
+            {
+                if (jsonReader.TokenType == JsonToken.StartObject)
+                {
+                    var entry = serializer.Deserialize<NotificationEntry>(jsonReader);
+                    if (entry != null)
+                    {
+                        queue.Enqueue(entry);
+                        if (queue.Count > MaxNotificationHistoryEntries)
+                        {
+                            queue.Dequeue();
+                        }
+                    }
+                }
+            }
+
+            return queue.ToList();
+        }
+
+        private bool TrimNotificationHistoryLocked()
+        {
+            if (_notificationHistory.Count <= MaxNotificationHistoryEntries)
+            {
+                return false;
+            }
+
+            int removeCount = _notificationHistory.Count - MaxNotificationHistoryEntries;
+            _notificationHistory.RemoveRange(0, removeCount);
+
+            if (lstNoti != null && !lstNoti.IsDisposed && lstNoti.Items.Count > 0)
+            {
+                lstNoti.BeginUpdate();
+                try
+                {
+                    int toRemove = Math.Min(removeCount, lstNoti.Items.Count);
+                    while (toRemove > 0)
+                    {
+                        lstNoti.Items.RemoveAt(0);
+                        toRemove--;
+                    }
+                }
+                finally
+                {
+                    lstNoti.EndUpdate();
+                }
+            }
+
+            return true;
         }
 
         #endregion
