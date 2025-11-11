@@ -74,8 +74,13 @@ namespace Pulsar.Server.Messages
         /// Represents the method that will handle display changes.
         /// </summary>
         /// <param name="sender">The message processor which raised the event.</param>
-        /// <param name="value">All currently available displays.</param>
-        public delegate void DisplaysChangedEventHandler(object sender, int value);
+        /// <param name="displays">The currently available displays.</param>
+        public delegate void DisplaysChangedEventHandler(object sender, int displays);
+
+        /// <summary>
+        /// Raised when displays change.
+        /// </summary>
+        public event DisplaysChangedEventHandler DisplaysChanged;
 
         /// <summary>
         /// The client which is associated with this remote desktop handler.
@@ -146,7 +151,7 @@ namespace Pulsar.Server.Messages
         }
 
         /// <inheritdoc />
-        public override bool CanExecute(IMessage message) => message is GetHVNCDesktopResponse;
+        public override bool CanExecute(IMessage message) => message is GetHVNCDesktopResponse || message is GetHVNCMonitorsResponse;
 
         /// <inheritdoc />
         public override bool CanExecuteFrom(ISender sender) => _client.Equals(sender);
@@ -157,6 +162,9 @@ namespace Pulsar.Server.Messages
             switch (message)
             {
                 case GetHVNCDesktopResponse response:
+                    Execute(sender, response);
+                    break;
+                case GetHVNCMonitorsResponse response:
                     Execute(sender, response);
                     break;
             }
@@ -232,6 +240,24 @@ namespace Pulsar.Server.Messages
             {
                 await RequestMoreFramesAsync();
             }
+        }
+
+        private void Execute(ISender client, GetHVNCMonitorsResponse message)
+        {
+            OnDisplaysChanged(message.Number);
+        }
+
+        /// <summary>
+        /// Reports changed displays.
+        /// </summary>
+        /// <param name="displays">All currently available displays.</param>
+        private void OnDisplaysChanged(int displays)
+        {
+            SynchronizationContext.Post(val =>
+                {
+                    var handler = DisplaysChanged;
+                    handler?.Invoke(this, (int)val);
+                }, displays);
         }
 
         private void EnsureLocalResolutionInitialized(Size fallbackSize)
@@ -412,7 +438,7 @@ namespace Pulsar.Server.Messages
         public void RefreshDisplays()
         {
             Debug.WriteLine("Refreshing HVNC displays");
-            // ts does nothing it just fits what remotedesktop does
+            _client.Send(new GetHVNCMonitors());
         }
 
         private async Task RequestMoreFramesAsync()

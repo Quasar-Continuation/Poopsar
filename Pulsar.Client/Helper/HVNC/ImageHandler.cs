@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
 namespace Pulsar.Client.Helper.HVNC
 {
@@ -86,11 +87,19 @@ namespace Pulsar.Client.Helper.HVNC
             return result;
         }
 
-        private bool DrawApplication(IntPtr hWnd, Graphics ModifiableScreen, IntPtr DC, float scalingFactor)
+        private bool DrawApplication(IntPtr hWnd, Graphics ModifiableScreen, IntPtr DC, float scalingFactor, Rectangle captureArea)
         {
             bool result = false;
             RECT rect;
             GetWindowRect(hWnd, out rect);
+
+            // Only draw if window is within the capture area
+            if (rect.Right < captureArea.Left || rect.Left > captureArea.Right ||
+                rect.Bottom < captureArea.Top || rect.Top > captureArea.Bottom)
+            {
+                return false;
+            }
+
             IntPtr intPtr = CreateCompatibleDC(DC);
             IntPtr intPtr2 = CreateCompatibleBitmap(DC, (int)((float)(rect.Right - rect.Left) * scalingFactor), (int)((float)(rect.Bottom - rect.Top) * scalingFactor));
             SelectObject(intPtr, intPtr2);
@@ -100,7 +109,8 @@ namespace Pulsar.Client.Helper.HVNC
                 try
                 {
                     Bitmap bitmap = Image.FromHbitmap(intPtr2);
-                    ModifiableScreen.DrawImage(bitmap, new Point(rect.Left, rect.Top));
+                    // Adjust draw position relative to capture area
+                    ModifiableScreen.DrawImage(bitmap, new Point(rect.Left - captureArea.Left, rect.Top - captureArea.Top));
                     bitmap.Dispose();
                     result = true;
                 }
@@ -113,7 +123,7 @@ namespace Pulsar.Client.Helper.HVNC
             return result;
         }
 
-        private void DrawTopDown(IntPtr owner, Graphics ModifiableScreen, IntPtr DC, float scalingFactor)
+        private void DrawTopDown(IntPtr owner, Graphics ModifiableScreen, IntPtr DC, float scalingFactor, Rectangle captureArea)
         {
             IntPtr intPtr = GetTopWindow(owner);
             if (intPtr == IntPtr.Zero)
@@ -127,19 +137,19 @@ namespace Pulsar.Client.Helper.HVNC
             }
             while (intPtr != IntPtr.Zero)
             {
-                this.DrawHwnd(intPtr, ModifiableScreen, DC, scalingFactor);
+                this.DrawHwnd(intPtr, ModifiableScreen, DC, scalingFactor, captureArea);
                 intPtr = GetWindow(intPtr, GetWindowType.GW_HWNDPREV);
             }
         }
 
-        private void DrawHwnd(IntPtr hWnd, Graphics ModifiableScreen, IntPtr DC, float scalingFactor)
+        private void DrawHwnd(IntPtr hWnd, Graphics ModifiableScreen, IntPtr DC, float scalingFactor, Rectangle captureArea)
         {
             if (IsWindowVisible(hWnd))
             {
-                this.DrawApplication(hWnd, ModifiableScreen, DC, scalingFactor);
+                this.DrawApplication(hWnd, ModifiableScreen, DC, scalingFactor, captureArea);
                 if (Environment.OSVersion.Version.Major < 6)
                 {
-                    this.DrawTopDown(hWnd, ModifiableScreen, DC, scalingFactor);
+                    this.DrawTopDown(hWnd, ModifiableScreen, DC, scalingFactor, captureArea);
                 }
             }
         }
@@ -150,19 +160,57 @@ namespace Pulsar.Client.Helper.HVNC
             GC.Collect();
         }
 
+        /// <summary>
+        /// Gets the total number of monitors available.
+        /// </summary>
+        /// <returns>The number of monitors.</returns>
+        public static int GetMonitorCount()
+        {
+            return Screen.AllScreens.Length;
+        }
+
+        /// <summary>
+        /// Captures the screenshot of the entire desktop (all monitors).
+        /// </summary>
         public Bitmap Screenshot()
+        {
+            return Screenshot(-1); // -1 means capture all monitors
+        }
+
+        /// <summary>
+        /// Captures the screenshot of a specific monitor.
+        /// </summary>
+        /// <param name="monitorIndex">The index of the monitor to capture. Use -1 to capture all monitors.</param>
+        public Bitmap Screenshot(int monitorIndex)
         {
             SetThreadDesktop(this.Desktop);
             IntPtr dc = GetDC(IntPtr.Zero);
-            RECT rect;
-            GetWindowRect(GetDesktopWindow(), out rect);
+
+            Rectangle captureArea;
+
+            if (monitorIndex >= 0 && monitorIndex < Screen.AllScreens.Length)
+            {
+                // Capture specific monitor
+                captureArea = Screen.AllScreens[monitorIndex].Bounds;
+            }
+            else
+            {
+                // Capture all monitors (entire desktop)
+                RECT rect;
+                GetWindowRect(GetDesktopWindow(), out rect);
+                captureArea = new Rectangle(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
+            }
+
             float scalingFactor = GetScalingFactor();
-            Bitmap bitmap = new Bitmap((int)((float)rect.Right * scalingFactor), (int)((float)rect.Bottom * scalingFactor));
+            int scaledWidth = (int)((float)captureArea.Width * scalingFactor);
+            int scaledHeight = (int)((float)captureArea.Height * scalingFactor);
+
+            Bitmap bitmap = new Bitmap(scaledWidth, scaledHeight);
             try
             {
                 using (Graphics graphics = Graphics.FromImage(bitmap))
                 {
-                    this.DrawTopDown(IntPtr.Zero, graphics, dc, scalingFactor);
+                    this.DrawTopDown(IntPtr.Zero, graphics, dc, scalingFactor, captureArea);
                 }
             }
             finally

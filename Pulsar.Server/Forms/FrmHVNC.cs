@@ -316,6 +316,12 @@ namespace Pulsar.Server.Forms
 
             OnResize(EventArgs.Empty); // trigger resize event to align controls 
 
+            // Subscribe to displays changed event
+            _hVNCHandler.DisplaysChanged += DisplaysChanged;
+
+            // Request monitor count from client
+            _hVNCHandler.RefreshDisplays();
+
             cbMonitors.SelectedIndex = 0;
         }
 
@@ -346,6 +352,7 @@ namespace Pulsar.Server.Forms
             // all cleanup logic goes here
             UnsubscribeEvents();
             if (_hVNCHandler.IsStarted) StopStream();
+            _hVNCHandler.DisplaysChanged -= DisplaysChanged;
             UnregisterMessageHandler();
             _hVNCHandler.Dispose();
             _clipboardMonitor?.Dispose();
