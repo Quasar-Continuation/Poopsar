@@ -5,6 +5,6 @@ namespace Pulsar.Common.Messages.Monitoring.HVNC
 {
     [MessagePackObject]
     public class GetHVNCMonitors : IMessage
- {
+    {
     }
 }

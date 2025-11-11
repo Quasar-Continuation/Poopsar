@@ -119,7 +119,8 @@ namespace Pulsar.Client.Helper
                     Initialize();
                 }
 
-                if (screenNumber < 0 || screenNumber >= System.Windows.Forms.Screen.AllScreens.Length)
+                var monitorCount = DisplayManager.GetDisplayCount();
+                if (screenNumber < 0 || screenNumber >= monitorCount)
                     throw new ArgumentOutOfRangeException(nameof(screenNumber));
 
                 Rectangle bounds = GetBounds(screenNumber);
@@ -153,7 +154,8 @@ namespace Pulsar.Client.Helper
                         Initialize();
                     }
 
-                    if (screenNumber < 0 || screenNumber >= System.Windows.Forms.Screen.AllScreens.Length)
+                    var monitorCount = DisplayManager.GetDisplayCount();
+                    if (screenNumber < 0 || screenNumber >= monitorCount)
                     {
                         throw new ArgumentOutOfRangeException(nameof(screenNumber));
                     }
@@ -255,7 +257,11 @@ namespace Pulsar.Client.Helper
         /// </summary>
         public static Rectangle GetBounds(int screenNumber)
         {
-            return System.Windows.Forms.Screen.AllScreens[screenNumber].Bounds;
+            var rects = DisplayManager.GetAllMonitorRects();
+            if (screenNumber < 0 || screenNumber >= rects.Count)
+                throw new ArgumentOutOfRangeException(nameof(screenNumber));
+            var r = rects[screenNumber];
+            return new Rectangle(r.left, r.top, r.right - r.left, r.bottom - r.top);
         }        
         
         /// <summary>

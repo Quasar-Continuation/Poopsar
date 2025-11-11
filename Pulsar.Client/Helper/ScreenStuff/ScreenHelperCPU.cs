@@ -1,5 +1,6 @@
 ﻿using Pulsar.Client.Config;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
@@ -83,7 +84,11 @@ namespace Pulsar.Client.Helper
 
         public static Rectangle GetBounds(int screenNumber)
         {
-            return Screen.AllScreens[screenNumber].Bounds;
+            var rects = DisplayManager.GetAllMonitorRects();
+            if (screenNumber < 0 || screenNumber >= rects.Count)
+                throw new ArgumentOutOfRangeException(nameof(screenNumber));
+            var r = rects[screenNumber];
+            return new Rectangle(r.left, r.top, r.right - r.left, r.bottom - r.top);
         }
 
         private class DeviceContext : IDisposable
@@ -127,6 +132,18 @@ namespace Pulsar.Client.Helper
                     return true;
                 }, IntPtr.Zero);
             return count;
+        }
+
+        public static List<Rect> GetAllMonitorRects()
+        {
+            var rects = new List<Rect>();
+            EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero,
+                (IntPtr hMonitor, IntPtr hdcMonitor, ref Rect lprcMonitor, IntPtr dwData) =>
+                {
+                    rects.Add(lprcMonitor);
+                    return true;
+                }, IntPtr.Zero);
+            return rects;
         }
     }
 }
