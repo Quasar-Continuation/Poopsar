@@ -30,8 +30,41 @@ namespace Pulsar.Server.Forms
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
+            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FrmHVNC));
+            btnStart = new System.Windows.Forms.Button();
+            btnStop = new System.Windows.Forms.Button();
+            barQuality = new System.Windows.Forms.TrackBar();
+            lblQuality = new System.Windows.Forms.Label();
+            lblQualityShow = new System.Windows.Forms.Label();
+            btnMouse = new System.Windows.Forms.Button();
+            panelTop = new System.Windows.Forms.Panel();
+            btnBiDirectionalClipboard = new System.Windows.Forms.Button();
+            dropDownMenuButton = new MenuButton();
+            contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(components);
+            menuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            menuItem2 = new System.Windows.Forms.ToolStripMenuItem();
+            startEdgeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            startBraveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            startOperaToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            startOperaGXToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            startFirefoxToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            startCmdToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            startPowershellToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            startDiscordToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            startCustomPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            cLONEBROWSERPROFILEToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            sizeLabelCounter = new System.Windows.Forms.Label();
+            btnKeyboard = new System.Windows.Forms.Button();
+            cbMonitors = new System.Windows.Forms.ComboBox();
+            btnHide = new System.Windows.Forms.Button();
+            btnShow = new System.Windows.Forms.Button();
+            toolTipButtons = new System.Windows.Forms.ToolTip(components);
+            picDesktop = new RemoteDesktopElementHost();
+            ((System.ComponentModel.ISupportInitialize)barQuality).BeginInit();
+            panelTop.SuspendLayout();
+            contextMenuStrip.SuspendLayout();
+            SuspendLayout();
             this.btnStart = new System.Windows.Forms.Button();
             this.btnStop = new System.Windows.Forms.Button();
             this.barQuality = new System.Windows.Forms.TrackBar();
@@ -69,119 +102,124 @@ namespace Pulsar.Server.Forms
             // 
             // btnStart
             // 
-            this.btnStart.Location = new System.Drawing.Point(11, 3);
-            this.btnStart.Name = "btnStart";
-            this.btnStart.Size = new System.Drawing.Size(68, 28);
-            this.btnStart.TabIndex = 1;
-            this.btnStart.TabStop = false;
-            this.btnStart.Text = "Start";
-            this.btnStart.UseVisualStyleBackColor = true;
-            this.btnStart.Click += new System.EventHandler(this.btnStart_Click);
+            btnStart.Location = new System.Drawing.Point(11, 3);
+            btnStart.Name = "btnStart";
+            btnStart.Size = new System.Drawing.Size(68, 28);
+            btnStart.TabIndex = 1;
+            btnStart.TabStop = false;
+            btnStart.Text = "Start";
+            btnStart.UseVisualStyleBackColor = true;
+            btnStart.Click += btnStart_Click;
             // 
             // btnStop
             // 
-            this.btnStop.Enabled = false;
-            this.btnStop.Location = new System.Drawing.Point(85, 3);
-            this.btnStop.Name = "btnStop";
-            this.btnStop.Size = new System.Drawing.Size(68, 28);
-            this.btnStop.TabIndex = 2;
-            this.btnStop.TabStop = false;
-            this.btnStop.Text = "Stop";
-            this.btnStop.UseVisualStyleBackColor = true;
-            this.btnStop.Click += new System.EventHandler(this.btnStop_Click);
+            btnStop.Enabled = false;
+            btnStop.Location = new System.Drawing.Point(85, 3);
+            btnStop.Name = "btnStop";
+            btnStop.Size = new System.Drawing.Size(68, 28);
+            btnStop.TabIndex = 2;
+            btnStop.TabStop = false;
+            btnStop.Text = "Stop";
+            btnStop.UseVisualStyleBackColor = true;
+            btnStop.Click += btnStop_Click;
             // 
             // barQuality
             // 
-            this.barQuality.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.barQuality.Location = new System.Drawing.Point(456, 3);
-            this.barQuality.Maximum = 100;
-            this.barQuality.Minimum = 1;
-            this.barQuality.Name = "barQuality";
-            this.barQuality.Size = new System.Drawing.Size(114, 45);
-            this.barQuality.TabIndex = 3;
-            this.barQuality.TabStop = false;
-            this.barQuality.Value = 75;
-            this.barQuality.Scroll += new System.EventHandler(this.barQuality_Scroll);
+            barQuality.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            barQuality.Location = new System.Drawing.Point(456, 3);
+            barQuality.Maximum = 100;
+            barQuality.Minimum = 1;
+            barQuality.Name = "barQuality";
+            barQuality.Size = new System.Drawing.Size(114, 45);
+            barQuality.TabIndex = 3;
+            barQuality.TabStop = false;
+            barQuality.Value = 100;
+            barQuality.Scroll += barQuality_Scroll;
             // 
             // lblQuality
             // 
-            this.lblQuality.AutoSize = true;
-            this.lblQuality.Location = new System.Drawing.Point(404, 5);
-            this.lblQuality.Name = "lblQuality";
-            this.lblQuality.Size = new System.Drawing.Size(46, 13);
-            this.lblQuality.TabIndex = 4;
-            this.lblQuality.Text = "Quality:";
+            lblQuality.AutoSize = true;
+            lblQuality.Location = new System.Drawing.Point(404, 5);
+            lblQuality.Name = "lblQuality";
+            lblQuality.Size = new System.Drawing.Size(46, 13);
+            lblQuality.TabIndex = 4;
+            lblQuality.Text = "Quality:";
             // 
             // lblQualityShow
             // 
-            this.lblQualityShow.AutoSize = true;
-            this.lblQualityShow.Location = new System.Drawing.Point(404, 18);
-            this.lblQualityShow.Name = "lblQualityShow";
-            this.lblQualityShow.Size = new System.Drawing.Size(52, 13);
-            this.lblQualityShow.TabIndex = 5;
-            this.lblQualityShow.Text = "75 (high)";
+            lblQualityShow.AutoSize = true;
+            lblQualityShow.Location = new System.Drawing.Point(404, 18);
+            lblQualityShow.Name = "lblQualityShow";
+            lblQualityShow.Size = new System.Drawing.Size(56, 13);
+            lblQualityShow.TabIndex = 5;
+            lblQualityShow.Text = "100 (best)";
             // 
             // btnMouse
             // 
-            this.btnMouse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnMouse.Image = global::Pulsar.Server.Properties.Resources.mouse_delete;
-            this.btnMouse.Location = new System.Drawing.Point(701, 3);
-            this.btnMouse.Name = "btnMouse";
-            this.btnMouse.Size = new System.Drawing.Size(28, 28);
-            this.btnMouse.TabIndex = 6;
-            this.btnMouse.TabStop = false;
-            this.toolTipButtons.SetToolTip(this.btnMouse, "Enable mouse input.");
-            this.btnMouse.UseVisualStyleBackColor = true;
-            this.btnMouse.Click += new System.EventHandler(this.btnMouse_Click);
+            btnMouse.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
+            btnMouse.Image = Properties.Resources.mouse_delete;
+            btnMouse.Location = new System.Drawing.Point(701, 3);
+            btnMouse.Name = "btnMouse";
+            btnMouse.Size = new System.Drawing.Size(28, 28);
+            btnMouse.TabIndex = 6;
+            btnMouse.TabStop = false;
+            toolTipButtons.SetToolTip(btnMouse, "Enable mouse input.");
+            btnMouse.UseVisualStyleBackColor = true;
+            btnMouse.Click += btnMouse_Click;
             // 
             // panelTop
             // 
-            this.panelTop.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.panelTop.Controls.Add(this.btnBiDirectionalClipboard);
-            this.panelTop.Controls.Add(this.dropDownMenuButton);
-            this.panelTop.Controls.Add(this.sizeLabelCounter);
-            this.panelTop.Controls.Add(this.btnKeyboard);
-            this.panelTop.Controls.Add(this.cbMonitors);
-            this.panelTop.Controls.Add(this.btnHide);
-            this.panelTop.Controls.Add(this.lblQualityShow);
-            this.panelTop.Controls.Add(this.btnMouse);
-            this.panelTop.Controls.Add(this.btnStart);
-            this.panelTop.Controls.Add(this.btnStop);
-            this.panelTop.Controls.Add(this.lblQuality);
-            this.panelTop.Controls.Add(this.barQuality);
-            this.panelTop.Dock = System.Windows.Forms.DockStyle.Top;
-            this.panelTop.Location = new System.Drawing.Point(0, 0);
-            this.panelTop.Name = "panelTop";
-            this.panelTop.Size = new System.Drawing.Size(859, 36);
-            this.panelTop.TabIndex = 7;
+            panelTop.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            panelTop.Controls.Add(btnBiDirectionalClipboard);
+            panelTop.Controls.Add(dropDownMenuButton);
+            panelTop.Controls.Add(sizeLabelCounter);
+            panelTop.Controls.Add(btnKeyboard);
+            panelTop.Controls.Add(cbMonitors);
+            panelTop.Controls.Add(btnHide);
+            panelTop.Controls.Add(lblQualityShow);
+            panelTop.Controls.Add(btnMouse);
+            panelTop.Controls.Add(btnStart);
+            panelTop.Controls.Add(btnStop);
+            panelTop.Controls.Add(lblQuality);
+            panelTop.Controls.Add(barQuality);
+            panelTop.Dock = System.Windows.Forms.DockStyle.Top;
+            panelTop.Location = new System.Drawing.Point(0, 0);
+            panelTop.Name = "panelTop";
+            panelTop.Size = new System.Drawing.Size(859, 36);
+            panelTop.TabIndex = 7;
             // 
             // btnBiDirectionalClipboard
             // 
-            this.btnBiDirectionalClipboard.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnBiDirectionalClipboard.Image = global::Pulsar.Server.Properties.Resources.clipboard_paste_image;
-            this.btnBiDirectionalClipboard.Location = new System.Drawing.Point(667, 3);
-            this.btnBiDirectionalClipboard.Name = "btnBiDirectionalClipboard";
-            this.btnBiDirectionalClipboard.Size = new System.Drawing.Size(28, 28);
-            this.btnBiDirectionalClipboard.TabIndex = 13;
-            this.btnBiDirectionalClipboard.TabStop = false;
-            this.toolTipButtons.SetToolTip(this.btnBiDirectionalClipboard, "Enable mouse input.");
-            this.btnBiDirectionalClipboard.UseVisualStyleBackColor = true;
-            this.btnBiDirectionalClipboard.Click += new System.EventHandler(this.btnBiDirectionalClipboard_Click);
+            btnBiDirectionalClipboard.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
+            btnBiDirectionalClipboard.Image = Properties.Resources.clipboard_paste_image;
+            btnBiDirectionalClipboard.Location = new System.Drawing.Point(667, 3);
+            btnBiDirectionalClipboard.Name = "btnBiDirectionalClipboard";
+            btnBiDirectionalClipboard.Size = new System.Drawing.Size(28, 28);
+            btnBiDirectionalClipboard.TabIndex = 13;
+            btnBiDirectionalClipboard.TabStop = false;
+            toolTipButtons.SetToolTip(btnBiDirectionalClipboard, "Enable mouse input.");
+            btnBiDirectionalClipboard.UseVisualStyleBackColor = true;
+            btnBiDirectionalClipboard.Click += btnBiDirectionalClipboard_Click;
             // 
             // dropDownMenuButton
             // 
-            this.dropDownMenuButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.dropDownMenuButton.Location = new System.Drawing.Point(576, 3);
-            this.dropDownMenuButton.Menu = this.contextMenuStrip;
-            this.dropDownMenuButton.Name = "dropDownMenuButton";
-            this.dropDownMenuButton.Size = new System.Drawing.Size(82, 28);
-            this.dropDownMenuButton.TabIndex = 12;
-            this.dropDownMenuButton.Text = "Menu";
-            this.dropDownMenuButton.UseVisualStyleBackColor = true;
+            dropDownMenuButton.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
+            dropDownMenuButton.Location = new System.Drawing.Point(576, 3);
+            dropDownMenuButton.Menu = contextMenuStrip;
+            dropDownMenuButton.Name = "dropDownMenuButton";
+            dropDownMenuButton.Size = new System.Drawing.Size(82, 28);
+            dropDownMenuButton.TabIndex = 12;
+            dropDownMenuButton.Text = "Menu";
+            dropDownMenuButton.UseVisualStyleBackColor = true;
             // 
             // contextMenuStrip
             // 
+            contextMenuStrip.BackColor = System.Drawing.Color.FromArgb(40, 40, 40);
+            contextMenuStrip.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
+            contextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { menuItem1, menuItem2, startEdgeToolStripMenuItem, startBraveToolStripMenuItem, startOperaToolStripMenuItem, startOperaGXToolStripMenuItem, startFirefoxToolStripMenuItem, startCmdToolStripMenuItem, startPowershellToolStripMenuItem, startDiscordToolStripMenuItem, startCustomPathToolStripMenuItem, cLONEBROWSERPROFILEToolStripMenuItem });
+            contextMenuStrip.Name = "contextMenuStrip";
+            contextMenuStrip.RenderMode = System.Windows.Forms.ToolStripRenderMode.System;
+            contextMenuStrip.Size = new System.Drawing.Size(206, 268);
             this.contextMenuStrip.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.contextMenuStrip.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.contextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -204,92 +242,92 @@ namespace Pulsar.Server.Forms
             // 
             // menuItem1
             // 
-            this.menuItem1.ForeColor = System.Drawing.SystemColors.Control;
-            this.menuItem1.Name = "menuItem1";
-            this.menuItem1.Size = new System.Drawing.Size(215, 22);
-            this.menuItem1.Text = "Start Explorer";
-            this.menuItem1.Click += new System.EventHandler(this.menuItem1_Click);
+            menuItem1.ForeColor = System.Drawing.SystemColors.Control;
+            menuItem1.Name = "menuItem1";
+            menuItem1.Size = new System.Drawing.Size(205, 22);
+            menuItem1.Text = "Start Explorer";
+            menuItem1.Click += menuItem1_Click;
             // 
             // menuItem2
             // 
-            this.menuItem2.ForeColor = System.Drawing.SystemColors.Control;
-            this.menuItem2.Name = "menuItem2";
-            this.menuItem2.Size = new System.Drawing.Size(215, 22);
-            this.menuItem2.Text = "Start Chrome";
-            this.menuItem2.Click += new System.EventHandler(this.menuItem2_Click);
+            menuItem2.ForeColor = System.Drawing.SystemColors.Control;
+            menuItem2.Name = "menuItem2";
+            menuItem2.Size = new System.Drawing.Size(205, 22);
+            menuItem2.Text = "Start Chrome";
+            menuItem2.Click += menuItem2_Click;
             // 
             // startEdgeToolStripMenuItem
             // 
-            this.startEdgeToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
-            this.startEdgeToolStripMenuItem.Name = "startEdgeToolStripMenuItem";
-            this.startEdgeToolStripMenuItem.Size = new System.Drawing.Size(215, 22);
-            this.startEdgeToolStripMenuItem.Text = "Start Edge";
-            this.startEdgeToolStripMenuItem.Click += new System.EventHandler(this.startEdgeToolStripMenuItem_Click);
+            startEdgeToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
+            startEdgeToolStripMenuItem.Name = "startEdgeToolStripMenuItem";
+            startEdgeToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            startEdgeToolStripMenuItem.Text = "Start Edge";
+            startEdgeToolStripMenuItem.Click += startEdgeToolStripMenuItem_Click;
             // 
             // startBraveToolStripMenuItem
             // 
-            this.startBraveToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
-            this.startBraveToolStripMenuItem.Name = "startBraveToolStripMenuItem";
-            this.startBraveToolStripMenuItem.Size = new System.Drawing.Size(215, 22);
-            this.startBraveToolStripMenuItem.Text = "Start Brave";
-            this.startBraveToolStripMenuItem.Click += new System.EventHandler(this.startBraveToolStripMenuItem_Click);
+            startBraveToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
+            startBraveToolStripMenuItem.Name = "startBraveToolStripMenuItem";
+            startBraveToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            startBraveToolStripMenuItem.Text = "Start Brave";
+            startBraveToolStripMenuItem.Click += startBraveToolStripMenuItem_Click;
             // 
             // startOperaToolStripMenuItem
             // 
-            this.startOperaToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
-            this.startOperaToolStripMenuItem.Name = "startOperaToolStripMenuItem";
-            this.startOperaToolStripMenuItem.Size = new System.Drawing.Size(215, 22);
-            this.startOperaToolStripMenuItem.Text = "Start Opera";
-            this.startOperaToolStripMenuItem.Click += new System.EventHandler(this.startOperaToolStripMenuItem_Click);
+            startOperaToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
+            startOperaToolStripMenuItem.Name = "startOperaToolStripMenuItem";
+            startOperaToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            startOperaToolStripMenuItem.Text = "Start Opera";
+            startOperaToolStripMenuItem.Click += startOperaToolStripMenuItem_Click;
             // 
             // startOperaGXToolStripMenuItem
             // 
-            this.startOperaGXToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
-            this.startOperaGXToolStripMenuItem.Name = "startOperaGXToolStripMenuItem";
-            this.startOperaGXToolStripMenuItem.Size = new System.Drawing.Size(215, 22);
-            this.startOperaGXToolStripMenuItem.Text = "Start OperaGX";
-            this.startOperaGXToolStripMenuItem.Click += new System.EventHandler(this.startOperaGXToolStripMenuItem_Click);
+            startOperaGXToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
+            startOperaGXToolStripMenuItem.Name = "startOperaGXToolStripMenuItem";
+            startOperaGXToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            startOperaGXToolStripMenuItem.Text = "Start OperaGX";
+            startOperaGXToolStripMenuItem.Click += startOperaGXToolStripMenuItem_Click;
             // 
             // startFirefoxToolStripMenuItem
             // 
-            this.startFirefoxToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
-            this.startFirefoxToolStripMenuItem.Name = "startFirefoxToolStripMenuItem";
-            this.startFirefoxToolStripMenuItem.Size = new System.Drawing.Size(215, 22);
-            this.startFirefoxToolStripMenuItem.Text = "Start Firefox";
-            this.startFirefoxToolStripMenuItem.Click += new System.EventHandler(this.startFirefoxToolStripMenuItem_Click);
+            startFirefoxToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
+            startFirefoxToolStripMenuItem.Name = "startFirefoxToolStripMenuItem";
+            startFirefoxToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            startFirefoxToolStripMenuItem.Text = "Start Firefox";
+            startFirefoxToolStripMenuItem.Click += startFirefoxToolStripMenuItem_Click;
             // 
             // startCmdToolStripMenuItem
             // 
-            this.startCmdToolStripMenuItem.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.startCmdToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
-            this.startCmdToolStripMenuItem.Name = "startCmdToolStripMenuItem";
-            this.startCmdToolStripMenuItem.Size = new System.Drawing.Size(215, 22);
-            this.startCmdToolStripMenuItem.Text = "Start Cmd";
-            this.startCmdToolStripMenuItem.Click += new System.EventHandler(this.startCmdToolStripMenuItem_Click);
+            startCmdToolStripMenuItem.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            startCmdToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
+            startCmdToolStripMenuItem.Name = "startCmdToolStripMenuItem";
+            startCmdToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            startCmdToolStripMenuItem.Text = "Start Cmd";
+            startCmdToolStripMenuItem.Click += startCmdToolStripMenuItem_Click;
             // 
             // startPowershellToolStripMenuItem
             // 
-            this.startPowershellToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
-            this.startPowershellToolStripMenuItem.Name = "startPowershellToolStripMenuItem";
-            this.startPowershellToolStripMenuItem.Size = new System.Drawing.Size(215, 22);
-            this.startPowershellToolStripMenuItem.Text = "Start Powershell";
-            this.startPowershellToolStripMenuItem.Click += new System.EventHandler(this.startPowershellToolStripMenuItem_Click);
+            startPowershellToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
+            startPowershellToolStripMenuItem.Name = "startPowershellToolStripMenuItem";
+            startPowershellToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            startPowershellToolStripMenuItem.Text = "Start Powershell";
+            startPowershellToolStripMenuItem.Click += startPowershellToolStripMenuItem_Click;
             // 
             // startDiscordToolStripMenuItem
             // 
-            this.startDiscordToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
-            this.startDiscordToolStripMenuItem.Name = "startDiscordToolStripMenuItem";
-            this.startDiscordToolStripMenuItem.Size = new System.Drawing.Size(215, 22);
-            this.startDiscordToolStripMenuItem.Text = "Start Discord";
-            this.startDiscordToolStripMenuItem.Click += new System.EventHandler(this.startDiscordToolStripMenuItem_Click);
+            startDiscordToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
+            startDiscordToolStripMenuItem.Name = "startDiscordToolStripMenuItem";
+            startDiscordToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            startDiscordToolStripMenuItem.Text = "Start Discord";
+            startDiscordToolStripMenuItem.Click += startDiscordToolStripMenuItem_Click;
             // 
             // startCustomPathToolStripMenuItem
             // 
-            this.startCustomPathToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
-            this.startCustomPathToolStripMenuItem.Name = "startCustomPathToolStripMenuItem";
-            this.startCustomPathToolStripMenuItem.Size = new System.Drawing.Size(215, 22);
-            this.startCustomPathToolStripMenuItem.Text = "Start Custom Path";
-            this.startCustomPathToolStripMenuItem.Click += new System.EventHandler(this.startCustomPathToolStripMenuItem_Click);
+            startCustomPathToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
+            startCustomPathToolStripMenuItem.Name = "startCustomPathToolStripMenuItem";
+            startCustomPathToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            startCustomPathToolStripMenuItem.Text = "Start Custom Path";
+            startCustomPathToolStripMenuItem.Click += startCustomPathToolStripMenuItem_Click;
             // 
             // startGenericChromiumToolStripMenuItem
             // 
@@ -301,6 +339,11 @@ namespace Pulsar.Server.Forms
             // 
             // cLONEBROWSERPROFILEToolStripMenuItem
             // 
+            cLONEBROWSERPROFILEToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
+            cLONEBROWSERPROFILEToolStripMenuItem.Name = "cLONEBROWSERPROFILEToolStripMenuItem";
+            cLONEBROWSERPROFILEToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            cLONEBROWSERPROFILEToolStripMenuItem.Text = "DIRECT START BROWSER";
+            cLONEBROWSERPROFILEToolStripMenuItem.Click += cLONEBROWSERPROFILEToolStripMenuItem_Click;
             this.cLONEBROWSERPROFILEToolStripMenuItem.Checked = true;
             this.cLONEBROWSERPROFILEToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.cLONEBROWSERPROFILEToolStripMenuItem.ForeColor = System.Drawing.SystemColors.Control;
@@ -311,97 +354,95 @@ namespace Pulsar.Server.Forms
             // 
             // sizeLabelCounter
             // 
-            this.sizeLabelCounter.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.sizeLabelCounter.Location = new System.Drawing.Point(769, 11);
-            this.sizeLabelCounter.Name = "sizeLabelCounter";
-            this.sizeLabelCounter.Size = new System.Drawing.Size(77, 15);
-            this.sizeLabelCounter.TabIndex = 11;
-            this.sizeLabelCounter.Text = "Size: ";
+            sizeLabelCounter.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
+            sizeLabelCounter.Location = new System.Drawing.Point(769, 11);
+            sizeLabelCounter.Name = "sizeLabelCounter";
+            sizeLabelCounter.Size = new System.Drawing.Size(77, 15);
+            sizeLabelCounter.TabIndex = 11;
+            sizeLabelCounter.Text = "Size: ";
             // 
             // btnKeyboard
             // 
-            this.btnKeyboard.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnKeyboard.Image = global::Pulsar.Server.Properties.Resources.keyboard_delete;
-            this.btnKeyboard.Location = new System.Drawing.Point(735, 3);
-            this.btnKeyboard.Name = "btnKeyboard";
-            this.btnKeyboard.Size = new System.Drawing.Size(28, 28);
-            this.btnKeyboard.TabIndex = 9;
-            this.btnKeyboard.TabStop = false;
-            this.toolTipButtons.SetToolTip(this.btnKeyboard, "Enable keyboard input.");
-            this.btnKeyboard.UseVisualStyleBackColor = true;
-            this.btnKeyboard.Click += new System.EventHandler(this.btnKeyboard_Click);
+            btnKeyboard.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
+            btnKeyboard.Image = Properties.Resources.keyboard_delete;
+            btnKeyboard.Location = new System.Drawing.Point(735, 3);
+            btnKeyboard.Name = "btnKeyboard";
+            btnKeyboard.Size = new System.Drawing.Size(28, 28);
+            btnKeyboard.TabIndex = 9;
+            btnKeyboard.TabStop = false;
+            toolTipButtons.SetToolTip(btnKeyboard, "Enable keyboard input.");
+            btnKeyboard.UseVisualStyleBackColor = true;
+            btnKeyboard.Click += btnKeyboard_Click;
             // 
             // cbMonitors
             // 
-            this.cbMonitors.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cbMonitors.FormattingEnabled = true;
-            this.cbMonitors.Items.AddRange(new object[] {
-            "Display 0"});
-            this.cbMonitors.Location = new System.Drawing.Point(159, 5);
-            this.cbMonitors.Name = "cbMonitors";
-            this.cbMonitors.Size = new System.Drawing.Size(180, 21);
-            this.cbMonitors.TabIndex = 8;
-            this.cbMonitors.TabStop = false;
+            cbMonitors.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            cbMonitors.FormattingEnabled = true;
+            cbMonitors.Items.AddRange(new object[] { "Display 0" });
+            cbMonitors.Location = new System.Drawing.Point(159, 5);
+            cbMonitors.Name = "cbMonitors";
+            cbMonitors.Size = new System.Drawing.Size(180, 21);
+            cbMonitors.TabIndex = 8;
+            cbMonitors.TabStop = false;
             // 
             // btnHide
             // 
-            this.btnHide.Location = new System.Drawing.Point(344, 3);
-            this.btnHide.Name = "btnHide";
-            this.btnHide.Size = new System.Drawing.Size(54, 28);
-            this.btnHide.TabIndex = 7;
-            this.btnHide.TabStop = false;
-            this.btnHide.Text = "Hide";
-            this.btnHide.UseVisualStyleBackColor = true;
-            this.btnHide.Click += new System.EventHandler(this.btnHide_Click);
+            btnHide.Location = new System.Drawing.Point(344, 3);
+            btnHide.Name = "btnHide";
+            btnHide.Size = new System.Drawing.Size(54, 28);
+            btnHide.TabIndex = 7;
+            btnHide.TabStop = false;
+            btnHide.Text = "Hide";
+            btnHide.UseVisualStyleBackColor = true;
+            btnHide.Click += btnHide_Click;
             // 
             // btnShow
             // 
-            this.btnShow.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnShow.Location = new System.Drawing.Point(805, 534);
-            this.btnShow.Name = "btnShow";
-            this.btnShow.Size = new System.Drawing.Size(54, 28);
-            this.btnShow.TabIndex = 8;
-            this.btnShow.TabStop = false;
-            this.btnShow.Text = "Show";
-            this.btnShow.UseVisualStyleBackColor = true;
-            this.btnShow.Visible = false;
-            this.btnShow.Click += new System.EventHandler(this.btnShow_Click);
+            btnShow.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right;
+            btnShow.Location = new System.Drawing.Point(805, 534);
+            btnShow.Name = "btnShow";
+            btnShow.Size = new System.Drawing.Size(54, 28);
+            btnShow.TabIndex = 8;
+            btnShow.TabStop = false;
+            btnShow.Text = "Show";
+            btnShow.UseVisualStyleBackColor = true;
+            btnShow.Visible = false;
+            btnShow.Click += btnShow_Click;
             // 
             // picDesktop
             // 
-            this.picDesktop.BackColor = System.Drawing.Color.Black;
-            this.picDesktop.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.picDesktop.Location = new System.Drawing.Point(0, 0);
-            this.picDesktop.Margin = new System.Windows.Forms.Padding(0);
-            this.picDesktop.Name = "picDesktop";
-            this.picDesktop.Size = new System.Drawing.Size(859, 562);
-            this.picDesktop.TabIndex = 0;
-            this.picDesktop.TabStop = false;
+            picDesktop.BackColor = System.Drawing.Color.Black;
+            picDesktop.Dock = System.Windows.Forms.DockStyle.Fill;
+            picDesktop.Location = new System.Drawing.Point(0, 0);
+            picDesktop.Margin = new System.Windows.Forms.Padding(0);
+            picDesktop.Name = "picDesktop";
+            picDesktop.Size = new System.Drawing.Size(859, 562);
+            picDesktop.TabIndex = 0;
+            picDesktop.TabStop = false;
             // 
             // FrmHVNC
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
-            this.ClientSize = new System.Drawing.Size(859, 562);
-            this.Controls.Add(this.btnShow);
-            this.Controls.Add(this.panelTop);
-            this.Controls.Add(this.picDesktop);
-            this.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.KeyPreview = true;
-            this.MinimumSize = new System.Drawing.Size(640, 480);
-            this.Name = "FrmHVNC";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "HVNC []";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FrmHVNC_FormClosing);
-            this.Load += new System.EventHandler(this.FrmHVNC_Load);
-            this.Resize += new System.EventHandler(this.FrmHVNC_Resize);
-            ((System.ComponentModel.ISupportInitialize)(this.barQuality)).EndInit();
-            this.panelTop.ResumeLayout(false);
-            this.panelTop.PerformLayout();
-            this.contextMenuStrip.ResumeLayout(false);
-            this.ResumeLayout(false);
-
+            AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
+            ClientSize = new System.Drawing.Size(859, 562);
+            Controls.Add(btnShow);
+            Controls.Add(panelTop);
+            Controls.Add(picDesktop);
+            Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
+            Icon = (System.Drawing.Icon)resources.GetObject("$this.Icon");
+            KeyPreview = true;
+            MinimumSize = new System.Drawing.Size(640, 480);
+            Name = "FrmHVNC";
+            StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            Text = "HVNC []";
+            FormClosing += FrmHVNC_FormClosing;
+            Load += FrmHVNC_Load;
+            Resize += FrmHVNC_Resize;
+            ((System.ComponentModel.ISupportInitialize)barQuality).EndInit();
+            panelTop.ResumeLayout(false);
+            panelTop.PerformLayout();
+            contextMenuStrip.ResumeLayout(false);
+            ResumeLayout(false);
         }
 
         #endregion

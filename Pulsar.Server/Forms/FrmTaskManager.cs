@@ -10,121 +10,177 @@ using Pulsar.Server.Messages;
 using Pulsar.Server.Networking;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Pulsar.Server.Forms
 {
     public partial class FrmTaskManager : Form
     {
-        /// <summary>
-        /// The client which can be used for the task manager.
-        /// </summary>
         private readonly Client _connectClient;
-
-        /// <summary>
-        /// The message handler for handling the communication with the client.
-        /// </summary>
         private readonly TaskManagerHandler _taskManagerHandler;
-
-        /// <summary>
-        /// Holds the opened task manager form for each client.
-        /// </summary>
-        private static readonly Dictionary<Client, FrmTaskManager> OpenedForms = new Dictionary<Client, FrmTaskManager>();
-
-        private List<FrmMemoryDump> _memoryDumps = new List<FrmMemoryDump>();
-
+        private static readonly Dictionary<Client, FrmTaskManager> OpenedForms = new();
+        private List<FrmMemoryDump> _memoryDumps = new();
         private int? _ratPid = null;
-
         private readonly ProcessTreeView _processTreeView;
-
-        private Common.Models.Process[] _currentProcesses = Array.Empty<Common.Models.Process>();
+        private Pulsar.Common.Models.Process[] _currentProcesses = Array.Empty<Pulsar.Common.Models.Process>();
         private ProcessTreeSortColumn _sortColumn = ProcessTreeSortColumn.Name;
         private bool _sortAscending = true;
 
-        /// <summary>
-        /// Creates a new task manager form for the client or gets the current open form, if there exists one already.
-        /// </summary>
-        /// <param name="client">The client used for the task manager form.</param>
-        /// <returns>
-        /// Returns a new task manager form for the client if there is none currently open, otherwise creates a new one.
-        /// </returns>
+        private readonly System.Windows.Forms.Timer _countdownTimer;
+        private int _countdownValue = 7;
+        private bool _pauseAutoRefresh = false;
+        private System.Drawing.Color _originalLabelColor;
+
+        // Ultra-light update management
+        private DateTime _lastUpdateTime = DateTime.MinValue;
+        private readonly TimeSpan _minimumUpdateInterval = TimeSpan.FromMilliseconds(500);
+        private readonly Queue<Pulsar.Common.Models.Process[]> _updateQueue = new Queue<Pulsar.Common.Models.Process[]>();
+        private bool _isProcessingQueue = false;
+        private readonly object _queueLock = new object();
+
         public static FrmTaskManager CreateNewOrGetExisting(Client client)
         {
-            if (OpenedForms.ContainsKey(client))
-            {
-                return OpenedForms[client];
-            }
-            FrmTaskManager f = new FrmTaskManager(client);
-            f.Disposed += (sender, args) => OpenedForms.Remove(client);
-            OpenedForms.Add(client, f);
-            return f;
+            if (OpenedForms.TryGetValue(client, out var form)) return form;
+            form = new FrmTaskManager(client);
+            form.Disposed += (s, e) => OpenedForms.Remove(client);
+            OpenedForms[client] = form;
+            return form;
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FrmTaskManager"/> class using the given client.
-        /// </summary>
-        /// <param name="client">The client used for the task manager form.</param>
         public FrmTaskManager(Client client)
         {
             _connectClient = client;
             _taskManagerHandler = new TaskManagerHandler(client);
             _processTreeView = new ProcessTreeView();
 
-            RegisterMessageHandler();
             InitializeComponent();
-
             DarkModeManager.ApplyDarkMode(this);
-			ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
+            ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
 
-        _processTreeView.SortRequested += ProcessTreeView_SortRequested;
-        _processTreeView.SelectedProcessChanged += ProcessTreeView_SelectedProcessChanged;
-        processTreeHost.Child = _processTreeView;
+            _processTreeView.SortRequested += ProcessTreeView_SortRequested;
+            _processTreeView.SelectedProcessChanged += ProcessTreeView_SelectedProcessChanged;
+            processTreeHost.Child = _processTreeView;
+
+            _originalLabelColor = toolStripStatusLabel1.ForeColor;
+
+            _countdownTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+            _countdownTimer.Tick += CountdownTimer_Tick;
+            _countdownTimer.Start();
+
+            RegisterMessageHandler();
+        }
+        private void AutoExpandFirstExplorer()
+        {
+            if (_processTreeView == null) return;
+
+            _processTreeView.FlattenNodes();
+
+            var allNodesField = typeof(ProcessTreeView)
+                .GetField("_allNodes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (allNodesField == null) return;
+
+            var allNodes = allNodesField.GetValue(_processTreeView) as List<ProcessTreeNode>;
+            if (allNodes == null || allNodes.Count == 0) return;
+
+            // Find the main explorer.exe: the one that has child processes
+            var node = allNodes
+                .Where(n => string.Equals(n.Name, "explorer.exe", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(n => n.Children.Count) // choose the one with most children
+                .FirstOrDefault();
+
+            if (node != null)
+            {
+                // Expand the node's ancestors so the tree path is visible
+                void ExpandAncestors(ProcessTreeNode target)
+                {
+                    var rootNodesProperty = typeof(ProcessTreeView)
+                        .GetProperty("RootNodes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+                    var rootNodes = rootNodesProperty?.GetValue(_processTreeView) as IEnumerable<ProcessTreeNode> ?? Enumerable.Empty<ProcessTreeNode>();
+
+                    foreach (var root in rootNodes)
+                    {
+                        if (TryExpandPath(root, target)) break;
+                    }
+
+                    bool TryExpandPath(ProcessTreeNode current, ProcessTreeNode targetNode)
+                    {
+                        if (current == targetNode) return true;
+
+                        foreach (var child in current.Children)
+                        {
+                            if (TryExpandPath(child, targetNode))
+                            {
+                                current.IsExpanded = true;
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+                }
+
+                ExpandAncestors(node);
+                node.IsExpanded = true; // only expand the main explorer.exe node
+            }
         }
 
-        /// <summary>
-        /// Registers the task manager message handler for client communication.
-        /// </summary>
+
+
+
+
+
+        private void CountdownTimer_Tick(object sender, EventArgs e)
+        {
+            toolStripStatusLabel1.Text = $"Refreshing in {_countdownValue}s...";
+
+            if (_countdownValue == 2)
+                toolStripStatusLabel1.ForeColor = System.Drawing.Color.Yellow;
+            else if (_countdownValue == 1)
+                toolStripStatusLabel1.ForeColor = System.Drawing.Color.Green;
+            else
+                toolStripStatusLabel1.ForeColor = _originalLabelColor;
+
+            if (_countdownValue > 0)
+            {
+                _countdownValue--;
+            }
+            else
+            {
+                if (!_pauseAutoRefresh)
+                    _ = Task.Run(() => _taskManagerHandler.RefreshProcesses());
+
+                _countdownValue = 7; // reset to 7 seconds
+                toolStripStatusLabel1.ForeColor = _originalLabelColor;
+            }
+        }
+
         private void RegisterMessageHandler()
         {
             _connectClient.ClientState += ClientDisconnected;
+
             _taskManagerHandler.ProgressChanged += (s, processes) =>
             {
-                Debug.WriteLine(_taskManagerHandler.LastProcessesResponse.RatPid);
-
-                if (_taskManagerHandler.LastProcessesResponse != null)
-                {
-                    TasksChanged(s, processes, _taskManagerHandler.LastProcessesResponse.RatPid);
-
-                }
-                else
-                {
-                    TasksChanged(s, processes, null);
-                }
+                QueueProcessUpdate(processes, _taskManagerHandler.LastProcessesResponse?.RatPid);
             };
+
             _taskManagerHandler.ProcessActionPerformed += ProcessActionPerformed;
             _taskManagerHandler.OnResponseReceived += CreateMemoryDump;
+
+            // Register with MessageHandler if exists
             MessageHandler.Register(_taskManagerHandler);
         }
 
-        /// <summary>
-        /// Unregisters the task manager message handler.
-        /// </summary>
         private void UnregisterMessageHandler()
         {
             MessageHandler.Unregister(_taskManagerHandler);
             _taskManagerHandler.OnResponseReceived -= CreateMemoryDump;
             _taskManagerHandler.ProcessActionPerformed -= ProcessActionPerformed;
             _taskManagerHandler.Dispose();
-
             _connectClient.ClientState -= ClientDisconnected;
         }
 
-        /// <summary>
-        /// Called whenever a client disconnects.
-        /// </summary>
-        /// <param name="client">The client which disconnected.</param>
-        /// <param name="connected">True if the client connected, false if disconnected</param>
         private void ClientDisconnected(Client client, bool connected)
         {
             if (!connected)
@@ -133,147 +189,353 @@ namespace Pulsar.Server.Forms
             }
         }
 
-        private void TasksChanged(object sender, Common.Models.Process[] processes)
+        private void QueueProcessUpdate(Pulsar.Common.Models.Process[] processes, int? ratPid)
         {
-            _currentProcesses = processes ?? Array.Empty<Common.Models.Process>();
-            RenderProcesses();
+            lock (_queueLock)
+            {
+                _ratPid = ratPid;
+
+                _updateQueue.Clear();
+                _updateQueue.Enqueue(processes ?? Array.Empty<Pulsar.Common.Models.Process>());
+
+                if (!_isProcessingQueue)
+                {
+                    _isProcessingQueue = true;
+                    _ = Task.Run(ProcessUpdateQueue);
+                }
+            }
         }
 
-        private void TasksChanged(object sender, Common.Models.Process[] processes, int? ratPid)
+        private async Task ProcessUpdateQueue()
         {
-            _ratPid = ratPid;
-            TasksChanged(sender, processes);
+            while (true)
+            {
+                Pulsar.Common.Models.Process[] processesToUpdate = null;
+
+                lock (_queueLock)
+                {
+                    if (_updateQueue.Count == 0)
+                    {
+                        _isProcessingQueue = false;
+                        break;
+                    }
+                    processesToUpdate = _updateQueue.Dequeue();
+                }
+
+                if (processesToUpdate != null)
+                    await ProcessAndUpdateAsync(processesToUpdate);
+
+                await Task.Delay(10);
+            }
+        }
+
+        private async Task ProcessAndUpdateAsync(Pulsar.Common.Models.Process[] processes)
+        {
+            var timeSinceLastUpdate = DateTime.Now - _lastUpdateTime;
+            if (timeSinceLastUpdate < _minimumUpdateInterval)
+            {
+                await Task.Delay(_minimumUpdateInterval - timeSinceLastUpdate);
+            }
+
+            var processedData = await Task.Run(() => ProcessDataInBackground(processes));
+            await UpdateUIAsync(processedData);
+
+            _lastUpdateTime = DateTime.Now;
+        }
+
+        private ProcessDataResult ProcessDataInBackground(Pulsar.Common.Models.Process[] processes)
+        {
+            var sortedProcesses = SortProcesses(processes, _sortColumn, _sortAscending);
+
+            return new ProcessDataResult
+            {
+                Processes = sortedProcesses,
+                ProcessCount = processes.Length,
+                RatPid = _ratPid
+            };
+        }
+
+        private Pulsar.Common.Models.Process[] SortProcesses(Pulsar.Common.Models.Process[] processes, ProcessTreeSortColumn sortColumn, bool ascending)
+        {
+            if (processes == null || processes.Length == 0)
+                return processes;
+
+            try
+            {
+                IEnumerable<Pulsar.Common.Models.Process> ordered = sortColumn switch
+                {
+                    ProcessTreeSortColumn.Pid => processes.OrderBy(p => p.Id),
+                    ProcessTreeSortColumn.WindowTitle => processes.OrderBy(p => p.MainWindowTitle ?? ""),
+                    _ => processes.OrderBy(p => p.Name ?? "")
+                };
+
+                return ascending ? ordered.ToArray() : ordered.Reverse().ToArray();
+            }
+            catch
+            {
+                return processes;
+            }
+        }
+
+        private async Task UpdateUIAsync(ProcessDataResult data)
+        {
+            if (this.InvokeRequired)
+                await this.InvokeAsync(() =>
+                {
+                    _processTreeView.UpdateProcesses(data.Processes, _sortColumn, _sortAscending, _ratPid);
+                    AutoExpandFirstExplorer(); // call after update
+                });
+            else
+            {
+                _processTreeView.UpdateProcesses(data.Processes, _sortColumn, _sortAscending, _ratPid);
+                AutoExpandFirstExplorer();
+            }
+
+
+            UpdateStatusLabel(data.ProcessCount);
+        }
+
+
+        private void UpdateStatusLabel(int processCount)
+        {
+            string sortLabel = _sortColumn switch
+            {
+                ProcessTreeSortColumn.Pid => "PID",
+                ProcessTreeSortColumn.WindowTitle => "Title",
+                _ => "Name"
+            };
+            string orderLabel = _sortAscending ? "asc" : "desc";
+            processesToolStripStatusLabel.Text = $"Processes: {processCount} | Sort: {sortLabel} ({orderLabel})";
         }
 
         private void ProcessActionPerformed(object sender, ProcessAction action, bool result)
         {
-            string text = string.Empty;
-            switch (action)
+            string text = action switch
             {
-                case ProcessAction.Start:
-                    text = result ? "Process started successfully" : "Failed to start process";
-                    break;
-                case ProcessAction.End:
-                    text = result ? "Process ended successfully" : "Failed to end process";
-                    break;
-            }
+                ProcessAction.Start => result ? "Process started successfully" : "Failed to start process",
+                ProcessAction.End => result ? "Process ended successfully" : "Failed to end process",
+                _ => string.Empty
+            };
 
-            processesToolStripStatusLabel.Text = text;
+            if (this.InvokeRequired)
+                this.Invoke((MethodInvoker)(() => processesToolStripStatusLabel.Text = text));
+            else
+                processesToolStripStatusLabel.Text = text;
         }
 
         private void FrmTaskManager_Load(object sender, EventArgs e)
         {
             this.Text = WindowHelper.GetWindowTitle("Task Manager", _connectClient);
-            _taskManagerHandler.RefreshProcesses();
+            _ = Task.Run(() => _taskManagerHandler.RefreshProcesses());
         }
 
         private void FrmTaskManager_FormClosing(object sender, FormClosingEventArgs e)
         {
+            _countdownTimer.Stop();
             UnregisterMessageHandler();
         }
 
-        private void killProcessToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            foreach (var process in GetSelectedProcesses())
-            {
-                _taskManagerHandler.EndProcess(process.Id);
-            }
-        }
-
-        private void startProcessToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            string processName = string.Empty;
-            if (InputBox.Show("Process name", "Enter Process name:", ref processName) == DialogResult.OK)
-            {
-                _taskManagerHandler.StartProcess(processName);
-            }
-        }
-
-        private void refreshToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            _taskManagerHandler.RefreshProcesses();
-        }
-
-        private void dumpMemoryToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            foreach (var process in GetSelectedProcesses())
-            {
-                _taskManagerHandler.DumpProcess(process.Id);
-            }
-        }
-
-        private void suspendProcessToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            foreach (var process in GetSelectedProcesses())
-            {
-                _taskManagerHandler.SuspendProcess(process.Id);
-            }
-        }
-
-        public void CreateMemoryDump(object sender, DoProcessDumpResponse response)
-        {
-            if (response.Result == true)
-            {
-                this.Invoke((MethodInvoker)delegate
-                {
-                    FrmMemoryDump dumpFrm = FrmMemoryDump.CreateNewOrGetExisting(_connectClient, response);
-                    _memoryDumps.Add(dumpFrm);
-                    dumpFrm.Show();
-                });
-            } 
-            else
-            {
-                string reason = response.FailureReason == "" ? "" : $"Reason: {response.FailureReason}";
-                MessageBox.Show($"Failed to dump process!\n{reason}", $"Failed to dump process ({response.Pid}) - {response.ProcessName}");
-            }
-        }
+        private IEnumerable<Pulsar.Common.Models.Process> GetSelectedProcesses() =>
+            _processTreeView?.SelectedProcesses ?? Array.Empty<Pulsar.Common.Models.Process>();
 
         private void ProcessTreeView_SortRequested(object sender, SortRequestedEventArgs e)
         {
             if (_sortColumn == e.Column)
-            {
                 _sortAscending = !_sortAscending;
-            }
             else
             {
                 _sortColumn = e.Column;
                 _sortAscending = true;
             }
 
-            RenderProcesses();
+            if (_currentProcesses.Length > 0)
+                _ = Task.Run(() => ProcessAndUpdateAsync(_currentProcesses));
         }
 
-        private void ProcessTreeView_SelectedProcessChanged(object sender, EventArgs e)
-        {
-            //TODO: Add details panel update
-        }
+        private void ProcessTreeView_SelectedProcessChanged(object sender, EventArgs e) { }
 
-        /// <summary>
-        /// Rebuilds the WPF process tree hierarchy so parent and child processes stay grouped.
-        /// </summary>
-        private void RenderProcesses()
+        private void CreateMemoryDump(object sender, DoProcessDumpResponse response)
         {
-            if (processTreeHost != null)
+            if (response.Result)
             {
-                processTreeHost.Enabled = _taskManagerHandler != null;
+                this.Invoke((MethodInvoker)(() =>
+                {
+                    var dumpFrm = FrmMemoryDump.CreateNewOrGetExisting(_connectClient, response);
+                    _memoryDumps.Add(dumpFrm);
+                    dumpFrm.Show();
+                }));
             }
-
-            _processTreeView.UpdateProcesses(_currentProcesses, _sortColumn, _sortAscending, _ratPid);
-
-            var sortLabel = _sortColumn switch
+            else
             {
-                ProcessTreeSortColumn.Pid => "PID",
-                ProcessTreeSortColumn.WindowTitle => "Title",
-                _ => "Name"
-            };
-
-            var orderLabel = _sortAscending ? "asc" : "desc";
-            processesToolStripStatusLabel.Text = $"Processes: {_currentProcesses.Length} | Sort: {sortLabel} ({orderLabel})";
+                string reason = string.IsNullOrEmpty(response.FailureReason) ? "" : $"Reason: {response.FailureReason}";
+                MessageBox.Show($"Failed to dump process!\n{reason}", $"Failed to dump process ({response.Pid}) - {response.ProcessName}");
+            }
         }
 
-        private IEnumerable<Common.Models.Process> GetSelectedProcesses()
+        public void SetAutoRefreshEnabled(bool enabled) => _pauseAutoRefresh = !enabled;
+
+        private void PerformOnSelectedProcesses(Action<Pulsar.Common.Models.Process> action)
         {
-            return _processTreeView?.SelectedProcesses ?? Array.Empty<Common.Models.Process>();
+            _pauseAutoRefresh = true;
+            try
+            {
+                var selected = GetSelectedProcesses().ToList();
+                foreach (var process in selected)
+                    action(process);
+            }
+            finally
+            {
+                _pauseAutoRefresh = false;
+            }
+        }
+
+        #region Menu Actions
+        private void killProcessToolStripMenuItem_Click(object sender, EventArgs e) =>
+            PerformOnSelectedProcesses(p => _taskManagerHandler.EndProcess(p.Id));
+
+        private void startProcessToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string processName = string.Empty;
+            if (InputBox.Show("Process name", "Enter Process name:", ref processName) == DialogResult.OK)
+                _taskManagerHandler.StartProcess(processName);
+        }
+
+        private void refreshToolStripMenuItem_Click(object sender, EventArgs e) =>
+            _taskManagerHandler.RefreshProcesses();
+
+        private void dumpMemoryToolStripMenuItem_Click(object sender, EventArgs e) =>
+            PerformOnSelectedProcesses(p => _taskManagerHandler.DumpProcess(p.Id));
+
+        // Suspend selected processes
+        private void suspendProcessToolStripMenuItem_Click(object sender, EventArgs e) =>
+            PerformOnSelectedProcesses(p => _taskManagerHandler.SuspendProcess(p.Id, true));
+
+        // Resume selected processes
+        private void resumeProcessToolStripMenuItem_Click(object sender, EventArgs e) =>
+            PerformOnSelectedProcesses(p => _taskManagerHandler.SuspendProcess(p.Id, false));
+
+
+        private void topmostOnToolStripMenuItem_Click(object sender, EventArgs e) =>
+            PerformOnSelectedProcesses(p => _taskManagerHandler.SetTopMost(p.Id, true));
+
+        private void topmostOffToolStripMenuItem_Click(object sender, EventArgs e) =>
+            PerformOnSelectedProcesses(p => _taskManagerHandler.SetTopMost(p.Id, false));
+
+        // New: Minimize / Maximize
+        private void minimizedToolStripMenuItem_Click(object sender, EventArgs e) =>
+            PerformOnSelectedProcesses(p => _taskManagerHandler.SetWindowState(p.Id, true));
+
+        private void maximizedToolStripMenuItem_Click(object sender, EventArgs e) =>
+            PerformOnSelectedProcesses(p => _taskManagerHandler.SetWindowState(p.Id, false));
+        #endregion
+
+        private string _lastSearchKeyword = ""; // Stores last search
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            // Handle Ctrl + F globally
+            if (keyData == (Keys.Control | Keys.F))
+            {
+                ShowSearchDialog();
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        private void ShowSearchDialog()
+        {
+            string prompt = "Search by name, window title, or PID. Enter keywords separated by spaces. Leave text selected and click Enter/OK to find next.";
+
+            string keyword = Microsoft.VisualBasic.Interaction.InputBox(
+                prompt,
+                "Find Process",
+                _lastSearchKeyword);
+
+            if (string.IsNullOrWhiteSpace(keyword))
+                keyword = _lastSearchKeyword;
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                _lastSearchKeyword = keyword.Trim();
+                _processTreeView.FlattenNodes();
+                _processTreeView.FindNext(_lastSearchKeyword);
+            }
+        }
+
+
+
+
+        // Optional: keep your menu item wired up too
+        private void searchToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ShowSearchDialog();
+        }
+
+        private void enableDisableAutoRefreshToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            // Toggle auto-refresh
+            _pauseAutoRefresh = !_pauseAutoRefresh;
+
+            // Toggle menu item checkmark
+            if (sender is ToolStripMenuItem menuItem)
+                menuItem.Checked = !_pauseAutoRefresh;
+
+            // Update status label
+            if (_pauseAutoRefresh)
+            {
+                toolStripStatusLabel1.Text = "Auto refresh disabled";
+                toolStripStatusLabel1.ForeColor = System.Drawing.Color.Red;
+                _countdownTimer.Stop(); // stop ticking
+            }
+            else
+            {
+                toolStripStatusLabel1.Text = $"Refreshing in {_countdownValue}s...";
+                toolStripStatusLabel1.ForeColor = _originalLabelColor;
+                _countdownTimer.Start(); // resume ticking
+            }
+        }
+        private void SetSuspendStateForSelectedProcesses(bool suspend)
+        {
+            PerformOnSelectedProcesses(p => _taskManagerHandler.SuspendProcess(p.Id, suspend));
+        }
+
+        private void beginSuspendToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SetSuspendStateForSelectedProcesses(true);
+        }
+
+        private void endSuspendToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SetSuspendStateForSelectedProcesses(false);
+        }
+
+    }
+
+    public class ProcessDataResult
+    {
+        public Pulsar.Common.Models.Process[] Processes { get; set; } = Array.Empty<Pulsar.Common.Models.Process>();
+        public int ProcessCount { get; set; }
+        public int? RatPid { get; set; }
+    }
+
+    public static class ControlExtensions
+    {
+        public static Task InvokeAsync(this Control control, Action action)
+        {
+            var tcs = new TaskCompletionSource<object>();
+            control.BeginInvoke((Action)(() =>
+            {
+                try
+                {
+                    action();
+                    tcs.SetResult(null);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            }));
+            return tcs.Task;
         }
     }
 }

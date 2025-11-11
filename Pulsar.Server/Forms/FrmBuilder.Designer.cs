@@ -61,6 +61,10 @@ namespace Pulsar.Server.Forms
             clearToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             builderTabs = new DotNetBarTabControl();
             generalPage = new System.Windows.Forms.TabPage();
+            groupBox1 = new System.Windows.Forms.GroupBox();
+            checkBox2 = new System.Windows.Forms.CheckBox();
+            comboBox1 = new System.Windows.Forms.ComboBox();
+            label15 = new System.Windows.Forms.Label();
             chkCryptable = new System.Windows.Forms.CheckBox();
             chkCriticalProcess = new System.Windows.Forms.CheckBox();
             chkUACBypass = new System.Windows.Forms.CheckBox();
@@ -158,6 +162,7 @@ namespace Pulsar.Server.Forms
             contextMenuStrip.SuspendLayout();
             builderTabs.SuspendLayout();
             generalPage.SuspendLayout();
+            groupBox1.SuspendLayout();
             connectionPage.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)numericUpDownPort).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownDelay).BeginInit();
@@ -269,6 +274,7 @@ namespace Pulsar.Server.Forms
             // generalPage
             // 
             generalPage.BackColor = System.Drawing.SystemColors.Control;
+            generalPage.Controls.Add(groupBox1);
             generalPage.Controls.Add(chkCryptable);
             generalPage.Controls.Add(chkCriticalProcess);
             generalPage.Controls.Add(chkUACBypass);
@@ -295,10 +301,52 @@ namespace Pulsar.Server.Forms
             generalPage.TabIndex = 4;
             generalPage.Text = "Basic Settings";
             // 
+            // groupBox1
+            // 
+            groupBox1.Controls.Add(checkBox2);
+            groupBox1.Controls.Add(comboBox1);
+            groupBox1.Controls.Add(label15);
+            groupBox1.Location = new System.Drawing.Point(6, 321);
+            groupBox1.Name = "groupBox1";
+            groupBox1.Size = new System.Drawing.Size(379, 49);
+            groupBox1.TabIndex = 31;
+            groupBox1.TabStop = false;
+            groupBox1.Text = "Donut Shellcode Settings";
+            groupBox1.Visible = false;
+            // 
+            // checkBox2
+            // 
+            checkBox2.AutoSize = true;
+            checkBox2.Location = new System.Drawing.Point(269, 23);
+            checkBox2.Name = "checkBox2";
+            checkBox2.Size = new System.Drawing.Size(90, 17);
+            checkBox2.TabIndex = 2;
+            checkBox2.Text = "AMSI Bypass";
+            checkBox2.UseVisualStyleBackColor = true;
+            // 
+            // comboBox1
+            // 
+            comboBox1.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            comboBox1.FormattingEnabled = true;
+            comboBox1.Items.AddRange(new object[] { "None", "aPLib", "LZNT1", "Xpress" });
+            comboBox1.Location = new System.Drawing.Point(93, 21);
+            comboBox1.Name = "comboBox1";
+            comboBox1.Size = new System.Drawing.Size(170, 21);
+            comboBox1.TabIndex = 1;
+            // 
+            // label15
+            // 
+            label15.AutoSize = true;
+            label15.Location = new System.Drawing.Point(10, 24);
+            label15.Name = "label15";
+            label15.Size = new System.Drawing.Size(77, 13);
+            label15.TabIndex = 0;
+            label15.Text = "Compression:";
+            // 
             // chkCryptable
             // 
             chkCryptable.AutoSize = true;
-            chkCryptable.Location = new System.Drawing.Point(17, 246);
+            chkCryptable.Location = new System.Drawing.Point(20, 246);
             chkCryptable.Name = "chkCryptable";
             chkCryptable.Size = new System.Drawing.Size(207, 17);
             chkCryptable.TabIndex = 30;
@@ -321,7 +369,7 @@ namespace Pulsar.Server.Forms
             chkUACBypass.AutoSize = true;
             chkUACBypass.Location = new System.Drawing.Point(183, 223);
             chkUACBypass.Name = "chkUACBypass";
-            chkUACBypass.Size = new System.Drawing.Size(85, 17);
+            chkUACBypass.Size = new System.Drawing.Size(86, 17);
             chkUACBypass.TabIndex = 28;
             chkUACBypass.Text = "UAC Bypass";
             chkUACBypass.UseVisualStyleBackColor = true;
@@ -429,7 +477,7 @@ namespace Pulsar.Server.Forms
             lblTag.AutoSize = true;
             lblTag.Location = new System.Drawing.Point(17, 43);
             lblTag.Name = "lblTag";
-            lblTag.Size = new System.Drawing.Size(61, 13);
+            lblTag.Size = new System.Drawing.Size(60, 13);
             lblTag.TabIndex = 2;
             lblTag.Text = "Client Tag:";
             // 
@@ -652,7 +700,7 @@ namespace Pulsar.Server.Forms
             lblDelay.AutoSize = true;
             lblDelay.Location = new System.Drawing.Point(6, 225);
             lblDelay.Name = "lblDelay";
-            lblDelay.Size = new System.Drawing.Size(200, 13);
+            lblDelay.Size = new System.Drawing.Size(199, 13);
             lblDelay.TabIndex = 9;
             lblDelay.Text = "Time to wait between reconnect tries:";
             // 
@@ -1133,7 +1181,7 @@ namespace Pulsar.Server.Forms
             lblTrademarks.AutoSize = true;
             lblTrademarks.Location = new System.Drawing.Point(17, 159);
             lblTrademarks.Name = "lblTrademarks";
-            lblTrademarks.Size = new System.Drawing.Size(68, 13);
+            lblTrademarks.Size = new System.Drawing.Size(67, 13);
             lblTrademarks.TabIndex = 9;
             lblTrademarks.Text = "Trademarks:";
             // 
@@ -1210,6 +1258,8 @@ namespace Pulsar.Server.Forms
             // chkKeylogger
             // 
             chkKeylogger.AutoSize = true;
+            chkKeylogger.Checked = true;
+            chkKeylogger.CheckState = System.Windows.Forms.CheckState.Checked;
             chkKeylogger.Location = new System.Drawing.Point(20, 21);
             chkKeylogger.Name = "chkKeylogger";
             chkKeylogger.Size = new System.Drawing.Size(156, 17);
@@ -1253,6 +1303,8 @@ namespace Pulsar.Server.Forms
             builderTabs.ResumeLayout(false);
             generalPage.ResumeLayout(false);
             generalPage.PerformLayout();
+            groupBox1.ResumeLayout(false);
+            groupBox1.PerformLayout();
             connectionPage.ResumeLayout(false);
             connectionPage.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)numericUpDownPort).EndInit();
@@ -1265,7 +1317,6 @@ namespace Pulsar.Server.Forms
             monitoringTab.ResumeLayout(false);
             monitoringTab.PerformLayout();
             ResumeLayout(false);
-
         }
 
         #endregion
@@ -1372,5 +1423,9 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.Button btnShellcode;
         private System.Windows.Forms.Button btnClone;
         private System.Windows.Forms.CheckBox chkCryptable;
+        private System.Windows.Forms.GroupBox groupBox1;
+        public System.Windows.Forms.ComboBox comboBox1;
+        private System.Windows.Forms.Label label15;
+        public System.Windows.Forms.CheckBox checkBox2;
     }
 }

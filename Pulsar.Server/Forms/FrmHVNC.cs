@@ -248,8 +248,26 @@ namespace Pulsar.Server.Forms
         {
             panelTop.Visible = visible;
             btnShow.Visible = !visible;
+
+            if (visible)
+            {
+                // Restore picture below panel
+                picDesktop.Top = panelTop.Bottom;
+                picDesktop.Height = this.ClientSize.Height - panelTop.Height;
+            }
+            else
+            {
+                // Expand picture to fill the whole window
+                picDesktop.Top = 0;
+                picDesktop.Height = this.ClientSize.Height;
+            }
+
+            // Keep full width either way
+            picDesktop.Width = this.ClientSize.Width;
+
             this.ActiveControl = picDesktop;
         }
+
 
         /// <summary>
         /// Called whenever the remote displays changed.
@@ -271,44 +289,24 @@ namespace Pulsar.Server.Forms
         /// <param name="bmp">The new desktop image to draw.</param>
         private Stopwatch _stopwatch = new Stopwatch();
         private int _sizeFrames = 0;
+        private int _remoteDesktopWidth = 0;
+        private int _remoteDesktopHeight = 0;
 
         private void UpdateImage(object sender, Bitmap bmp)
         {
             if (!_stopwatch.IsRunning)
-            {
                 _stopwatch.Start();
-            }
 
             _sizeFrames++;
 
-            double elapsedSeconds = _stopwatch.Elapsed.TotalSeconds;
-
-            if (_hVNCHandler.CurrentFps > 0)
+            // Update remote resolution from the frame
+            if (bmp != null)
             {
-                _lastFps = _hVNCHandler.CurrentFps;
+                _remoteDesktopWidth = bmp.Width;
+                _remoteDesktopHeight = bmp.Height;
             }
 
-            if (elapsedSeconds >= 1.0)
-            {
-                _stopwatch.Restart();
-            }
-
-            if (_sizeFrames >= 60)
-            {
-                _sizeFrames = 0;
-                long last = _hVNCHandler.LastFrameSizeBytes;
-                double avg = _hVNCHandler.AverageFrameSizeBytes;
-                if (last > 0 || avg > 0)
-                {
-                    double lastKB = last / 1024.0;
-                    double avgKB = avg / 1024.0;
-                    this.Invoke((MethodInvoker)delegate
-                    {
-                        sizeLabelCounter.Text = $"{avgKB:0.0}  KB";
-                    });
-                }
-            }
-
+            // ... rest of your existing code
             picDesktop.UpdateImage(bmp, false);
         }
 
@@ -362,10 +360,25 @@ namespace Pulsar.Server.Forms
             if (WindowState == FormWindowState.Minimized)
                 return;
 
-            _hVNCHandler.LocalResolution = picDesktop.Size;
-            btnShow.Left = (this.Width - btnShow.Width) / 2;
-            btnShow.Top = this.Height - btnShow.Height - 40;
+            panelTop.Width = this.ClientSize.Width;
+            picDesktop.Width = this.ClientSize.Width;
+
+            if (panelTop.Visible)
+            {
+                picDesktop.Top = panelTop.Bottom;
+                picDesktop.Height = this.ClientSize.Height - panelTop.Height;
+            }
+            else
+            {
+                picDesktop.Top = 0;
+                picDesktop.Height = this.ClientSize.Height;
+            }
+
+            btnShow.Left = (this.ClientSize.Width - btnShow.Width) / 2;
+            btnShow.Top = this.ClientSize.Height - btnShow.Height - 40;
         }
+
+
 
         private void btnStart_Click(object sender, EventArgs e)
         {
@@ -636,29 +649,24 @@ namespace Pulsar.Server.Forms
 
         #region Input Event Handlers
 
+        private int ScaleX(int x) => _remoteDesktopWidth == 0 ? x : x * _remoteDesktopWidth / picDesktop.Width;
+        private int ScaleY(int y) => _remoteDesktopHeight == 0 ? y : y * _remoteDesktopHeight / picDesktop.Height;
+
         private void PicDesktop_MouseDown(object sender, MouseEventArgs e)
         {
             if (!_enableMouseInput) return;
 
-            uint message = 0;
-            int wParam = 0;
-
-            switch (e.Button)
+            uint message = e.Button switch
             {
-                case MouseButtons.Left:
-                    message = 0x0201; // WM_LBUTTONDOWN
-                    break;
-                case MouseButtons.Right:
-                    message = 0x0204; // WM_RBUTTONDOWN
-                    break;
-                case MouseButtons.Middle:
-                    message = 0x0207; // WM_MBUTTONDOWN
-                    break;
-                default:
-                    return;
-            }
+                MouseButtons.Left => 0x0201,
+                MouseButtons.Right => 0x0204,
+                MouseButtons.Middle => 0x0207,
+                _ => 0
+            };
+            if (message == 0) return;
 
-            int lParam = (e.Y << 16) | (e.X & 0xFFFF);
+            int wParam = 0;
+            int lParam = (ScaleY(e.Y) << 16) | (ScaleX(e.X) & 0xFFFF);
             _hVNCHandler.SendMouseEvent(message, wParam, lParam);
         }
 
@@ -666,25 +674,17 @@ namespace Pulsar.Server.Forms
         {
             if (!_enableMouseInput) return;
 
-            uint message = 0;
-            int wParam = 0;
-
-            switch (e.Button)
+            uint message = e.Button switch
             {
-                case MouseButtons.Left:
-                    message = 0x0202; // WM_LBUTTONUP
-                    break;
-                case MouseButtons.Right:
-                    message = 0x0205; // WM_RBUTTONUP
-                    break;
-                case MouseButtons.Middle:
-                    message = 0x0208; // WM_MBUTTONUP
-                    break;
-                default:
-                    return;
-            }
+                MouseButtons.Left => 0x0202,
+                MouseButtons.Right => 0x0205,
+                MouseButtons.Middle => 0x0208,
+                _ => 0
+            };
+            if (message == 0) return;
 
-            int lParam = (e.Y << 16) | (e.X & 0xFFFF);
+            int wParam = 0;
+            int lParam = (ScaleY(e.Y) << 16) | (ScaleX(e.X) & 0xFFFF);
             _hVNCHandler.SendMouseEvent(message, wParam, lParam);
         }
 
@@ -692,10 +692,9 @@ namespace Pulsar.Server.Forms
         {
             if (!_enableMouseInput) return;
 
-            uint message = 0x0200; // WM_MOUSEMOVE
+            uint message = 0x0200;
             int wParam = 0;
-            int lParam = (e.Y << 16) | (e.X & 0xFFFF);
-
+            int lParam = (ScaleY(e.Y) << 16) | (ScaleX(e.X) & 0xFFFF);
             _hVNCHandler.SendMouseEvent(message, wParam, lParam);
         }
 
@@ -703,11 +702,15 @@ namespace Pulsar.Server.Forms
         {
             if (!_enableMouseInput) return;
 
-            uint message = 0x020A; // WM_MOUSEWHEEL
-            int wParam = (e.Delta << 16); // High-order word contains wheel delta
-            int lParam = (e.Y << 16) | (e.X & 0xFFFF);
+            int x = ScaleX(e.X);
+            int y = ScaleY(e.Y);
 
-            _hVNCHandler.SendMouseEvent(message, wParam, lParam);
+            if (e.Delta != 0)
+            {
+                int buttonMask = e.Delta > 0 ? 0x0010 : 0x0020; // Wheel up/down
+                _hVNCHandler.SendMouseEvent(0x0201, buttonMask, (y << 16) | (x & 0xFFFF));
+                _hVNCHandler.SendMouseEvent(0x0202, 0, (y << 16) | (x & 0xFFFF));
+            }
         }
 
         private void PicDesktop_KeyDown(object sender, KeyEventArgs e)

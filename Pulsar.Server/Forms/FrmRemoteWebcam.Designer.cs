@@ -81,7 +81,7 @@ namespace Pulsar.Server.Forms
             barQuality.Size = new System.Drawing.Size(109, 45);
             barQuality.TabIndex = 3;
             barQuality.TabStop = false;
-            barQuality.Value = 75;
+            barQuality.Value = 100;
             barQuality.Scroll += barQuality_Scroll;
             // 
             // lblQuality
@@ -98,9 +98,9 @@ namespace Pulsar.Server.Forms
             lblQualityShow.AutoSize = true;
             lblQualityShow.Location = new System.Drawing.Point(648, 16);
             lblQualityShow.Name = "lblQualityShow";
-            lblQualityShow.Size = new System.Drawing.Size(52, 13);
+            lblQualityShow.Size = new System.Drawing.Size(56, 13);
             lblQualityShow.TabIndex = 5;
-            lblQualityShow.Text = "75 (high)";
+            lblQualityShow.Text = "100 (best)";
             // 
             // panelTop
             // 
@@ -195,7 +195,6 @@ namespace Pulsar.Server.Forms
             panelTop.ResumeLayout(false);
             panelTop.PerformLayout();
             ResumeLayout(false);
-
         }
 
         #endregion

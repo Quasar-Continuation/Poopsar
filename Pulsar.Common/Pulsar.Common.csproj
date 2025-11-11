@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks>net472;net9.0-windows</TargetFrameworks>
+		<TargetFrameworks>net48;net9.0-windows</TargetFrameworks>
 		<OutputType>Library</OutputType>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 		<Configurations>Debug;Release;ReleaseWithDonut</Configurations>
@@ -63,5 +63,8 @@
 	<ItemGroup>
 		<PackageReference Include="MessagePack" Version="3.1.4" />
 		<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Reference Include="System.Windows.Forms" />
 	</ItemGroup>
 </Project>

@@ -79,8 +79,8 @@ namespace Pulsar.Server.Controls
                     IsHitTestVisible = true
                 };
 
-                RenderOptions.SetBitmapScalingMode(_imageControl, BitmapScalingMode.NearestNeighbor);
-                RenderOptions.SetEdgeMode(_imageControl, EdgeMode.Aliased);
+                RenderOptions.SetBitmapScalingMode(_imageControl, BitmapScalingMode.HighQuality);
+                RenderOptions.SetEdgeMode(_imageControl, EdgeMode.Unspecified);
 
                 Child = _imageControl;
 

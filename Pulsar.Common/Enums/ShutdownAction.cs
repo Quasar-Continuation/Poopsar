@@ -4,6 +4,7 @@
     {
         Shutdown,
         Restart,
-        Standby
+        Standby,
+        Lockscreen
     }
 }

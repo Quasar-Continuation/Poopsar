@@ -8,6 +8,7 @@ namespace Pulsar.Common
     /// </summary>
     public class NativeMethods
     {
+
         [DllImport("msvcrt.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe int memcmp(byte* ptr1, byte* ptr2, uint count);
 

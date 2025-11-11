@@ -30,146 +30,236 @@ namespace Pulsar.Server.Forms
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
+            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FrmTaskManager));
-            this.contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.killProcessToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.dumpMemoryToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.startProcessToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.suspendProcessToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.lineToolStripMenuItem = new System.Windows.Forms.ToolStripSeparator();
-            this.refreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.tableLayoutPanel = new System.Windows.Forms.TableLayoutPanel();
-            this.processTreeHost = new System.Windows.Forms.Integration.ElementHost();
-            this.statusStrip = new System.Windows.Forms.StatusStrip();
-            this.processesToolStripStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
-            this.contextMenuStrip.SuspendLayout();
-            this.tableLayoutPanel.SuspendLayout();
-            this.statusStrip.SuspendLayout();
-            this.SuspendLayout();
+            contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(components);
+            killProcessToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            suspendProcessToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            beginSuspendToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            endSuspendToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            minimizeMaximizeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            minimizedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            maximizedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            topmostWindowToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            topmostOnToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            topmostOffToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            lineToolStripMenuItem = new System.Windows.Forms.ToolStripSeparator();
+            searchToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            dumpMemoryToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            startProcessToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            enableDisableAutoRefreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            refreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            tableLayoutPanel = new System.Windows.Forms.TableLayoutPanel();
+            processTreeHost = new ElementHost();
+            statusStrip = new System.Windows.Forms.StatusStrip();
+            processesToolStripStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
+            toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
+            contextMenuStrip.SuspendLayout();
+            tableLayoutPanel.SuspendLayout();
+            statusStrip.SuspendLayout();
+            SuspendLayout();
             // 
             // contextMenuStrip
             // 
-            this.contextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.killProcessToolStripMenuItem,
-            this.dumpMemoryToolStripMenuItem,
-            this.startProcessToolStripMenuItem,
-            this.suspendProcessToolStripMenuItem,
-            this.lineToolStripMenuItem,
-            this.refreshToolStripMenuItem});
-            this.contextMenuStrip.Name = "ctxtMenu";
-            this.contextMenuStrip.Size = new System.Drawing.Size(163, 120);
+            contextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { killProcessToolStripMenuItem, suspendProcessToolStripMenuItem, minimizeMaximizeToolStripMenuItem, topmostWindowToolStripMenuItem, lineToolStripMenuItem, searchToolStripMenuItem, dumpMemoryToolStripMenuItem, startProcessToolStripMenuItem, enableDisableAutoRefreshToolStripMenuItem, refreshToolStripMenuItem });
+            contextMenuStrip.Name = "ctxtMenu";
+            contextMenuStrip.Size = new System.Drawing.Size(169, 208);
             // 
             // killProcessToolStripMenuItem
             // 
-            this.killProcessToolStripMenuItem.Image = global::Pulsar.Server.Properties.Resources.cancel;
-            this.killProcessToolStripMenuItem.Name = "killProcessToolStripMenuItem";
-            this.killProcessToolStripMenuItem.Size = new System.Drawing.Size(162, 22);
-            this.killProcessToolStripMenuItem.Text = "Kill Process";
-            this.killProcessToolStripMenuItem.Click += new System.EventHandler(this.killProcessToolStripMenuItem_Click);
-            // 
-            // dumpMemoryToolStripMenuItem
-            // 
-            this.dumpMemoryToolStripMenuItem.Image = global::Pulsar.Server.Properties.Resources.broom;
-            this.dumpMemoryToolStripMenuItem.Name = "dumpMemoryToolStripMenuItem";
-            this.dumpMemoryToolStripMenuItem.Size = new System.Drawing.Size(162, 22);
-            this.dumpMemoryToolStripMenuItem.Text = "Dump Memory";
-            this.dumpMemoryToolStripMenuItem.Click += new System.EventHandler(this.dumpMemoryToolStripMenuItem_Click);
-            // 
-            // startProcessToolStripMenuItem
-            // 
-            this.startProcessToolStripMenuItem.Image = global::Pulsar.Server.Properties.Resources.application_go;
-            this.startProcessToolStripMenuItem.Name = "startProcessToolStripMenuItem";
-            this.startProcessToolStripMenuItem.Size = new System.Drawing.Size(162, 22);
-            this.startProcessToolStripMenuItem.Text = "Start Process";
-            this.startProcessToolStripMenuItem.Click += new System.EventHandler(this.startProcessToolStripMenuItem_Click);
+            killProcessToolStripMenuItem.Image = Properties.Resources.cancel;
+            killProcessToolStripMenuItem.Name = "killProcessToolStripMenuItem";
+            killProcessToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
+            killProcessToolStripMenuItem.Text = "Kill Process";
+            killProcessToolStripMenuItem.Click += killProcessToolStripMenuItem_Click;
             // 
             // suspendProcessToolStripMenuItem
             // 
-            this.suspendProcessToolStripMenuItem.Image = global::Pulsar.Server.Properties.Resources.wait;
-            this.suspendProcessToolStripMenuItem.Name = "suspendProcessToolStripMenuItem";
-            this.suspendProcessToolStripMenuItem.Size = new System.Drawing.Size(162, 22);
-            this.suspendProcessToolStripMenuItem.Text = "Suspend Process";
-            this.suspendProcessToolStripMenuItem.Click += new System.EventHandler(this.suspendProcessToolStripMenuItem_Click);
+            suspendProcessToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { beginSuspendToolStripMenuItem, endSuspendToolStripMenuItem });
+            suspendProcessToolStripMenuItem.Image = Properties.Resources.wait;
+            suspendProcessToolStripMenuItem.Name = "suspendProcessToolStripMenuItem";
+            suspendProcessToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
+            suspendProcessToolStripMenuItem.Text = "Suspend Process";
+            suspendProcessToolStripMenuItem.Click += suspendProcessToolStripMenuItem_Click;
+            // 
+            // beginSuspendToolStripMenuItem
+            // 
+            beginSuspendToolStripMenuItem.Image = Properties.Resources.anchor;
+            beginSuspendToolStripMenuItem.Name = "beginSuspendToolStripMenuItem";
+            beginSuspendToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            beginSuspendToolStripMenuItem.Text = "Begin Suspend";
+            beginSuspendToolStripMenuItem.Click += beginSuspendToolStripMenuItem_Click;
+            // 
+            // endSuspendToolStripMenuItem
+            // 
+            endSuspendToolStripMenuItem.Image = Properties.Resources.actions;
+            endSuspendToolStripMenuItem.Name = "endSuspendToolStripMenuItem";
+            endSuspendToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            endSuspendToolStripMenuItem.Text = "End Suspend";
+            endSuspendToolStripMenuItem.Click += endSuspendToolStripMenuItem_Click;
+            // 
+            // minimizeMaximizeToolStripMenuItem
+            // 
+            minimizeMaximizeToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { minimizedToolStripMenuItem, maximizedToolStripMenuItem });
+            minimizeMaximizeToolStripMenuItem.Image = Properties.Resources.windowstateicon;
+            minimizeMaximizeToolStripMenuItem.Name = "minimizeMaximizeToolStripMenuItem";
+            minimizeMaximizeToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
+            minimizeMaximizeToolStripMenuItem.Text = "Window State";
+            // 
+            // minimizedToolStripMenuItem
+            // 
+            minimizedToolStripMenuItem.Image = Properties.Resources.minimizewindowicon;
+            minimizedToolStripMenuItem.Name = "minimizedToolStripMenuItem";
+            minimizedToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            minimizedToolStripMenuItem.Text = "Minimized";
+            minimizedToolStripMenuItem.Click += minimizedToolStripMenuItem_Click;
+            // 
+            // maximizedToolStripMenuItem
+            // 
+            maximizedToolStripMenuItem.Image = Properties.Resources.maximizewindowicon;
+            maximizedToolStripMenuItem.Name = "maximizedToolStripMenuItem";
+            maximizedToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            maximizedToolStripMenuItem.Text = "Maximized";
+            maximizedToolStripMenuItem.Click += maximizedToolStripMenuItem_Click;
+            // 
+            // topmostWindowToolStripMenuItem
+            // 
+            topmostWindowToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { topmostOnToolStripMenuItem, topmostOffToolStripMenuItem });
+            topmostWindowToolStripMenuItem.Image = Properties.Resources.topmostwindowicon;
+            topmostWindowToolStripMenuItem.Name = "topmostWindowToolStripMenuItem";
+            topmostWindowToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
+            topmostWindowToolStripMenuItem.Text = "Topmost Window";
+            // 
+            // topmostOnToolStripMenuItem
+            // 
+            topmostOnToolStripMenuItem.Image = Properties.Resources.startbutton;
+            topmostOnToolStripMenuItem.Name = "topmostOnToolStripMenuItem";
+            topmostOnToolStripMenuItem.Size = new System.Drawing.Size(141, 22);
+            topmostOnToolStripMenuItem.Text = "Topmost On";
+            topmostOnToolStripMenuItem.Click += topmostOnToolStripMenuItem_Click;
+            // 
+            // topmostOffToolStripMenuItem
+            // 
+            topmostOffToolStripMenuItem.Image = Properties.Resources.stopbutton;
+            topmostOffToolStripMenuItem.Name = "topmostOffToolStripMenuItem";
+            topmostOffToolStripMenuItem.Size = new System.Drawing.Size(141, 22);
+            topmostOffToolStripMenuItem.Text = "Topmost Off";
+            topmostOffToolStripMenuItem.Click += topmostOffToolStripMenuItem_Click;
             // 
             // lineToolStripMenuItem
             // 
-            this.lineToolStripMenuItem.Name = "lineToolStripMenuItem";
-            this.lineToolStripMenuItem.Size = new System.Drawing.Size(159, 6);
+            lineToolStripMenuItem.Name = "lineToolStripMenuItem";
+            lineToolStripMenuItem.Size = new System.Drawing.Size(165, 6);
+            // 
+            // searchToolStripMenuItem
+            // 
+            searchToolStripMenuItem.Image = Properties.Resources.magnifyingglassicon;
+            searchToolStripMenuItem.Name = "searchToolStripMenuItem";
+            searchToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
+            searchToolStripMenuItem.Text = "Search (Ctrl + F)";
+            searchToolStripMenuItem.Click += searchToolStripMenuItem_Click;
+            // 
+            // dumpMemoryToolStripMenuItem
+            // 
+            dumpMemoryToolStripMenuItem.Image = Properties.Resources.broom;
+            dumpMemoryToolStripMenuItem.Name = "dumpMemoryToolStripMenuItem";
+            dumpMemoryToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
+            dumpMemoryToolStripMenuItem.Text = "Dump Memory";
+            dumpMemoryToolStripMenuItem.Click += dumpMemoryToolStripMenuItem_Click;
+            // 
+            // startProcessToolStripMenuItem
+            // 
+            startProcessToolStripMenuItem.Image = Properties.Resources.application_go;
+            startProcessToolStripMenuItem.Name = "startProcessToolStripMenuItem";
+            startProcessToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
+            startProcessToolStripMenuItem.Text = "Start Process";
+            startProcessToolStripMenuItem.Click += startProcessToolStripMenuItem_Click;
+            // 
+            // enableDisableAutoRefreshToolStripMenuItem
+            // 
+            enableDisableAutoRefreshToolStripMenuItem.Image = Properties.Resources.autorefreshicon;
+            enableDisableAutoRefreshToolStripMenuItem.Name = "enableDisableAutoRefreshToolStripMenuItem";
+            enableDisableAutoRefreshToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
+            enableDisableAutoRefreshToolStripMenuItem.Text = "Autorefresh";
+            enableDisableAutoRefreshToolStripMenuItem.Click += enableDisableAutoRefreshToolStripMenuItem_Click;
             // 
             // refreshToolStripMenuItem
             // 
-            this.refreshToolStripMenuItem.Image = global::Pulsar.Server.Properties.Resources.refresh;
-            this.refreshToolStripMenuItem.Name = "refreshToolStripMenuItem";
-            this.refreshToolStripMenuItem.Size = new System.Drawing.Size(162, 22);
-            this.refreshToolStripMenuItem.Text = "Refresh";
-            this.refreshToolStripMenuItem.Click += new System.EventHandler(this.refreshToolStripMenuItem_Click);
+            refreshToolStripMenuItem.Image = Properties.Resources.refresh;
+            refreshToolStripMenuItem.Name = "refreshToolStripMenuItem";
+            refreshToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
+            refreshToolStripMenuItem.Text = "Refresh";
+            refreshToolStripMenuItem.Click += refreshToolStripMenuItem_Click;
             // 
             // tableLayoutPanel
             // 
-            this.tableLayoutPanel.ColumnCount = 1;
-            this.tableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel.Controls.Add(this.processTreeHost, 0, 0);
-            this.tableLayoutPanel.Controls.Add(this.statusStrip, 0, 1);
-            this.tableLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.tableLayoutPanel.Location = new System.Drawing.Point(0, 0);
-            this.tableLayoutPanel.Name = "tableLayoutPanel";
-            this.tableLayoutPanel.RowCount = 2;
-            this.tableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 22F));
-            this.tableLayoutPanel.Size = new System.Drawing.Size(821, 493);
-            this.tableLayoutPanel.TabIndex = 2;
+            tableLayoutPanel.ColumnCount = 1;
+            tableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            tableLayoutPanel.Controls.Add(processTreeHost, 0, 0);
+            tableLayoutPanel.Controls.Add(statusStrip, 0, 1);
+            tableLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
+            tableLayoutPanel.Location = new System.Drawing.Point(0, 0);
+            tableLayoutPanel.Name = "tableLayoutPanel";
+            tableLayoutPanel.RowCount = 2;
+            tableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            tableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 22F));
+            tableLayoutPanel.Size = new System.Drawing.Size(821, 493);
+            tableLayoutPanel.TabIndex = 2;
             // 
             // processTreeHost
             // 
-            this.processTreeHost.BackColor = System.Drawing.Color.Transparent;
-            this.processTreeHost.ContextMenuStrip = this.contextMenuStrip;
-            this.processTreeHost.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.processTreeHost.Location = new System.Drawing.Point(3, 3);
-            this.processTreeHost.Name = "processTreeHost";
-            this.processTreeHost.Size = new System.Drawing.Size(815, 465);
-            this.processTreeHost.TabIndex = 1;
-            this.processTreeHost.Text = "processTreeHost";
-            this.processTreeHost.Child = null;
+            processTreeHost.BackColor = System.Drawing.Color.Transparent;
+            processTreeHost.ContextMenuStrip = contextMenuStrip;
+            processTreeHost.Dock = System.Windows.Forms.DockStyle.Fill;
+            processTreeHost.Location = new System.Drawing.Point(3, 3);
+            processTreeHost.Name = "processTreeHost";
+            processTreeHost.Size = new System.Drawing.Size(815, 465);
+            processTreeHost.TabIndex = 1;
+            processTreeHost.Text = "processTreeHost";
             // 
             // statusStrip
             // 
-            this.statusStrip.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.processesToolStripStatusLabel});
-            this.statusStrip.Location = new System.Drawing.Point(0, 471);
-            this.statusStrip.Name = "statusStrip";
-            this.statusStrip.Size = new System.Drawing.Size(821, 22);
-            this.statusStrip.TabIndex = 2;
-            this.statusStrip.Text = "statusStrip1";
+            statusStrip.Dock = System.Windows.Forms.DockStyle.Fill;
+            statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { processesToolStripStatusLabel, toolStripStatusLabel1 });
+            statusStrip.Location = new System.Drawing.Point(0, 471);
+            statusStrip.Name = "statusStrip";
+            statusStrip.Size = new System.Drawing.Size(821, 22);
+            statusStrip.TabIndex = 2;
+            statusStrip.Text = "statusStrip1";
             // 
             // processesToolStripStatusLabel
             // 
-            this.processesToolStripStatusLabel.Name = "processesToolStripStatusLabel";
-            this.processesToolStripStatusLabel.Size = new System.Drawing.Size(70, 17);
-            this.processesToolStripStatusLabel.Text = "Processes: 0";
+            processesToolStripStatusLabel.Name = "processesToolStripStatusLabel";
+            processesToolStripStatusLabel.Size = new System.Drawing.Size(70, 17);
+            processesToolStripStatusLabel.Text = "Processes: 0";
+            // 
+            // toolStripStatusLabel1
+            // 
+            toolStripStatusLabel1.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
+            toolStripStatusLabel1.Name = "toolStripStatusLabel1";
+            toolStripStatusLabel1.Size = new System.Drawing.Size(10, 17);
+            toolStripStatusLabel1.Text = "‎ ";
             // 
             // FrmTaskManager
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
-            this.ClientSize = new System.Drawing.Size(821, 493);
-            this.Controls.Add(this.tableLayoutPanel);
-            this.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.MinimumSize = new System.Drawing.Size(351, 449);
-            this.Name = "FrmTaskManager";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Task Manager []";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FrmTaskManager_FormClosing);
-            this.Load += new System.EventHandler(this.FrmTaskManager_Load);
-            this.contextMenuStrip.ResumeLayout(false);
-            this.tableLayoutPanel.ResumeLayout(false);
-            this.tableLayoutPanel.PerformLayout();
-            this.statusStrip.ResumeLayout(false);
-            this.statusStrip.PerformLayout();
-            this.ResumeLayout(false);
-
+            AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
+            ClientSize = new System.Drawing.Size(821, 493);
+            Controls.Add(tableLayoutPanel);
+            Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
+            Icon = (System.Drawing.Icon)resources.GetObject("$this.Icon");
+            MinimumSize = new System.Drawing.Size(351, 449);
+            Name = "FrmTaskManager";
+            StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            Text = "Task Manager []";
+            FormClosing += FrmTaskManager_FormClosing;
+            Load += FrmTaskManager_Load;
+            contextMenuStrip.ResumeLayout(false);
+            tableLayoutPanel.ResumeLayout(false);
+            tableLayoutPanel.PerformLayout();
+            statusStrip.ResumeLayout(false);
+            statusStrip.PerformLayout();
+            ResumeLayout(false);
         }
 
         #endregion
@@ -185,5 +275,16 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.ToolStripStatusLabel processesToolStripStatusLabel;
         private System.Windows.Forms.ToolStripMenuItem dumpMemoryToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem suspendProcessToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem topmostWindowToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem topmostOnToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem topmostOffToolStripMenuItem;
+        private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel1;
+        private System.Windows.Forms.ToolStripMenuItem searchToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem enableDisableAutoRefreshToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem minimizeMaximizeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem minimizedToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem maximizedToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem beginSuspendToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem endSuspendToolStripMenuItem;
     }
 }
