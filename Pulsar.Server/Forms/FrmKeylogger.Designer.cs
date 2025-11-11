@@ -37,6 +37,7 @@
             rtbLogViewer = new System.Windows.Forms.RichTextBox();
             button1 = new System.Windows.Forms.Button();
             checkBox1 = new System.Windows.Forms.CheckBox();
+            button2 = new System.Windows.Forms.Button();
             statusStrip.SuspendLayout();
             SuspendLayout();
             // 
@@ -49,7 +50,7 @@
             lstLogs.GridLines = true;
             lstLogs.Location = new System.Drawing.Point(0, 31);
             lstLogs.Name = "lstLogs";
-            lstLogs.Size = new System.Drawing.Size(155, 431);
+            lstLogs.Size = new System.Drawing.Size(153, 431);
             lstLogs.TabIndex = 0;
             lstLogs.UseCompatibleStateImageBehavior = false;
             lstLogs.View = System.Windows.Forms.View.Details;
@@ -80,9 +81,10 @@
             // 
             btnGetLogs.Location = new System.Drawing.Point(2, 5);
             btnGetLogs.Name = "btnGetLogs";
-            btnGetLogs.Size = new System.Drawing.Size(153, 23);
+            btnGetLogs.Size = new System.Drawing.Size(152, 23);
             btnGetLogs.TabIndex = 9;
             btnGetLogs.Text = "Get Log Files";
+            btnGetLogs.Click += btnGetLogs_Click;
             // 
             // rtbLogViewer
             // 
@@ -97,7 +99,7 @@
             // 
             // button1
             // 
-            button1.Location = new System.Drawing.Point(161, 5);
+            button1.Location = new System.Drawing.Point(430, 5);
             button1.Name = "button1";
             button1.Size = new System.Drawing.Size(58, 23);
             button1.TabIndex = 1;
@@ -108,18 +110,28 @@
             // 
             checkBox1.Checked = true;
             checkBox1.CheckState = System.Windows.Forms.CheckState.Checked;
-            checkBox1.Location = new System.Drawing.Point(225, 5);
+            checkBox1.Location = new System.Drawing.Point(161, 5);
             checkBox1.Name = "checkBox1";
             checkBox1.Size = new System.Drawing.Size(104, 24);
             checkBox1.TabIndex = 0;
             checkBox1.Text = "Live Keylogger";
             checkBox1.CheckedChanged += checkBox1_CheckedChanged_1;
             // 
+            // button2
+            // 
+            button2.Location = new System.Drawing.Point(262, 5);
+            button2.Name = "button2";
+            button2.Size = new System.Drawing.Size(162, 23);
+            button2.TabIndex = 10;
+            button2.Text = "Save Log To Client Folder";
+            button2.Click += button2_Click;
+            // 
             // FrmKeylogger
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             ClientSize = new System.Drawing.Size(862, 482);
+            Controls.Add(button2);
             Controls.Add(checkBox1);
             Controls.Add(button1);
             Controls.Add(rtbLogViewer);
@@ -150,5 +162,6 @@
         private System.Windows.Forms.ToolStripStatusLabel stripLblStatus;
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.CheckBox checkBox1;
+        private System.Windows.Forms.Button button2;
     }
 }

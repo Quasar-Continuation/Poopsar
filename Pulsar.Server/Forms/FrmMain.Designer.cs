@@ -113,6 +113,7 @@ namespace Pulsar.Server.Forms
             openToolStripMenuItem = new ToolStripMenuItem();
             closeToolStripMenuItem = new ToolStripMenuItem();
             connectionToolStripMenuItem = new ToolStripMenuItem();
+            deleteTempDirectoryToolStripMenuItem = new ToolStripMenuItem();
             elevatedToolStripMenuItem = new ToolStripMenuItem();
             elevateClientPermissionsToolStripMenuItem = new ToolStripMenuItem();
             elevateToSystemToolStripMenuItem = new ToolStripMenuItem();
@@ -252,7 +253,6 @@ namespace Pulsar.Server.Forms
             aboutToolStripMenuItem = new ToolStripMenuItem();
             settingsToolStripMenuItem = new ToolStripMenuItem();
             builderToolStripMenuItem = new ToolStripMenuItem();
-            deleteTempDirectoryToolStripMenuItem = new ToolStripMenuItem();
             contextMenuStrip.SuspendLayout();
             tableLayoutPanel.SuspendLayout();
             MainTabControl.SuspendLayout();
@@ -737,6 +737,14 @@ namespace Pulsar.Server.Forms
             connectionToolStripMenuItem.Name = "connectionToolStripMenuItem";
             connectionToolStripMenuItem.Size = new Size(180, 22);
             connectionToolStripMenuItem.Text = "Client Management";
+            // 
+            // deleteTempDirectoryToolStripMenuItem
+            // 
+            deleteTempDirectoryToolStripMenuItem.Image = Properties.Resources.broom;
+            deleteTempDirectoryToolStripMenuItem.Name = "deleteTempDirectoryToolStripMenuItem";
+            deleteTempDirectoryToolStripMenuItem.Size = new Size(191, 22);
+            deleteTempDirectoryToolStripMenuItem.Text = "Delete Temp Directory";
+            deleteTempDirectoryToolStripMenuItem.Click += deleteTempDirectoryToolStripMenuItem_Click;
             // 
             // elevatedToolStripMenuItem
             // 
@@ -1279,10 +1287,10 @@ namespace Pulsar.Server.Forms
             // tabStats
             // 
             tabStats.Controls.Add(statsElementHost);
-            tabStats.Location = new Point(4, 24);
+            tabStats.Location = new Point(4, 22);
             tabStats.Margin = new Padding(0);
             tabStats.Name = "tabStats";
-            tabStats.Size = new Size(1136, 463);
+            tabStats.Size = new Size(1136, 465);
             tabStats.TabIndex = 1;
             tabStats.Text = "Stats";
             tabStats.UseVisualStyleBackColor = true;
@@ -1292,7 +1300,7 @@ namespace Pulsar.Server.Forms
             statsElementHost.Dock = DockStyle.Fill;
             statsElementHost.Location = new Point(0, 0);
             statsElementHost.Name = "statsElementHost";
-            statsElementHost.Size = new Size(1136, 463);
+            statsElementHost.Size = new Size(1136, 465);
             statsElementHost.TabIndex = 0;
             // 
             // tabPage1
@@ -1302,10 +1310,10 @@ namespace Pulsar.Server.Forms
             tabPage1.Controls.Add(tableLayoutPanel1);
             tabPage1.Controls.Add(DebugLogRichBox);
             tabPage1.Controls.Add(splitter1);
-            tabPage1.Location = new Point(4, 24);
+            tabPage1.Location = new Point(4, 22);
             tabPage1.Margin = new Padding(0);
             tabPage1.Name = "tabPage1";
-            tabPage1.Size = new Size(1136, 463);
+            tabPage1.Size = new Size(1136, 465);
             tabPage1.TabIndex = 1;
             tabPage1.Text = "Clients";
             tabPage1.UseVisualStyleBackColor = true;
@@ -1316,7 +1324,7 @@ namespace Pulsar.Server.Forms
             wpfClientsHost.Dock = DockStyle.Fill;
             wpfClientsHost.Location = new Point(0, 0);
             wpfClientsHost.Name = "wpfClientsHost";
-            wpfClientsHost.Size = new Size(849, 349);
+            wpfClientsHost.Size = new Size(849, 351);
             wpfClientsHost.TabIndex = 22;
             // 
             // lstClients
@@ -1328,7 +1336,7 @@ namespace Pulsar.Server.Forms
             lstClients.Location = new Point(0, 0);
             lstClients.Name = "lstClients";
             lstClients.ShowItemToolTips = true;
-            lstClients.Size = new Size(849, 349);
+            lstClients.Size = new Size(849, 351);
             lstClients.SmallImageList = imgFlags;
             lstClients.TabIndex = 1;
             lstClients.UseCompatibleStateImageBehavior = false;
@@ -1410,7 +1418,7 @@ namespace Pulsar.Server.Forms
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 166F));
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
             tableLayoutPanel1.RowStyles.Add(new RowStyle());
-            tableLayoutPanel1.Size = new Size(287, 349);
+            tableLayoutPanel1.Size = new Size(287, 351);
             tableLayoutPanel1.TabIndex = 32;
             tableLayoutPanel1.Paint += tableLayoutPanel1_Paint;
             // 
@@ -1587,7 +1595,7 @@ namespace Pulsar.Server.Forms
             DebugLogRichBox.Dock = DockStyle.Bottom;
             DebugLogRichBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             DebugLogRichBox.ForeColor = SystemColors.InfoText;
-            DebugLogRichBox.Location = new Point(0, 349);
+            DebugLogRichBox.Location = new Point(0, 351);
             DebugLogRichBox.Name = "DebugLogRichBox";
             DebugLogRichBox.ReadOnly = true;
             DebugLogRichBox.Size = new Size(1136, 111);
@@ -1630,7 +1638,7 @@ namespace Pulsar.Server.Forms
             // splitter1
             // 
             splitter1.Dock = DockStyle.Bottom;
-            splitter1.Location = new Point(0, 460);
+            splitter1.Location = new Point(0, 462);
             splitter1.Name = "splitter1";
             splitter1.Size = new Size(1136, 3);
             splitter1.TabIndex = 34;
@@ -2210,14 +2218,6 @@ namespace Pulsar.Server.Forms
             builderToolStripMenuItem.Size = new Size(72, 21);
             builderToolStripMenuItem.Text = "Builder";
             builderToolStripMenuItem.Click += builderToolStripMenuItem_Click;
-            // 
-            // deleteTempDirectoryToolStripMenuItem
-            // 
-            deleteTempDirectoryToolStripMenuItem.Image = Properties.Resources.broom;
-            deleteTempDirectoryToolStripMenuItem.Name = "deleteTempDirectoryToolStripMenuItem";
-            deleteTempDirectoryToolStripMenuItem.Size = new Size(191, 22);
-            deleteTempDirectoryToolStripMenuItem.Text = "Delete Temp Directory";
-            deleteTempDirectoryToolStripMenuItem.Click += deleteTempDirectoryToolStripMenuItem_Click;
             // 
             // FrmMain
             // 

