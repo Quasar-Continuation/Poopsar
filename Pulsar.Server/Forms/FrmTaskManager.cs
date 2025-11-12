@@ -67,6 +67,12 @@ namespace Pulsar.Server.Forms
 
             _countdownTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             _countdownTimer.Tick += CountdownTimer_Tick;
+
+            // ✅ Auto-refresh ON by default
+            _pauseAutoRefresh = false;
+            enableDisableAutoRefreshToolStripMenuItem.Checked = true;
+            toolStripStatusLabel1.Text = $"Refreshing in {_countdownValue}s...";
+            toolStripStatusLabel1.ForeColor = _originalLabelColor;
             _countdownTimer.Start();
 
             RegisterMessageHandler();

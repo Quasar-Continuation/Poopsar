@@ -24,6 +24,8 @@ namespace Pulsar.Server.Forms
         private readonly int _clientPort;
 
         private readonly Timer _refreshTimer;
+        private bool _autoRefreshEnabled = true;
+        private bool _initialLoad = true;
 
         public static FrmConnections CreateNewOrGetExisting(Client client)
         {
@@ -60,8 +62,14 @@ namespace Pulsar.Server.Forms
 
             // ⏱️ Setup live refresh (like Task Manager)
             _refreshTimer = new Timer { Interval = 2000 }; // refresh every 2s
-            _refreshTimer.Tick += (s, e) => _connectionsHandler.RefreshTcpConnections();
+            _refreshTimer.Tick += (s, e) =>
+            {
+                if (_autoRefreshEnabled)
+                    _connectionsHandler.RefreshTcpConnections();
+            };
             _refreshTimer.Start();
+
+            autorefreshToolStripMenuItem.Checked = _autoRefreshEnabled;
         }
 
         private void RegisterMessageHandler()
@@ -84,7 +92,6 @@ namespace Pulsar.Server.Forms
             if (!connected)
                 this.Invoke((MethodInvoker)this.Close);
         }
-        private bool _initialLoad = true;
 
         private void TcpConnectionsChanged(object sender, TcpConnection[] connections)
         {
@@ -124,13 +131,13 @@ namespace Pulsar.Server.Forms
                     // New connection
                     var lvi = new ListViewItem(new[]
                     {
-                con.ProcessName,
-                con.LocalAddress,
-                con.LocalPort.ToString(),
-                con.RemoteAddress,
-                con.RemotePort.ToString(),
-                state
-            });
+                        con.ProcessName,
+                        con.LocalAddress,
+                        con.LocalPort.ToString(),
+                        con.RemoteAddress,
+                        con.RemotePort.ToString(),
+                        state
+                    });
 
                     // ✅ Keep client’s own connection green
                     if (!string.IsNullOrEmpty(_clientAddress) &&
@@ -142,7 +149,7 @@ namespace Pulsar.Server.Forms
                     }
                     else if (!_initialLoad)
                     {
-                        // 🔵 Flash new connections for 2 seconds (was 800ms)
+                        // 🔵 Flash new connections for 2 seconds
                         lvi.ForeColor = Color.LightSkyBlue;
                         var timer = new Timer { Interval = 2000, Tag = lvi };
                         timer.Tick += (s, e2) =>
@@ -231,6 +238,24 @@ namespace Pulsar.Server.Forms
         private void lstConnections_ColumnClick(object sender, ColumnClickEventArgs e)
         {
             lstConnections.LvwColumnSorter.NeedNumberCompare = (e.Column == 2 || e.Column == 4);
+        }
+
+        private void autorefreshToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            _autoRefreshEnabled = !_autoRefreshEnabled;
+            autorefreshToolStripMenuItem.Checked = _autoRefreshEnabled;
+
+            if (_autoRefreshEnabled)
+            {
+                _refreshTimer.Start();
+                _connectionsHandler.RefreshTcpConnections(); // optional immediate refresh
+                this.Text = WindowHelper.GetWindowTitle("Connections (Auto Refresh On)", _connectClient);
+            }
+            else
+            {
+                _refreshTimer.Stop();
+                this.Text = WindowHelper.GetWindowTitle("Connections (Auto Refresh Off)", _connectClient);
+            }
         }
     }
 }

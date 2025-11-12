@@ -54,6 +54,7 @@ namespace Pulsar.Server.Forms
             statusStrip = new System.Windows.Forms.StatusStrip();
             processesToolStripStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
+            toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             contextMenuStrip.SuspendLayout();
             tableLayoutPanel.SuspendLayout();
             statusStrip.SuspendLayout();
@@ -61,9 +62,9 @@ namespace Pulsar.Server.Forms
             // 
             // contextMenuStrip
             // 
-            contextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { killProcessToolStripMenuItem, suspendProcessToolStripMenuItem, minimizeMaximizeToolStripMenuItem, topmostWindowToolStripMenuItem, lineToolStripMenuItem, searchToolStripMenuItem, dumpMemoryToolStripMenuItem, startProcessToolStripMenuItem, enableDisableAutoRefreshToolStripMenuItem, refreshToolStripMenuItem });
+            contextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { killProcessToolStripMenuItem, suspendProcessToolStripMenuItem, minimizeMaximizeToolStripMenuItem, topmostWindowToolStripMenuItem, lineToolStripMenuItem, searchToolStripMenuItem, dumpMemoryToolStripMenuItem, startProcessToolStripMenuItem, toolStripSeparator1, refreshToolStripMenuItem, enableDisableAutoRefreshToolStripMenuItem });
             contextMenuStrip.Name = "ctxtMenu";
-            contextMenuStrip.Size = new System.Drawing.Size(169, 208);
+            contextMenuStrip.Size = new System.Drawing.Size(169, 214);
             // 
             // killProcessToolStripMenuItem
             // 
@@ -110,7 +111,7 @@ namespace Pulsar.Server.Forms
             // 
             minimizedToolStripMenuItem.Image = Properties.Resources.minimizewindowicon;
             minimizedToolStripMenuItem.Name = "minimizedToolStripMenuItem";
-            minimizedToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            minimizedToolStripMenuItem.Size = new System.Drawing.Size(131, 22);
             minimizedToolStripMenuItem.Text = "Minimized";
             minimizedToolStripMenuItem.Click += minimizedToolStripMenuItem_Click;
             // 
@@ -118,7 +119,7 @@ namespace Pulsar.Server.Forms
             // 
             maximizedToolStripMenuItem.Image = Properties.Resources.maximizewindowicon;
             maximizedToolStripMenuItem.Name = "maximizedToolStripMenuItem";
-            maximizedToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            maximizedToolStripMenuItem.Size = new System.Drawing.Size(131, 22);
             maximizedToolStripMenuItem.Text = "Maximized";
             maximizedToolStripMenuItem.Click += maximizedToolStripMenuItem_Click;
             // 
@@ -240,6 +241,11 @@ namespace Pulsar.Server.Forms
             toolStripStatusLabel1.Size = new System.Drawing.Size(10, 17);
             toolStripStatusLabel1.Text = "‎ ";
             // 
+            // toolStripSeparator1
+            // 
+            toolStripSeparator1.Name = "toolStripSeparator1";
+            toolStripSeparator1.Size = new System.Drawing.Size(165, 6);
+            // 
             // FrmTaskManager
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
@@ -286,5 +292,6 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.ToolStripMenuItem maximizedToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem beginSuspendToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem endSuspendToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
     }
 }
