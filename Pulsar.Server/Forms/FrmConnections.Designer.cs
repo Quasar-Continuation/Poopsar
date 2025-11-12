@@ -33,8 +33,10 @@ namespace Pulsar.Server.Forms
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FrmConnections));
             contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(components);
-            refreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             closeConnectionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            searchToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            refreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             autorefreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             lstConnections = new AeroListView();
             columnHeader1 = new System.Windows.Forms.ColumnHeader();
@@ -43,37 +45,49 @@ namespace Pulsar.Server.Forms
             columnHeader4 = new System.Windows.Forms.ColumnHeader();
             columnHeader5 = new System.Windows.Forms.ColumnHeader();
             columnHeader6 = new System.Windows.Forms.ColumnHeader();
-            toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             contextMenuStrip.SuspendLayout();
             SuspendLayout();
             // 
             // contextMenuStrip
             // 
-            contextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { closeConnectionToolStripMenuItem, toolStripSeparator1, refreshToolStripMenuItem, autorefreshToolStripMenuItem });
+            contextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { closeConnectionToolStripMenuItem, toolStripSeparator1, searchToolStripMenuItem, refreshToolStripMenuItem, autorefreshToolStripMenuItem });
             contextMenuStrip.Name = "contextMenuStrip";
-            contextMenuStrip.Size = new System.Drawing.Size(169, 76);
-            // 
-            // refreshToolStripMenuItem
-            // 
-            refreshToolStripMenuItem.Image = Properties.Resources.refresh;
-            refreshToolStripMenuItem.Name = "refreshToolStripMenuItem";
-            refreshToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
-            refreshToolStripMenuItem.Text = "Refresh";
-            refreshToolStripMenuItem.Click += refreshToolStripMenuItem_Click;
+            contextMenuStrip.Size = new System.Drawing.Size(197, 98);
             // 
             // closeConnectionToolStripMenuItem
             // 
             closeConnectionToolStripMenuItem.Image = Properties.Resources.uac_shield;
             closeConnectionToolStripMenuItem.Name = "closeConnectionToolStripMenuItem";
-            closeConnectionToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
-            closeConnectionToolStripMenuItem.Text = "Close Connection";
+            closeConnectionToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
+            closeConnectionToolStripMenuItem.Text = "Close Connection (Del)";
             closeConnectionToolStripMenuItem.Click += closeConnectionToolStripMenuItem_Click;
+            // 
+            // toolStripSeparator1
+            // 
+            toolStripSeparator1.Name = "toolStripSeparator1";
+            toolStripSeparator1.Size = new System.Drawing.Size(193, 6);
+            // 
+            // searchToolStripMenuItem
+            // 
+            searchToolStripMenuItem.Image = Properties.Resources.magnifyingglassicon;
+            searchToolStripMenuItem.Name = "searchToolStripMenuItem";
+            searchToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
+            searchToolStripMenuItem.Text = "Search (Ctrl + F)";
+            searchToolStripMenuItem.Click += searchToolStripMenuItem_Click;
+            // 
+            // refreshToolStripMenuItem
+            // 
+            refreshToolStripMenuItem.Image = Properties.Resources.refresh;
+            refreshToolStripMenuItem.Name = "refreshToolStripMenuItem";
+            refreshToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
+            refreshToolStripMenuItem.Text = "Refresh";
+            refreshToolStripMenuItem.Click += refreshToolStripMenuItem_Click;
             // 
             // autorefreshToolStripMenuItem
             // 
             autorefreshToolStripMenuItem.Image = Properties.Resources.autorefreshicon;
             autorefreshToolStripMenuItem.Name = "autorefreshToolStripMenuItem";
-            autorefreshToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
+            autorefreshToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
             autorefreshToolStripMenuItem.Text = "Autorefresh";
             autorefreshToolStripMenuItem.Click += autorefreshToolStripMenuItem_Click;
             // 
@@ -121,11 +135,6 @@ namespace Pulsar.Server.Forms
             columnHeader6.Text = "State";
             columnHeader6.Width = 180;
             // 
-            // toolStripSeparator1
-            // 
-            toolStripSeparator1.Name = "toolStripSeparator1";
-            toolStripSeparator1.Size = new System.Drawing.Size(165, 6);
-            // 
             // FrmConnections
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
@@ -157,5 +166,6 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.ToolStripMenuItem closeConnectionToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem autorefreshToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
+        private System.Windows.Forms.ToolStripMenuItem searchToolStripMenuItem;
     }
 }

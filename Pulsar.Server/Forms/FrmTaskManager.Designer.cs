@@ -47,14 +47,14 @@ namespace Pulsar.Server.Forms
             searchToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             dumpMemoryToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             startProcessToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            enableDisableAutoRefreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             refreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            enableDisableAutoRefreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             tableLayoutPanel = new System.Windows.Forms.TableLayoutPanel();
             processTreeHost = new ElementHost();
             statusStrip = new System.Windows.Forms.StatusStrip();
             processesToolStripStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
-            toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             contextMenuStrip.SuspendLayout();
             tableLayoutPanel.SuspendLayout();
             statusStrip.SuspendLayout();
@@ -71,7 +71,7 @@ namespace Pulsar.Server.Forms
             killProcessToolStripMenuItem.Image = Properties.Resources.cancel;
             killProcessToolStripMenuItem.Name = "killProcessToolStripMenuItem";
             killProcessToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
-            killProcessToolStripMenuItem.Text = "Kill Process";
+            killProcessToolStripMenuItem.Text = "Kill Process (Del)";
             killProcessToolStripMenuItem.Click += killProcessToolStripMenuItem_Click;
             // 
             // suspendProcessToolStripMenuItem
@@ -176,13 +176,10 @@ namespace Pulsar.Server.Forms
             startProcessToolStripMenuItem.Text = "Start Process";
             startProcessToolStripMenuItem.Click += startProcessToolStripMenuItem_Click;
             // 
-            // enableDisableAutoRefreshToolStripMenuItem
+            // toolStripSeparator1
             // 
-            enableDisableAutoRefreshToolStripMenuItem.Image = Properties.Resources.autorefreshicon;
-            enableDisableAutoRefreshToolStripMenuItem.Name = "enableDisableAutoRefreshToolStripMenuItem";
-            enableDisableAutoRefreshToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
-            enableDisableAutoRefreshToolStripMenuItem.Text = "Autorefresh";
-            enableDisableAutoRefreshToolStripMenuItem.Click += enableDisableAutoRefreshToolStripMenuItem_Click;
+            toolStripSeparator1.Name = "toolStripSeparator1";
+            toolStripSeparator1.Size = new System.Drawing.Size(165, 6);
             // 
             // refreshToolStripMenuItem
             // 
@@ -191,6 +188,14 @@ namespace Pulsar.Server.Forms
             refreshToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
             refreshToolStripMenuItem.Text = "Refresh";
             refreshToolStripMenuItem.Click += refreshToolStripMenuItem_Click;
+            // 
+            // enableDisableAutoRefreshToolStripMenuItem
+            // 
+            enableDisableAutoRefreshToolStripMenuItem.Image = Properties.Resources.autorefreshicon;
+            enableDisableAutoRefreshToolStripMenuItem.Name = "enableDisableAutoRefreshToolStripMenuItem";
+            enableDisableAutoRefreshToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
+            enableDisableAutoRefreshToolStripMenuItem.Text = "Autorefresh";
+            enableDisableAutoRefreshToolStripMenuItem.Click += enableDisableAutoRefreshToolStripMenuItem_Click;
             // 
             // tableLayoutPanel
             // 
@@ -240,11 +245,6 @@ namespace Pulsar.Server.Forms
             toolStripStatusLabel1.Name = "toolStripStatusLabel1";
             toolStripStatusLabel1.Size = new System.Drawing.Size(10, 17);
             toolStripStatusLabel1.Text = "‎ ";
-            // 
-            // toolStripSeparator1
-            // 
-            toolStripSeparator1.Name = "toolStripSeparator1";
-            toolStripSeparator1.Size = new System.Drawing.Size(165, 6);
             // 
             // FrmTaskManager
             // 

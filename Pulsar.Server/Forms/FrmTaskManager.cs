@@ -445,8 +445,17 @@ namespace Pulsar.Server.Forms
                 ShowSearchDialog();
                 return true;
             }
+
+            // Handle Delete key to kill selected process
+            if (keyData == Keys.Delete)
+            {
+                PerformOnSelectedProcesses(p => _taskManagerHandler.EndProcess(p.Id));
+                return true; // indicate we've handled the key
+            }
+
             return base.ProcessCmdKey(ref msg, keyData);
         }
+
 
         private void ShowSearchDialog()
         {

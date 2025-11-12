@@ -19,6 +19,8 @@ namespace Pulsar.Server.Forms
         private readonly TcpConnectionsHandler _connectionsHandler;
         private readonly Dictionary<string, ListViewGroup> _groups = new();
         private static readonly Dictionary<Client, FrmConnections> OpenedForms = new();
+        private readonly HashSet<string> _newKeys = new(); // track new connections for blue highlight
+        private readonly Dictionary<ListViewItem, Color> _originalForeColors = new(); // store original text color
 
         private readonly string _clientAddress;
         private readonly int _clientPort;
@@ -93,105 +95,136 @@ namespace Pulsar.Server.Forms
                 this.Invoke((MethodInvoker)this.Close);
         }
 
+        private readonly HashSet<string> _initialKeys = new(); // track initial connections
+
         private void TcpConnectionsChanged(object sender, TcpConnection[] connections)
         {
-            if (InvokeRequired)
+            try
             {
-                Invoke(new Action<object, TcpConnection[]>(TcpConnectionsChanged), sender, connections);
-                return;
-            }
-
-            lstConnections.BeginUpdate();
-
-            var existing = lstConnections.Items.Cast<ListViewItem>()
-                .ToDictionary(x => GetKey(x), x => x);
-
-            var seen = new HashSet<string>();
-
-            foreach (var con in connections)
-            {
-                string key = GetKey(con);
-                seen.Add(key);
-                string state = con.State.ToString();
-
-                if (!_groups.ContainsKey(state))
+                if (InvokeRequired)
                 {
-                    var g = new ListViewGroup(state, state);
-                    lstConnections.Groups.Add(g);
-                    _groups[state] = g;
+                    Invoke(new Action<object, TcpConnection[]>(TcpConnectionsChanged), sender, connections);
+                    return;
                 }
 
-                if (existing.TryGetValue(key, out var item))
-                {
-                    // Update existing item state
-                    item.SubItems[5].Text = state;
-                }
-                else
-                {
-                    // New connection
-                    var lvi = new ListViewItem(new[]
-                    {
-                        con.ProcessName,
-                        con.LocalAddress,
-                        con.LocalPort.ToString(),
-                        con.RemoteAddress,
-                        con.RemotePort.ToString(),
-                        state
-                    });
+                lstConnections.BeginUpdate();
 
-                    // ✅ Keep client’s own connection green
-                    if (!string.IsNullOrEmpty(_clientAddress) &&
-                        string.Equals(con.LocalAddress, _clientAddress, StringComparison.OrdinalIgnoreCase) &&
-                        con.LocalPort == _clientPort)
+                int topIndex = 0;
+                try
+                {
+                    topIndex = lstConnections.TopItem?.Index ?? 0;
+                }
+                catch { /* ignore if TopItem is temporarily invalid */ }
+
+                if (_initialLoad)
+                {
+                    foreach (var con in connections)
+                        _initialKeys.Add(GetKey(con));
+                    _initialLoad = false;
+                }
+
+                var items = lstConnections.Items.Cast<ListViewItem>().ToList();
+                var existing = items.ToDictionary(x => GetKey(x), x => x);
+                var seenNow = new HashSet<string>();
+
+                foreach (var con in connections)
+                {
+                    try
                     {
-                        lvi.ForeColor = Color.MediumSeaGreen;
-                        lvi.Font = new Font(lstConnections.Font, FontStyle.Bold);
+                        string key = GetKey(con);
+                        seenNow.Add(key);
+                        string state = con.State.ToString();
+
+                        if (!_groups.ContainsKey(state))
+                        {
+                            var g = new ListViewGroup(state, state);
+                            lstConnections.Groups.Add(g);
+                            _groups[state] = g;
+                        }
+
+                        if (existing.TryGetValue(key, out var item))
+                        {
+                            item.SubItems[5].Text = state;
+                        }
+                        else
+                        {
+                            var lvi = new ListViewItem(new[]
+                            {
+                                con.ProcessName,
+                                con.LocalAddress,
+                                con.LocalPort.ToString(),
+                                con.RemoteAddress,
+                                con.RemotePort.ToString(),
+                                state
+                            });
+
+                            // Set colors
+                            if (!string.IsNullOrEmpty(_clientAddress) &&
+                                string.Equals(con.LocalAddress, _clientAddress, StringComparison.OrdinalIgnoreCase) &&
+                                con.LocalPort == _clientPort)
+                            {
+                                lvi.ForeColor = Color.MediumSeaGreen;
+                                lvi.Font = new Font(lstConnections.Font, FontStyle.Bold);
+                            }
+                            else if (!_initialKeys.Contains(key))
+                            {
+                                lvi.ForeColor = Color.FromArgb(25, 118, 210); // darker blue for new connections
+                                _newKeys.Add(key); // track new connection
+                            }
+
+                            // Store original color
+                            _originalForeColors[lvi] = lvi.ForeColor;
+
+                            lvi.Group = _groups[state];
+                            lstConnections.Items.Add(lvi);
+                        }
                     }
-                    else if (!_initialLoad)
+                    catch { /* ignore individual connection issues */ }
+                }
+
+                // Remove missing items safely
+                var toRemove = items.Where(i => !seenNow.Contains(GetKey(i))).ToList();
+                foreach (var item in toRemove)
+                {
+                    try
                     {
-                        // 🔵 Flash new connections for 2 seconds
-                        lvi.ForeColor = Color.LightSkyBlue;
-                        var timer = new Timer { Interval = 2000, Tag = lvi };
+                        if (item.ForeColor == Color.MediumSeaGreen)
+                            continue;
+
+                        item.ForeColor = Color.IndianRed;
+
+                        var timer = new Timer { Interval = 800, Tag = item };
                         timer.Tick += (s, e2) =>
                         {
-                            timer.Stop();
-                            timer.Dispose();
-                            if (lstConnections.Items.Contains(lvi))
-                                lvi.ForeColor = lstConnections.ForeColor;
+                            try
+                            {
+                                timer.Stop();
+                                timer.Dispose();
+                                if (lstConnections.Items.Contains(item))
+                                    lstConnections.Items.Remove(item);
+                            }
+                            catch { }
                         };
                         timer.Start();
                     }
-
-                    lvi.Group = _groups[state];
-                    lstConnections.Items.Add(lvi);
+                    catch { }
                 }
-            }
 
-            // 🔴 Flash red before removal
-            var toRemove = lstConnections.Items.Cast<ListViewItem>()
-                .Where(i => !seen.Contains(GetKey(i)))
-                .ToList();
+                lstConnections.EndUpdate();
 
-            foreach (var item in toRemove)
-            {
-                if (item.ForeColor == Color.MediumSeaGreen)
-                    continue;
-
-                item.ForeColor = Color.IndianRed;
-
-                var timer = new Timer { Interval = 800, Tag = item };
-                timer.Tick += (s, e2) =>
+                // Restore scroll position safely
+                try
                 {
-                    timer.Stop();
-                    timer.Dispose();
-                    if (lstConnections.Items.Contains(item))
-                        lstConnections.Items.Remove(item);
-                };
-                timer.Start();
-            }
+                    if (lstConnections.Items.Count > 0 && topIndex < lstConnections.Items.Count)
+                        lstConnections.TopItem = lstConnections.Items[topIndex];
+                }
+                catch { }
 
-            lstConnections.EndUpdate();
-            _initialLoad = false;
+            }
+            catch
+            {
+                // Global catch
+            }
         }
 
         private static string GetKey(TcpConnection con) =>
@@ -248,7 +281,7 @@ namespace Pulsar.Server.Forms
             if (_autoRefreshEnabled)
             {
                 _refreshTimer.Start();
-                _connectionsHandler.RefreshTcpConnections(); // optional immediate refresh
+                _connectionsHandler.RefreshTcpConnections();
                 this.Text = WindowHelper.GetWindowTitle("Connections (Auto Refresh On)", _connectClient);
             }
             else
@@ -256,6 +289,88 @@ namespace Pulsar.Server.Forms
                 _refreshTimer.Stop();
                 this.Text = WindowHelper.GetWindowTitle("Connections (Auto Refresh Off)", _connectClient);
             }
+        }
+
+        private void SearchListView(string keyword)
+        {
+            keyword = keyword?.Trim().ToLower() ?? "";
+
+            // Detect theme based on ListView background (adjust to your actual UI logic)
+            bool isDarkTheme = lstConnections.BackColor.R < 128; // roughly dark if R,G,B < 128
+
+            foreach (ListViewItem item in lstConnections.Items)
+            {
+                string key = GetKey(item);
+                bool match = item.SubItems.Cast<ListViewItem.ListViewSubItem>()
+                                .Any(sub => sub.Text.ToLower().Contains(keyword));
+
+                if (string.IsNullOrEmpty(keyword))
+                {
+                    item.BackColor = Color.Empty;
+                    item.ForeColor = _newKeys.Contains(key) ? Color.FromArgb(25, 118, 210) :
+                                      (isDarkTheme ? Color.White : Color.Black);
+                }
+                else if (match)
+                {
+                    // Dynamic highlight based on theme
+                    item.BackColor = isDarkTheme ? Color.FromArgb(80, 80, 50) : Color.LightGoldenrodYellow;
+                    item.ForeColor = isDarkTheme ? Color.White : Color.Black;
+                }
+                else
+                {
+                    item.BackColor = Color.Empty;
+                    item.ForeColor = _newKeys.Contains(key) ? Color.FromArgb(25, 118, 210) :
+                                      (isDarkTheme ? Color.White : Color.Black);
+                }
+            }
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            // Detect Ctrl+F for search
+            if (keyData == (Keys.Control | Keys.F))
+            {
+                searchToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true; // handled
+            }
+
+            // Detect Delete key to close selected connections
+            if (keyData == Keys.Delete)
+            {
+                if (lstConnections.SelectedItems.Count > 0)
+                {
+                    foreach (ListViewItem lvi in lstConnections.SelectedItems)
+                    {
+                        try
+                        {
+                            _connectionsHandler.CloseTcpConnection(
+                                lvi.SubItems[1].Text,
+                                ushort.Parse(lvi.SubItems[2].Text),
+                                lvi.SubItems[3].Text,
+                                ushort.Parse(lvi.SubItems[4].Text));
+                        }
+                        catch { /* ignore parse/connection errors */ }
+                    }
+
+                    _connectionsHandler.RefreshTcpConnections();
+                }
+                return true; // handled
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        private void searchToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string keyword = Microsoft.VisualBasic.Interaction.InputBox(
+                "Enter search keyword:",
+                "Search Connections",
+                "");
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+                SearchListView(keyword);
+            else
+                SearchListView(""); // clear highlights if empty
         }
     }
 }
