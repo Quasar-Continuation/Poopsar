@@ -17,11 +17,16 @@ namespace Pulsar.Client
         [DllImport("kernel32.dll")]
         private static extern uint GetCurrentThreadId();
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetProcessDPIAware();
+
         [STAThread]
         private static void Main()
         {
             // enable TLS 1.2
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
+            SetProcessDPIAware();
 
             // Set the unhandled exception mode to force all Windows Forms errors to go through our handler
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
@@ -32,7 +37,7 @@ namespace Pulsar.Client
             SaveOriginalDesktop();
 
             Application.Run(new PulsarApplication());
-        }
+}
 
         private static void SaveOriginalDesktop()
         {

@@ -19,7 +19,8 @@ namespace Pulsar.Server.Controls.Wpf
 {
     public partial class ClientsListView : UserControl
     {
-        private readonly ObservableCollection<ClientListEntry> _entries = new();
+    private readonly ObservableCollection<ClientListEntry> _entries = new();
+    private readonly Dictionary<Client, ClientListEntry> _entryLookup = new();
         private readonly CollectionViewSource _collectionViewSource;
         private bool _groupByCountry;
         private Predicate<object>? _filter;
@@ -68,7 +69,17 @@ namespace Pulsar.Server.Controls.Wpf
                 return null;
             }
 
-            return Dispatcher.Invoke(() => _entries.FirstOrDefault(e => ReferenceEquals(e.Client, client)));
+            if (Dispatcher.CheckAccess())
+            {
+                _entryLookup.TryGetValue(client, out var entry);
+                return entry;
+            }
+
+            return Dispatcher.Invoke(() =>
+            {
+                _entryLookup.TryGetValue(client, out var entry);
+                return entry;
+            });
         }
 
         public ClientListEntry AddOrUpdate(Client client, Action<ClientListEntry> updater)
@@ -83,18 +94,25 @@ namespace Pulsar.Server.Controls.Wpf
                 throw new ArgumentNullException(nameof(updater));
             }
 
-            return Dispatcher.Invoke(() =>
+            if (Dispatcher.CheckAccess())
             {
-                var entry = _entries.FirstOrDefault(e => ReferenceEquals(e.Client, client));
-                if (entry == null)
-                {
-                    entry = new ClientListEntry(client);
-                    _entries.Add(entry);
-                }
+                return AddOrUpdateInternal(client, updater);
+            }
 
-                updater(entry);
-                return entry;
-            });
+            return Dispatcher.Invoke(() => AddOrUpdateInternal(client, updater));
+        }
+
+        private ClientListEntry AddOrUpdateInternal(Client client, Action<ClientListEntry> updater)
+        {
+            if (!_entryLookup.TryGetValue(client, out var entry))
+            {
+                entry = new ClientListEntry(client);
+                _entries.Add(entry);
+                _entryLookup[client] = entry;
+            }
+
+            updater(entry);
+            return entry;
         }
 
         public void Remove(Client client)
@@ -104,19 +122,41 @@ namespace Pulsar.Server.Controls.Wpf
                 return;
             }
 
-            Dispatcher.Invoke(() =>
+            void RemoveInternal()
             {
-                var target = _entries.FirstOrDefault(e => ReferenceEquals(e.Client, client));
-                if (target != null)
+                if (_entryLookup.TryGetValue(client, out var target))
                 {
                     _entries.Remove(target);
+                    _entryLookup.Remove(client);
                 }
-            });
+            }
+
+            if (Dispatcher.CheckAccess())
+            {
+                RemoveInternal();
+            }
+            else
+            {
+                Dispatcher.Invoke(RemoveInternal);
+            }
         }
 
         public void Clear()
         {
-            Dispatcher.Invoke(() => _entries.Clear());
+            void ClearInternal()
+            {
+                _entries.Clear();
+                _entryLookup.Clear();
+            }
+
+            if (Dispatcher.CheckAccess())
+            {
+                ClearInternal();
+            }
+            else
+            {
+                Dispatcher.Invoke(ClearInternal);
+            }
         }
 
         public void ApplyFilter(Predicate<ClientListEntry>? filter)
