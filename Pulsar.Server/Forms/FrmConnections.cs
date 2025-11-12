@@ -84,6 +84,7 @@ namespace Pulsar.Server.Forms
             if (!connected)
                 this.Invoke((MethodInvoker)this.Close);
         }
+        private bool _initialLoad = true;
 
         private void TcpConnectionsChanged(object sender, TcpConnection[] connections)
         {
@@ -95,7 +96,6 @@ namespace Pulsar.Server.Forms
 
             lstConnections.BeginUpdate();
 
-            // Maintain a map for quick lookups
             var existing = lstConnections.Items.Cast<ListViewItem>()
                 .ToDictionary(x => GetKey(x), x => x);
 
@@ -105,7 +105,6 @@ namespace Pulsar.Server.Forms
             {
                 string key = GetKey(con);
                 seen.Add(key);
-
                 string state = con.State.ToString();
 
                 if (!_groups.ContainsKey(state))
@@ -117,30 +116,43 @@ namespace Pulsar.Server.Forms
 
                 if (existing.TryGetValue(key, out var item))
                 {
-                    // Update existing
+                    // Update existing item state
                     item.SubItems[5].Text = state;
                 }
                 else
                 {
-                    // Add new item
+                    // New connection
                     var lvi = new ListViewItem(new[]
                     {
-                        con.ProcessName,
-                        con.LocalAddress,
-                        con.LocalPort.ToString(),
-                        con.RemoteAddress,
-                        con.RemotePort.ToString(),
-                        state
-                    });
+                con.ProcessName,
+                con.LocalAddress,
+                con.LocalPort.ToString(),
+                con.RemoteAddress,
+                con.RemotePort.ToString(),
+                state
+            });
 
-                    // Highlight client’s own connection
+                    // ✅ Keep client’s own connection green
                     if (!string.IsNullOrEmpty(_clientAddress) &&
                         string.Equals(con.LocalAddress, _clientAddress, StringComparison.OrdinalIgnoreCase) &&
                         con.LocalPort == _clientPort)
                     {
-                        lvi.BackColor = Color.MediumSeaGreen;
-                        lvi.ForeColor = Color.White;
+                        lvi.ForeColor = Color.MediumSeaGreen;
                         lvi.Font = new Font(lstConnections.Font, FontStyle.Bold);
+                    }
+                    else if (!_initialLoad)
+                    {
+                        // 🔵 Flash new connections for 2 seconds (was 800ms)
+                        lvi.ForeColor = Color.LightSkyBlue;
+                        var timer = new Timer { Interval = 2000, Tag = lvi };
+                        timer.Tick += (s, e2) =>
+                        {
+                            timer.Stop();
+                            timer.Dispose();
+                            if (lstConnections.Items.Contains(lvi))
+                                lvi.ForeColor = lstConnections.ForeColor;
+                        };
+                        timer.Start();
                     }
 
                     lvi.Group = _groups[state];
@@ -148,14 +160,31 @@ namespace Pulsar.Server.Forms
                 }
             }
 
-            // Remove items that no longer exist
-            foreach (ListViewItem item in lstConnections.Items)
+            // 🔴 Flash red before removal
+            var toRemove = lstConnections.Items.Cast<ListViewItem>()
+                .Where(i => !seen.Contains(GetKey(i)))
+                .ToList();
+
+            foreach (var item in toRemove)
             {
-                if (!seen.Contains(GetKey(item)))
-                    lstConnections.Items.Remove(item);
+                if (item.ForeColor == Color.MediumSeaGreen)
+                    continue;
+
+                item.ForeColor = Color.IndianRed;
+
+                var timer = new Timer { Interval = 800, Tag = item };
+                timer.Tick += (s, e2) =>
+                {
+                    timer.Stop();
+                    timer.Dispose();
+                    if (lstConnections.Items.Contains(item))
+                        lstConnections.Items.Remove(item);
+                };
+                timer.Start();
             }
 
             lstConnections.EndUpdate();
+            _initialLoad = false;
         }
 
         private static string GetKey(TcpConnection con) =>
