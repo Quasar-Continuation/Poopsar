@@ -180,5 +180,25 @@ namespace Pulsar.Server.Forms
             lvi = new ListViewItem(new[] { "", "Getting more information..." });
             lstSystem.Items.Add(lvi);
         }
+        // ----------------------
+        // Fix ListView redraw glitch
+        // ----------------------
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+
+            try
+            {
+                if (lstSystem.Items.Count > 0)
+                {
+                    int topIndex = lstSystem.TopItem?.Index ?? 0;
+                    lstSystem.BeginUpdate();
+                    lstSystem.TopItem = lstSystem.Items[topIndex];
+                    lstSystem.EndUpdate();
+                }
+            }
+            catch { }
+        }
+
     }
 }

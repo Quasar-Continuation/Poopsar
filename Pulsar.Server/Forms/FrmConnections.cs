@@ -359,6 +359,25 @@ namespace Pulsar.Server.Forms
 
             return base.ProcessCmdKey(ref msg, keyData);
         }
+        // ----------------------
+        // Fix ListView redraw glitch
+        // ----------------------
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+
+            try
+            {
+                if (lstConnections.Items.Count > 0)
+                {
+                    int topIndex = lstConnections.TopItem?.Index ?? 0;
+                    lstConnections.BeginUpdate();
+                    lstConnections.TopItem = lstConnections.Items[topIndex];
+                    lstConnections.EndUpdate();
+                }
+            }
+            catch { }
+        }
 
         private void searchToolStripMenuItem_Click(object sender, EventArgs e)
         {
