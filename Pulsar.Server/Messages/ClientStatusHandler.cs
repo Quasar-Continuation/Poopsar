@@ -199,32 +199,39 @@ namespace Pulsar.Server.Messages
                 return;
             }
 
-            try
+            if (client.ClipboardSyncEnabled)
             {
-                Debug.WriteLine($"Server: Setting server clipboard to: {message.ClipboardText.Substring(0, Math.Min(20, message.ClipboardText.Length))}...");
-                
-                ClipboardMonitor.NotifyReceivedFromClient(message.ClipboardText);
-                
-                Thread clipboardThread = new Thread(() =>
+                try
                 {
-                    try
+                    Debug.WriteLine($"Server: Mirroring clipboard from client ({client.EndPoint}): {message.ClipboardText.Substring(0, Math.Min(20, message.ClipboardText.Length))}...");
+
+                    ClipboardMonitor.NotifyReceivedFromClient(message.ClipboardText);
+
+                    Thread clipboardThread = new Thread(() =>
                     {
-                        Thread.CurrentThread.SetApartmentState(ApartmentState.STA);
-                        Clipboard.SetText(message.ClipboardText);
-                        Debug.WriteLine("Server: Successfully set server clipboard");
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Server: Error setting clipboard: {ex.Message}");
-                    }
-                });
-                clipboardThread.SetApartmentState(ApartmentState.STA);
-                clipboardThread.Start();
-                clipboardThread.Join(1000);
+                        try
+                        {
+                            Thread.CurrentThread.SetApartmentState(ApartmentState.STA);
+                            Clipboard.SetText(message.ClipboardText);
+                            Debug.WriteLine("Server: Successfully mirrored clipboard from client");
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Server: Error setting clipboard: {ex.Message}");
+                        }
+                    });
+                    clipboardThread.SetApartmentState(ApartmentState.STA);
+                    clipboardThread.Start();
+                    clipboardThread.Join(1000);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Server: Error in clipboard thread creation: {ex.Message}");
+                }
             }
-            catch (Exception ex)
+            else
             {
-                Debug.WriteLine($"Server: Error in clipboard thread creation: {ex.Message}");
+                Debug.WriteLine("Server: Clipboard sync disabled for this client; skipping host clipboard update.");
             }
 
             Task.Run(() =>

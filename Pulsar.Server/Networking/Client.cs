@@ -192,6 +192,11 @@ namespace Pulsar.Server.Networking
         /// </summary>
         public UserState Value { get; set; }
 
+    /// <summary>
+    /// Indicates whether this client currently allows clipboard mirroring to the server host.
+    /// </summary>
+    public bool ClipboardSyncEnabled { get; set; }
+
         /// <summary>
         /// The Endpoint which the client is connected to.
         /// </summary>

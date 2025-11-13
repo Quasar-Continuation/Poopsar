@@ -299,15 +299,39 @@ namespace Pulsar.Server.Forms
 
             _sizeFrames++;
 
-            // Update remote resolution from the frame
-            if (bmp != null)
+            double elapsedSeconds = _stopwatch.Elapsed.TotalSeconds;
+
+            if (_hVNCHandler.CurrentFps > 0)
             {
-                _remoteDesktopWidth = bmp.Width;
-                _remoteDesktopHeight = bmp.Height;
+                _lastFps = _hVNCHandler.CurrentFps;
             }
 
-            // ... rest of your existing code
+            if (elapsedSeconds >= 1.0)
+            {
+                _stopwatch.Restart();
+            }
+
+            if (_sizeFrames >= 60)
+            {
+                _sizeFrames = 0;
+                long last = _hVNCHandler.LastFrameSizeBytes;
+                double avg = _hVNCHandler.AverageFrameSizeBytes;
+                if (last > 0 || avg > 0)
+                {
+                    double lastKB = last / 1024.0;
+                    double avgKB = avg / 1024.0;
+                    this.Invoke((MethodInvoker)delegate
+                    {
+                        sizeLabelCounter.Text = $"{avgKB:0.0}  KB";
+                    });
+                }
+            }
+
             picDesktop.UpdateImage(bmp, false);
+            
+            // Update remote desktop dimensions for proper mouse coordinate scaling
+            _remoteDesktopWidth = picDesktop.ScreenWidth;
+            _remoteDesktopHeight = picDesktop.ScreenHeight;
         }
 
         private void FrmHVNC_Load(object sender, EventArgs e)
@@ -350,6 +374,7 @@ namespace Pulsar.Server.Forms
         private void FrmHVNC_FormClosing(object sender, FormClosingEventArgs e)
         {
             // all cleanup logic goes here
+            SetClientClipboardSync(false);
             UnsubscribeEvents();
             if (_hVNCHandler.IsStarted) StopStream();
             _hVNCHandler.DisplaysChanged -= DisplaysChanged;
@@ -481,6 +506,8 @@ namespace Pulsar.Server.Forms
             _clipboardMonitor.IsEnabled = _enableBidirectionalClipboard;
             Debug.WriteLine(_clipboardMonitor.IsEnabled ? "HVNC: Server->Client clipboard sync enabled." : "HVNC: Server->Client clipboard sync disabled.");
 
+            SetClientClipboardSync(_enableBidirectionalClipboard);
+
 
             if (_enableBidirectionalClipboard)
             {
@@ -510,6 +537,26 @@ namespace Pulsar.Server.Forms
             }
 
             this.ActiveControl = picDesktop;
+        }
+
+        private void SetClientClipboardSync(bool enabled)
+        {
+            try
+            {
+                if (_connectClient != null)
+                {
+                    _connectClient.ClipboardSyncEnabled = enabled;
+                }
+
+                _connectClient?.Send(new SetClipboardMonitoringEnabled { Enabled = enabled });
+                Debug.WriteLine(enabled
+                    ? "HVNC: Requested client clipboard sync enable."
+                    : "HVNC: Requested client clipboard sync disable.");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"HVNC: Failed to update client clipboard sync state: {ex.Message}");
+            }
         }
 
         #endregion
@@ -656,8 +703,29 @@ namespace Pulsar.Server.Forms
 
         #region Input Event Handlers
 
-        private int ScaleX(int x) => _remoteDesktopWidth == 0 ? x : x * _remoteDesktopWidth / picDesktop.Width;
-        private int ScaleY(int y) => _remoteDesktopHeight == 0 ? y : y * _remoteDesktopHeight / picDesktop.Height;
+        /// <summary>
+        /// Scales the X coordinate from the control space to the remote desktop space.
+        /// Uses floating-point math for more accurate scaling, then rounds to nearest integer.
+        /// </summary>
+        private int ScaleX(int x)
+        {
+            if (_remoteDesktopWidth == 0 || picDesktop.Width == 0)
+                return x;
+            
+            return (int)Math.Round((double)x * _remoteDesktopWidth / picDesktop.Width);
+        }
+
+        /// <summary>
+        /// Scales the Y coordinate from the control space to the remote desktop space.
+        /// Uses floating-point math for more accurate scaling, then rounds to nearest integer.
+        /// </summary>
+        private int ScaleY(int y)
+        {
+            if (_remoteDesktopHeight == 0 || picDesktop.Height == 0)
+                return y;
+            
+            return (int)Math.Round((double)y * _remoteDesktopHeight / picDesktop.Height);
+        }
 
         private void PicDesktop_MouseDown(object sender, MouseEventArgs e)
         {

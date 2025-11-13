@@ -409,6 +409,7 @@ namespace Pulsar.Server.Forms
         private void FrmRemoteDesktop_FormClosing(object sender, FormClosingEventArgs e)
         {
             // all cleanup logic goes here
+            SetClientClipboardSync(enabled: false);
             UnsubscribeEvents();
             if (_remoteDesktopHandler.IsStarted) StopStream();
             UnregisterMessageHandler();
@@ -846,8 +847,7 @@ namespace Pulsar.Server.Forms
             _clipboardMonitor.IsEnabled = _enableBidirectionalClipboard;
             Debug.WriteLine(_clipboardMonitor.IsEnabled ? "Server->Client clipboard sync enabled." : "Server->Client clipboard sync disabled.");
 
-            // Note: We do NOT control client clipboard monitoring here.
-            // Client clipboard monitoring is always active for crypto clipper and general monitoring.
+            SetClientClipboardSync(_enableBidirectionalClipboard);
 
             if (_enableBidirectionalClipboard)
             {
@@ -874,6 +874,26 @@ namespace Pulsar.Server.Forms
                 });
                 clipboardThread.SetApartmentState(ApartmentState.STA);
                 clipboardThread.Start();
+            }
+        }
+
+        private void SetClientClipboardSync(bool enabled)
+        {
+            try
+            {
+                if (_connectClient != null)
+                {
+                    _connectClient.ClipboardSyncEnabled = enabled;
+                }
+
+                _connectClient?.Send(new SetClipboardMonitoringEnabled { Enabled = enabled });
+                Debug.WriteLine(enabled
+                    ? "Requested client clipboard sync enable."
+                    : "Requested client clipboard sync disable.");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to update client clipboard sync state: {ex.Message}");
             }
         }
     }
