@@ -145,9 +145,17 @@ namespace Pulsar.Server.Forms
                 throw;
             }
 
+            // Ensure correct docking so picDesktop never draws behind panels:
+            // panelTop and panelDrawingTools dock top, picDesktop fills remaining area.
+            panelTop.Dock = DockStyle.Top;
+            panelDrawingTools.Dock = DockStyle.Top;
+            picDesktop.Dock = DockStyle.Fill;
+
+            // Apply dark mode and screen capture protection
             DarkModeManager.ApplyDarkMode(this);
             ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
 
+            // Configure color picker and drawing buttons
             colorPicker.BackColor = _drawingColor;
             colorPicker.FlatStyle = FlatStyle.Flat;
             colorPicker.FlatAppearance.BorderColor = Color.White;
@@ -164,6 +172,9 @@ namespace Pulsar.Server.Forms
 
             // Update tooltip text for bidirectional clipboard
             toolTipButtons.SetToolTip(this.btnBiDirectionalClipboard, "Enable bidirectional clipboard sync");
+
+            // Hook resize to keep layout correct
+            this.Resize += FrmRemoteDesktop_Resize;
         }
 
         /// <summary>
@@ -341,6 +352,10 @@ namespace Pulsar.Server.Forms
         {
             panelTop.Visible = visible;
             btnShow.Visible = !visible;
+
+            // Ensure panels are on top and layout is recalculated so picDesktop fills only the remaining area
+            UpdateDesktopLayout();
+
             this.ActiveControl = picDesktop;
         }
 
@@ -393,6 +408,9 @@ namespace Pulsar.Server.Forms
 
             ConfigureDrawingButtons();
 
+            // Important: ensure initial layout is correct so picDesktop isn't behind panels
+            UpdateDesktopLayout();
+
             _remoteDesktopHandler.RefreshDisplays();
         }
 
@@ -423,9 +441,45 @@ namespace Pulsar.Server.Forms
             if (WindowState == FormWindowState.Minimized)
                 return;
 
+            // Update the layout first so picDesktop.ClientSize is correct
+            UpdateDesktopLayout();
+
+            // then update remote handler
             _remoteDesktopHandler.LocalResolution = picDesktop.ClientSize;
+
+            // reposition the show button
             btnShow.Left = (this.Width - btnShow.Width) / 2;
             btnShow.Top = this.Height - btnShow.Height - 40;
+        }
+
+        /// <summary>
+        /// Centralized layout update that ensures picDesktop fills only the visible client area
+        /// and the top panels are on top (not overlapped by picDesktop).
+        /// Call this after showing/hiding panels or on resize.
+        /// </summary>
+        private void UpdateDesktopLayout()
+        {
+            // Reset docking first to avoid layout conflicts
+            picDesktop.Dock = DockStyle.None;
+
+            // Start from top of the form
+            int yOffset = 0;
+
+            // Add offset for visible panels
+            if (panelTop.Visible)
+                yOffset += panelTop.Height;
+
+            if (panelDrawingTools.Visible)
+                yOffset += panelDrawingTools.Height;
+
+            // Set position and size so picDesktop starts below panels
+            picDesktop.Location = new Point(0, yOffset);
+            picDesktop.Size = new Size(ClientSize.Width, ClientSize.Height - yOffset);
+
+            // Redock to fill the space after manual sizing (forces proper layout)
+            picDesktop.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+
+            picDesktop.Invalidate();
         }
 
         private void btnStart_Click(object sender, EventArgs e)
@@ -739,6 +793,10 @@ namespace Pulsar.Server.Forms
                 Properties.Resources.arrow_up;
             toolTipButtons.SetToolTip(btnShowDrawingTools,
                 visible ? "Hide drawing tools" : "Show drawing tools");
+
+            // Recalculate layout so picDesktop fills remaining area and panels stay on top
+            UpdateDesktopLayout();
+
             this.ActiveControl = picDesktop;
         }
 
@@ -895,6 +953,16 @@ namespace Pulsar.Server.Forms
             {
                 Debug.WriteLine($"Failed to update client clipboard sync state: {ex.Message}");
             }
+        }
+
+        private void panelTop_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void panelDrawingTools_Paint(object sender, PaintEventArgs e)
+        {
+
         }
     }
 }
