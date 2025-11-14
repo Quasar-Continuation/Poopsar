@@ -484,6 +484,8 @@ namespace Pulsar.Server.Forms
 
         private void btnStart_Click(object sender, EventArgs e)
         {
+            picDesktop.Enabled = true;
+
             if (cbMonitors.Items.Count == 0)
             {
                 MessageBox.Show("No remote display detected.\nPlease wait till the client sends a list with available displays.",
@@ -497,6 +499,7 @@ namespace Pulsar.Server.Forms
 
         private void btnStop_Click(object sender, EventArgs e)
         {
+            picDesktop.Enabled = false;
             UnsubscribeEvents();
             StopStream();
         }
