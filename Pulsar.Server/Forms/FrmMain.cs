@@ -23,6 +23,7 @@ using Pulsar.Server.Statistics;
 using Pulsar.Server.Utilities;
 using Pulsar.Server.Plugins;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.ComponentModel;
@@ -88,6 +89,8 @@ namespace Pulsar.Server.Forms
         private readonly Dictionary<Client, ClientListEntry> _clientEntryMap = new();
         private readonly Dictionary<Client, ListViewItem> _clientListViewItems = new();
         private readonly Dictionary<Client, Button> _clientStarButtons = new();
+        private readonly Dictionary<string, ListViewGroup> _countryGroups = new(StringComparer.OrdinalIgnoreCase);
+        private readonly IComparer _clientListViewComparer = new ClientListViewComparer();
         private readonly Dictionary<int, ImageSource> _flagImageCache = new();
         private readonly System.Windows.Forms.Timer _clientSortTimer;
         private bool _clientSortPending;
@@ -106,6 +109,15 @@ namespace Pulsar.Server.Forms
         private Dictionary<string, AutoTaskBehavior> _autoTaskBehaviorsByTitle = new(StringComparer.OrdinalIgnoreCase);
         private AutoTaskExecutionContext _currentAutoTaskContext;
         private readonly HashSet<string> _executedTaskClientCombinations = new HashSet<string>();
+        private static readonly HashSet<string> _connectionTerminatingAutoTaskIds = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "reconnectToolStripMenuItem",
+            "disconnectToolStripMenuItem",
+            "uninstallToolStripMenuItem",
+            "shutdownToolStripMenuItem",
+            "restartToolStripMenuItem",
+            "standbyToolStripMenuItem"
+        };
 
         // Plugin System Fields
         private PluginManager _pluginManager;
@@ -314,6 +326,7 @@ namespace Pulsar.Server.Forms
         public void RefreshClientGroups()
         {
             wpfClientsHost?.SetGroupByCountry(Settings.ShowCountryGroups);
+            ResetCountryGroups();
             SortClientsByFavoriteStatus(forceImmediate: true);
         }
 
@@ -809,29 +822,26 @@ namespace Pulsar.Server.Forms
             if (_countUpdateRunning) return;
             _countUpdateRunning = true;
 
-            ThreadPool.QueueUserWorkItem(_ =>
+            try
             {
-                try
+                this.BeginInvoke((MethodInvoker)delegate
                 {
-                    var count = ListenServer?.ConnectedClients?.Length ?? 0;
-                    this.BeginInvoke((MethodInvoker)delegate
+                    try
                     {
-                        try
-                        {
-                            var enabledPlugins = _pluginManager?.Plugins?.Count ?? 0;
-                            connectedToolStripStatusLabel.Text = $"Connected: {count} | Active plugins: {enabledPlugins}";
-                        }
-                        finally
-                        {
-                            _countUpdateRunning = false;
-                        }
-                    });
-                }
-                catch (Exception)
-                {
-                    _countUpdateRunning = false;
-                }
-            });
+                        var count = ListenServer?.ConnectedClients?.Length ?? 0;
+                        var enabledPlugins = _pluginManager?.Plugins?.Count ?? 0;
+                        connectedToolStripStatusLabel.Text = $"Connected: {count} | Active plugins: {enabledPlugins}";
+                    }
+                    finally
+                    {
+                        _countUpdateRunning = false;
+                    }
+                });
+            }
+            catch (Exception)
+            {
+                _countUpdateRunning = false;
+            }
         }
 
         private void ProcessClientConnectionsLoop(CancellationToken token)
@@ -1419,6 +1429,51 @@ namespace Pulsar.Server.Forms
             }
         }
 
+        private sealed class ClientListViewComparer : IComparer
+        {
+            public int Compare(object x, object y)
+            {
+                if (ReferenceEquals(x, y))
+                {
+                    return 0;
+                }
+
+                if (x is not ListViewItem left || y is not ListViewItem right)
+                {
+                    return 0;
+                }
+
+                var leftClient = left.Tag as Client;
+                var rightClient = right.Tag as Client;
+
+                bool leftFavorite = leftClient != null && Favorites.IsFavorite(leftClient.Value?.UserAtPc ?? string.Empty);
+                bool rightFavorite = rightClient != null && Favorites.IsFavorite(rightClient.Value?.UserAtPc ?? string.Empty);
+
+                if (leftFavorite != rightFavorite)
+                {
+                    return rightFavorite.CompareTo(leftFavorite);
+                }
+
+                var leftCountry = leftClient?.Value?.Country ?? "Unknown";
+                var rightCountry = rightClient?.Value?.Country ?? "Unknown";
+                int countryCompare = string.Compare(leftCountry, rightCountry, StringComparison.OrdinalIgnoreCase);
+                if (countryCompare != 0)
+                {
+                    return countryCompare;
+                }
+
+                var leftUser = leftClient?.Value?.UserAtPc ?? string.Empty;
+                var rightUser = rightClient?.Value?.UserAtPc ?? string.Empty;
+                int userCompare = string.Compare(leftUser, rightUser, StringComparison.OrdinalIgnoreCase);
+                if (userCompare != 0)
+                {
+                    return userCompare;
+                }
+
+                return string.Compare(left.Text, right.Text, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
         private void UpdateStarButtonPosition(Control starControl, ListViewItem item)
         {
             if (item == null || starControl == null) return;
@@ -1490,95 +1545,96 @@ namespace Pulsar.Server.Forms
                 return;
             }
 
-            if (lstClients.Visible)
+            if (!lstClients.Visible)
             {
-                lstClients.BeginUpdate();
-                try
+                wpfClientsHost?.RefreshSort();
+                ApplyWpfSearchFilter();
+                return;
+            }
+
+            lstClients.BeginUpdate();
+            try
+            {
+                lstClients.ListViewItemSorter = _clientListViewComparer;
+                lstClients.Sort();
+                lstClients.ListViewItemSorter = null;
+
+                if (!Settings.ShowCountryGroups && lstClients.Groups.Count > 0)
                 {
-                    _visibleClients.Clear();
+                    ResetCountryGroups();
+                }
 
-                    ClearAllStarButtons();
+                _visibleClients.Clear();
 
-                    var allItems = new List<ListViewItem>();
-
-                    allItems.AddRange(lstClients.Items.Cast<ListViewItem>().Where(item => item.Tag is Client));
-
-                    allItems.AddRange(_allClientItems.Values);
-
-                    var sortedItems = allItems
-                        .Where(item => item.Tag is Client)
-                        .OrderBy(item => (item.Tag as Client)?.Value?.Country ?? "Unknown")
-                        .ThenByDescending(item => Favorites.IsFavorite((item.Tag as Client)?.Value?.UserAtPc ?? string.Empty))
-                        .ToList();
-
-                    lstClients.Items.Clear();
-                    lstClients.Groups.Clear();
-                    _allClientItems.Clear();
-
-                    foreach (var item in sortedItems)
+                foreach (ListViewItem item in lstClients.Items)
+                {
+                    if (item?.Tag is not Client client)
                     {
-                        if (item.Tag is Client client)
-                        {
-                            _clientListViewItems[client] = item;
-
-                            if (Settings.ShowCountryGroups)
-                            {
-                                string country = client.Value?.Country ?? "Unknown";
-                                string countryWithCode = client.Value?.CountryWithCode ?? "Unknown";
-
-                                var group = GetGroupFromCountry(country, countryWithCode);
-                                item.Group = group;
-                            }
-                            else
-                            {
-                                item.Group = null;
-                            }
-
-                            if (ShouldShowClientInSearch(client, item))
-                            {
-                                lstClients.Items.Add(item);
-                                _visibleClients.Add(client);
-                                AddStarButton(item, client);
-                            }
-                            else
-                            {
-                                _allClientItems[client] = item;
-                                _visibleClients.Remove(client);
-                            }
-
-                            SyncWpfEntryFromListViewItem(item);
-                        }
+                        continue;
                     }
+
+                    _visibleClients.Add(client);
+                    _clientListViewItems[client] = item;
+
+                    if (Settings.ShowCountryGroups)
+                    {
+                        var group = GetGroupFromCountry(client.Value?.Country ?? "Unknown",
+                            client.Value?.CountryWithCode ?? "Unknown");
+                        item.Group = group;
+                    }
+                    else if (item.Group != null)
+                    {
+                        item.Group = null;
+                    }
+
+                    AddStarButton(item, client);
                 }
-                finally
-                {
-                    lstClients.EndUpdate();
-                }
+            }
+            finally
+            {
+                lstClients.EndUpdate();
             }
 
             wpfClientsHost?.RefreshSort();
             ApplyWpfSearchFilter();
+            RefreshStarButtons();
         }
 
         private ListViewGroup GetGroupFromCountry(string country, string countryWithCode)
         {
-            ListViewGroup lvg = null;
-            foreach (var group in lstClients.Groups.Cast<ListViewGroup>().Where(group => group.Name == country))
+            if (!Settings.ShowCountryGroups || lstClients == null || lstClients.IsDisposed)
             {
-                lvg = group;
+                return null;
             }
 
-            if (lvg == null)
+            if (!_countryGroups.TryGetValue(country, out var group) || group == null || !lstClients.Groups.Contains(group))
             {
-                lvg = new ListViewGroup
+                group = new ListViewGroup
                 {
                     Name = country,
                     Header = countryWithCode
                 };
-                lstClients.Groups.Add(lvg);
+
+                _countryGroups[country] = group;
+                lstClients.Groups.Add(group);
+            }
+            else
+            {
+                group.Header = countryWithCode;
             }
 
-            return lvg;
+            return group;
+        }
+
+        private void ResetCountryGroups()
+        {
+            if (lstClients == null || lstClients.IsDisposed)
+            {
+                return;
+            }
+
+            lstClients.Groups.Clear();
+            _countryGroups.Clear();
         }
 
         private void WpfClientsHost_SelectionChanged(object sender, EventArgs e)
@@ -4178,6 +4234,32 @@ namespace Pulsar.Server.Forms
                 {
                     task.Title = behavior.DisplayName;
                 }
+            }
+
+            EnforceConnectionTerminatingAutoTaskRules(task);
+        }
+
+        private void EnforceConnectionTerminatingAutoTaskRules(AutoTask task)
+        {
+            if (task == null)
+            {
+                return;
+            }
+
+            if (task.ExecutionMode != AutoTaskExecutionMode.EveryConnection)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(task.Identifier))
+            {
+                return;
+            }
+
+            if (_connectionTerminatingAutoTaskIds.Contains(task.Identifier))
+            {
+                task.ExecutionMode = AutoTaskExecutionMode.OncePerClient;
+                EventLog($"Auto task '{task.Title}' forces clients to disconnect or reconnect. Execution mode auto-set to 'Once Per Client' to prevent reconnect loops.", "warning");
             }
         }
 
