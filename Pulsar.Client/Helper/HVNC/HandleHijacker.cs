@@ -536,6 +536,26 @@ namespace Pulsar.Client.Helper.HVNC
 
                 Directory.CreateDirectory(destDir);
 
+                var directories = new List<string>();
+                foreach (string directory in Directory.EnumerateDirectories(sourceDir, "*", SearchOption.AllDirectories))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    directories.Add(directory);
+                }
+
+                foreach (string directory in directories)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    string relativeDir = directory.Substring(sourceDir.Length)
+                        .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    string targetDir = string.IsNullOrEmpty(relativeDir)
+                        ? destDir
+                        : Path.Combine(destDir, relativeDir);
+
+                    Directory.CreateDirectory(targetDir);
+                }
+
                 var files = new List<string>();
 
                 foreach (string file in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
@@ -553,10 +573,15 @@ namespace Pulsar.Client.Helper.HVNC
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    string relativePath = file.Substring(sourceDir.Length).TrimStart(Path.DirectorySeparatorChar);
+                    string relativePath = file.Substring(sourceDir.Length)
+                        .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
                     string destFile = Path.Combine(destDir, relativePath);
 
-                    Directory.CreateDirectory(Path.GetDirectoryName(destFile));
+                    string destFileDirectory = Path.GetDirectoryName(destFile);
+                    if (!string.IsNullOrEmpty(destFileDirectory))
+                    {
+                        Directory.CreateDirectory(destFileDirectory);
+                    }
 
                     try
                     {

@@ -89,6 +89,8 @@ namespace Pulsar.Server.Forms
         private readonly Dictionary<Client, ListViewItem> _clientListViewItems = new();
         private readonly Dictionary<Client, Button> _clientStarButtons = new();
         private readonly Dictionary<int, ImageSource> _flagImageCache = new();
+        private readonly System.Windows.Forms.Timer _clientSortTimer;
+        private bool _clientSortPending;
         private bool _syncingSelection;
         private IReadOnlyList<OfflineClientRecord> _cachedOfflineClients = Array.Empty<OfflineClientRecord>();
         private PreviewHandler _previewImageHandler;
@@ -123,6 +125,8 @@ namespace Pulsar.Server.Forms
             OfflineClientRepository.Initialize();
             OfflineClientRepository.ResetOnlineState();
             InitializeComponent();
+            _clientSortTimer = new System.Windows.Forms.Timer { Interval = 150 };
+            _clientSortTimer.Tick += ClientSortTimer_Tick;
             Text = $"Pulsar Premium - {ServerVersion.Display}";
             statsElementHost?.ShowLoading();
             heatMapElementHost?.ShowLoading();
@@ -310,7 +314,7 @@ namespace Pulsar.Server.Forms
         public void RefreshClientGroups()
         {
             wpfClientsHost?.SetGroupByCountry(Settings.ShowCountryGroups);
-            SortClientsByFavoriteStatus();
+            SortClientsByFavoriteStatus(forceImmediate: true);
         }
 
         public void RefreshClientTheme()
@@ -1442,69 +1446,116 @@ namespace Pulsar.Server.Forms
                         Properties.Resources.star_filled : Properties.Resources.star_empty;
                 }
 
-                SortClientsByFavoriteStatus();
+                SortClientsByFavoriteStatus(forceImmediate: true);
             }
         }
 
-        private void SortClientsByFavoriteStatus()
+        private void SortClientsByFavoriteStatus(bool forceImmediate = false)
         {
-            lstClients.BeginUpdate();
-            _visibleClients.Clear();
-
-            ClearAllStarButtons();
-
-            var allItems = new List<ListViewItem>();
-
-            allItems.AddRange(lstClients.Items.Cast<ListViewItem>().Where(item => item.Tag is Client));
-
-            allItems.AddRange(_allClientItems.Values);
-
-            var sortedItems = allItems
-                .Where(item => item.Tag is Client)
-                .OrderBy(item => (item.Tag as Client)?.Value?.Country ?? "Unknown")
-                .ThenByDescending(item => Favorites.IsFavorite((item.Tag as Client)?.Value?.UserAtPc ?? ""))
-                .ToList();
-
-            lstClients.Items.Clear();
-            lstClients.Groups.Clear();
-            _allClientItems.Clear();
-
-            foreach (var item in sortedItems)
+            if (lstClients == null || lstClients.IsDisposed)
             {
-                if (item.Tag is Client client)
+                return;
+            }
+
+            if (forceImmediate)
+            {
+                _clientSortTimer.Stop();
+                _clientSortPending = false;
+                PerformClientListSort();
+                return;
+            }
+
+            _clientSortPending = true;
+            _clientSortTimer.Stop();
+            _clientSortTimer.Start();
+        }
+
+        private void ClientSortTimer_Tick(object sender, EventArgs e)
+        {
+            _clientSortTimer.Stop();
+
+            if (!_clientSortPending)
+            {
+                return;
+            }
+
+            _clientSortPending = false;
+            PerformClientListSort();
+        }
+
+        private void PerformClientListSort()
+        {
+            if (lstClients == null || lstClients.IsDisposed)
+            {
+                return;
+            }
+
+            if (lstClients.Visible)
+            {
+                lstClients.BeginUpdate();
+                try
                 {
-                    _clientListViewItems[client] = item;
+                    _visibleClients.Clear();
 
-                    if (Settings.ShowCountryGroups)
-                    {
-                        string country = client.Value?.Country ?? "Unknown";
-                        string countryWithCode = client.Value?.CountryWithCode ?? "Unknown";
+                    ClearAllStarButtons();
 
-                        var group = GetGroupFromCountry(country, countryWithCode);
-                        item.Group = group;
-                    }
-                    else
-                    {
-                        item.Group = null;
-                    }
+                    var allItems = new List<ListViewItem>();
 
-                    if (ShouldShowClientInSearch(client, item))
-                    {
-                        lstClients.Items.Add(item);
-                        _visibleClients.Add(client);
-                        AddStarButton(item, client);
-                    }
-                    else
-                    {
-                        _allClientItems[client] = item;
-                        _visibleClients.Remove(client);
-                    }
+                    allItems.AddRange(lstClients.Items.Cast<ListViewItem>().Where(item => item.Tag is Client));
 
-                    SyncWpfEntryFromListViewItem(item);
+                    allItems.AddRange(_allClientItems.Values);
+
+                    var sortedItems = allItems
+                        .Where(item => item.Tag is Client)
+                        .OrderBy(item => (item.Tag as Client)?.Value?.Country ?? "Unknown")
+                        .ThenByDescending(item => Favorites.IsFavorite((item.Tag as Client)?.Value?.UserAtPc ?? string.Empty))
+                        .ToList();
+
+                    lstClients.Items.Clear();
+                    lstClients.Groups.Clear();
+                    _allClientItems.Clear();
+
+                    foreach (var item in sortedItems)
+                    {
+                        if (item.Tag is Client client)
+                        {
+                            _clientListViewItems[client] = item;
+
+                            if (Settings.ShowCountryGroups)
+                            {
+                                string country = client.Value?.Country ?? "Unknown";
+                                string countryWithCode = client.Value?.CountryWithCode ?? "Unknown";
+
+                                var group = GetGroupFromCountry(country, countryWithCode);
+                                item.Group = group;
+                            }
+                            else
+                            {
+                                item.Group = null;
+                            }
+
+                            if (ShouldShowClientInSearch(client, item))
+                            {
+                                lstClients.Items.Add(item);
+                                _visibleClients.Add(client);
+                                AddStarButton(item, client);
+                            }
+                            else
+                            {
+                                _allClientItems[client] = item;
+                                _visibleClients.Remove(client);
+                            }
+
+                            SyncWpfEntryFromListViewItem(item);
+                        }
+                    }
+                }
+                finally
+                {
+                    lstClients.EndUpdate();
                 }
             }
 
-            lstClients.EndUpdate();
             wpfClientsHost?.RefreshSort();
             ApplyWpfSearchFilter();
         }
@@ -3858,7 +3909,7 @@ namespace Pulsar.Server.Forms
             if (MainTabControl.SelectedTab == tabPage1)
             {
                 RefreshStarButtons();
-                SortClientsByFavoriteStatus();
+                SortClientsByFavoriteStatus(forceImmediate: true);
             }
             else if (MainTabControl.SelectedTab == tabPage2)
             {
@@ -5012,7 +5063,7 @@ namespace Pulsar.Server.Forms
                 }
                 _allClientItems.Clear();
 
-                SortClientsByFavoriteStatus();
+                SortClientsByFavoriteStatus(forceImmediate: true);
             }
             finally
             {
