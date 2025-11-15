@@ -719,9 +719,16 @@ namespace DarkModeForms
             {
                 var lView = control as ListView;
 
-                // Medium-light gray background for visibility
-                lView.BackColor = Color.FromArgb(200, 200, 200); // light enough for dark blue headers
-                lView.ForeColor = Color.FromArgb(50, 50, 50);    // dark gray text instead of pure black
+                if (IsDarkMode)
+                {
+                    lView.BackColor = Color.FromArgb(20, 20, 20);  // Very dark gray for dark mode
+                    lView.ForeColor = Color.White;                 // White text for dark mode
+                }
+                else
+                {
+                    lView.BackColor = Color.FromArgb(240, 240, 240); // Much lighter gray - almost white
+                    lView.ForeColor = Color.FromArgb(30, 30, 30);    // Dark text for light mode
+                }
                 lView.BorderStyle = BorderStyle.None;
 
                 // Theme setting
@@ -732,15 +739,30 @@ namespace DarkModeForms
                 {
                     lView.OwnerDraw = true;
 
-                    // Column headers
+                    // Column headers - fixed for both modes
                     lView.DrawColumnHeader += (sender, e) =>
                     {
-                        using (SolidBrush backBrush = new SolidBrush(Color.FromArgb(220, 220, 220))) // slightly lighter
-                        using (SolidBrush foreBrush = new SolidBrush(Color.FromArgb(50, 50, 50)))    // dark gray text
-                        using (var sf = new StringFormat() { Alignment = StringAlignment.Center })
+                        if (IsDarkMode)
                         {
-                            e.Graphics.FillRectangle(backBrush, e.Bounds);
-                            e.Graphics.DrawString(e.Header.Text, lView.Font, foreBrush, e.Bounds, sf);
+                            // Dark mode headers
+                            using (SolidBrush backBrush = new SolidBrush(Color.FromArgb(40, 40, 40))) // Dark header
+                            using (SolidBrush foreBrush = new SolidBrush(Color.White))                // White text
+                            using (var sf = new StringFormat() { Alignment = StringAlignment.Center })
+                            {
+                                e.Graphics.FillRectangle(backBrush, e.Bounds);
+                                e.Graphics.DrawString(e.Header.Text, lView.Font, foreBrush, e.Bounds, sf);
+                            }
+                        }
+                        else
+                        {
+                            // Light mode headers
+                            using (SolidBrush backBrush = new SolidBrush(Color.FromArgb(240, 240, 240))) // Light header
+                            using (SolidBrush foreBrush = new SolidBrush(Color.FromArgb(30, 30, 30)))    // Dark text
+                            using (var sf = new StringFormat() { Alignment = StringAlignment.Center })
+                            {
+                                e.Graphics.FillRectangle(backBrush, e.Bounds);
+                                e.Graphics.DrawString(e.Header.Text, lView.Font, foreBrush, e.Bounds, sf);
+                            }
                         }
                     };
 

@@ -47,7 +47,6 @@
             lstLogs.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] { hLogs });
             lstLogs.Font = new System.Drawing.Font("Segoe UI", 8.25F);
             lstLogs.FullRowSelect = true;
-            lstLogs.GridLines = true;
             lstLogs.Location = new System.Drawing.Point(0, 31);
             lstLogs.Name = "lstLogs";
             lstLogs.Size = new System.Drawing.Size(153, 431);
