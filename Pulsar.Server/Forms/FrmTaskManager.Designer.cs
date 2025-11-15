@@ -47,8 +47,9 @@ namespace Pulsar.Server.Forms
             searchToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             dumpMemoryToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             startProcessToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            enableDisableAutoRefreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             refreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            enableDisableAutoRefreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             tableLayoutPanel = new System.Windows.Forms.TableLayoutPanel();
             processTreeHost = new ElementHost();
             statusStrip = new System.Windows.Forms.StatusStrip();
@@ -61,16 +62,16 @@ namespace Pulsar.Server.Forms
             // 
             // contextMenuStrip
             // 
-            contextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { killProcessToolStripMenuItem, suspendProcessToolStripMenuItem, minimizeMaximizeToolStripMenuItem, topmostWindowToolStripMenuItem, lineToolStripMenuItem, searchToolStripMenuItem, dumpMemoryToolStripMenuItem, startProcessToolStripMenuItem, enableDisableAutoRefreshToolStripMenuItem, refreshToolStripMenuItem });
+            contextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { killProcessToolStripMenuItem, suspendProcessToolStripMenuItem, minimizeMaximizeToolStripMenuItem, topmostWindowToolStripMenuItem, lineToolStripMenuItem, searchToolStripMenuItem, dumpMemoryToolStripMenuItem, startProcessToolStripMenuItem, toolStripSeparator1, refreshToolStripMenuItem, enableDisableAutoRefreshToolStripMenuItem });
             contextMenuStrip.Name = "ctxtMenu";
-            contextMenuStrip.Size = new System.Drawing.Size(169, 208);
+            contextMenuStrip.Size = new System.Drawing.Size(169, 214);
             // 
             // killProcessToolStripMenuItem
             // 
             killProcessToolStripMenuItem.Image = Properties.Resources.cancel;
             killProcessToolStripMenuItem.Name = "killProcessToolStripMenuItem";
             killProcessToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
-            killProcessToolStripMenuItem.Text = "Kill Process";
+            killProcessToolStripMenuItem.Text = "Kill Process (Del)";
             killProcessToolStripMenuItem.Click += killProcessToolStripMenuItem_Click;
             // 
             // suspendProcessToolStripMenuItem
@@ -110,7 +111,7 @@ namespace Pulsar.Server.Forms
             // 
             minimizedToolStripMenuItem.Image = Properties.Resources.minimizewindowicon;
             minimizedToolStripMenuItem.Name = "minimizedToolStripMenuItem";
-            minimizedToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            minimizedToolStripMenuItem.Size = new System.Drawing.Size(131, 22);
             minimizedToolStripMenuItem.Text = "Minimized";
             minimizedToolStripMenuItem.Click += minimizedToolStripMenuItem_Click;
             // 
@@ -118,7 +119,7 @@ namespace Pulsar.Server.Forms
             // 
             maximizedToolStripMenuItem.Image = Properties.Resources.maximizewindowicon;
             maximizedToolStripMenuItem.Name = "maximizedToolStripMenuItem";
-            maximizedToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            maximizedToolStripMenuItem.Size = new System.Drawing.Size(131, 22);
             maximizedToolStripMenuItem.Text = "Maximized";
             maximizedToolStripMenuItem.Click += maximizedToolStripMenuItem_Click;
             // 
@@ -175,13 +176,10 @@ namespace Pulsar.Server.Forms
             startProcessToolStripMenuItem.Text = "Start Process";
             startProcessToolStripMenuItem.Click += startProcessToolStripMenuItem_Click;
             // 
-            // enableDisableAutoRefreshToolStripMenuItem
+            // toolStripSeparator1
             // 
-            enableDisableAutoRefreshToolStripMenuItem.Image = Properties.Resources.autorefreshicon;
-            enableDisableAutoRefreshToolStripMenuItem.Name = "enableDisableAutoRefreshToolStripMenuItem";
-            enableDisableAutoRefreshToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
-            enableDisableAutoRefreshToolStripMenuItem.Text = "Autorefresh";
-            enableDisableAutoRefreshToolStripMenuItem.Click += enableDisableAutoRefreshToolStripMenuItem_Click;
+            toolStripSeparator1.Name = "toolStripSeparator1";
+            toolStripSeparator1.Size = new System.Drawing.Size(165, 6);
             // 
             // refreshToolStripMenuItem
             // 
@@ -190,6 +188,14 @@ namespace Pulsar.Server.Forms
             refreshToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
             refreshToolStripMenuItem.Text = "Refresh";
             refreshToolStripMenuItem.Click += refreshToolStripMenuItem_Click;
+            // 
+            // enableDisableAutoRefreshToolStripMenuItem
+            // 
+            enableDisableAutoRefreshToolStripMenuItem.Image = Properties.Resources.autorefreshicon;
+            enableDisableAutoRefreshToolStripMenuItem.Name = "enableDisableAutoRefreshToolStripMenuItem";
+            enableDisableAutoRefreshToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
+            enableDisableAutoRefreshToolStripMenuItem.Text = "Autorefresh";
+            enableDisableAutoRefreshToolStripMenuItem.Click += enableDisableAutoRefreshToolStripMenuItem_Click;
             // 
             // tableLayoutPanel
             // 
@@ -286,5 +292,6 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.ToolStripMenuItem maximizedToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem beginSuspendToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem endSuspendToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
     }
 }

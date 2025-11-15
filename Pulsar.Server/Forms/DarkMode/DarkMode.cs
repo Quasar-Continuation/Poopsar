@@ -718,61 +718,58 @@ namespace DarkModeForms
             if (control is ListView || control is AeroListView)
             {
                 var lView = control as ListView;
-                //Mode = IsDarkMode ? "DarkMode_ItemsView" : "ClearMode_ItemsView";
+
+                if (IsDarkMode)
+                {
+                    lView.BackColor = Color.FromArgb(20, 20, 20);  // Very dark gray for dark mode
+                    lView.ForeColor = Color.White;                 // White text for dark mode
+                }
+                else
+                {
+                    lView.BackColor = Color.FromArgb(240, 240, 240); // Much lighter gray - almost white
+                    lView.ForeColor = Color.FromArgb(30, 30, 30);    // Dark text for light mode
+                }
+                lView.BorderStyle = BorderStyle.None;
+
+                // Theme setting
                 Mode = IsDarkMode ? "DarkMode_Explorer" : "ClearMode_Explorer";
                 SetWindowTheme(control.Handle, Mode, null);
-
 
                 if (lView.View == View.Details)
                 {
                     lView.OwnerDraw = true;
-                    lView.DrawColumnHeader += (object sender, DrawListViewColumnHeaderEventArgs e) =>
-                    {
-                        //e.DrawDefault = true;
-                        //e.DrawBackground();
-                        //e.DrawText();
 
-                        using (SolidBrush backBrush = new SolidBrush(OScolors.ControlLight))
+                    // Column headers - fixed for both modes
+                    lView.DrawColumnHeader += (sender, e) =>
+                    {
+                        if (IsDarkMode)
                         {
-                            using (SolidBrush foreBrush = new SolidBrush(OScolors.TextActive))
+                            // Dark mode headers
+                            using (SolidBrush backBrush = new SolidBrush(Color.FromArgb(40, 40, 40))) // Dark header
+                            using (SolidBrush foreBrush = new SolidBrush(Color.White))                // White text
+                            using (var sf = new StringFormat() { Alignment = StringAlignment.Center })
                             {
-                                using (var sf = new StringFormat())
-                                {
-                                    sf.Alignment = StringAlignment.Center;
-                                    e.Graphics.FillRectangle(backBrush, e.Bounds);
-                                    e.Graphics.DrawString(e.Header.Text, lView.Font, foreBrush, e.Bounds, sf);
-                                }
+                                e.Graphics.FillRectangle(backBrush, e.Bounds);
+                                e.Graphics.DrawString(e.Header.Text, lView.Font, foreBrush, e.Bounds, sf);
+                            }
+                        }
+                        else
+                        {
+                            // Light mode headers
+                            using (SolidBrush backBrush = new SolidBrush(Color.FromArgb(240, 240, 240))) // Light header
+                            using (SolidBrush foreBrush = new SolidBrush(Color.FromArgb(30, 30, 30)))    // Dark text
+                            using (var sf = new StringFormat() { Alignment = StringAlignment.Center })
+                            {
+                                e.Graphics.FillRectangle(backBrush, e.Bounds);
+                                e.Graphics.DrawString(e.Header.Text, lView.Font, foreBrush, e.Bounds, sf);
                             }
                         }
                     };
-                    lView.DrawItem += (sender, e) => { e.DrawDefault = true; };
-                    lView.DrawSubItem += (sender, e) =>
-                    {
-                        e.DrawDefault = true;
 
-                        //IntPtr headerControl = GetHeaderControl(lView);
-                        //IntPtr hdc = GetDC(headerControl);
-                        //Rectangle rc = new Rectangle(
-                        //  e.Bounds.Right, //<- Right instead of Left - offsets the rectangle
-                        //  e.Bounds.Top,
-                        //  e.Bounds.Width,
-                        //  e.Bounds.Height
-                        //);
-                        //rc.Width += 200;
-
-                        //using (SolidBrush backBrush = new SolidBrush(OScolors.ControlLight))
-                        //{
-                        //  e.Graphics.FillRectangle(backBrush, rc);
-                        //}
-
-                        //ReleaseDC(headerControl, hdc);
-
-                    };
-
-                    Mode = IsDarkMode ? "DarkMode_Explorer" : "ClearMode_Explorer";
-                    SetWindowTheme(control.Handle, Mode, null);
+                    // Items
+                    lView.DrawItem += (sender, e) => e.DrawDefault = true;
+                    lView.DrawSubItem += (sender, e) => e.DrawDefault = true;
                 }
-
             }
             if (control is TreeView)
             {

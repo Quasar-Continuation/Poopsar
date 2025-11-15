@@ -82,6 +82,7 @@ namespace Pulsar.Server.Forms
 
         private void FrmReverseProxy_Load(object sender, EventArgs e)
         {
+            lstConnections.GridLines = false;
             if (_clients.Length > 1)
             {
                 this.Text = "Reverse Proxy [Load-Balancer is active]";

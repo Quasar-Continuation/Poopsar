@@ -147,7 +147,7 @@ namespace Pulsar.Server.Forms
             if (result == DialogResult.No)
             {
                 // User did not agree – close the form
-                this.Close();
+                Environment.Exit(0);
             }
             // If Yes, the form stays open and continues loading
         }

@@ -180,5 +180,6 @@ namespace Pulsar.Server.Forms
             lvi = new ListViewItem(new[] { "", "Getting more information..." });
             lstSystem.Items.Add(lvi);
         }
+
     }
 }

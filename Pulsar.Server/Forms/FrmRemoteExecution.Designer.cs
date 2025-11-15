@@ -36,13 +36,13 @@
             btnBrowse = new System.Windows.Forms.Button();
             txtPath = new System.Windows.Forms.TextBox();
             label1 = new System.Windows.Forms.Label();
+            chkUpdate = new System.Windows.Forms.CheckBox();
             groupURL = new System.Windows.Forms.GroupBox();
             radioLocalFile = new System.Windows.Forms.RadioButton();
             radioURL = new System.Windows.Forms.RadioButton();
-            lstTransfers = new Pulsar.Server.Controls.AeroListView();
+            lstTransfers = new Controls.AeroListView();
             hClient = new System.Windows.Forms.ColumnHeader();
             hStatus = new System.Windows.Forms.ColumnHeader();
-            chkUpdate = new System.Windows.Forms.CheckBox();
             chkBoxReflectionExecute = new System.Windows.Forms.CheckBox();
             chkRunPE = new System.Windows.Forms.CheckBox();
             cmbRunPETarget = new System.Windows.Forms.ComboBox();
@@ -55,11 +55,11 @@
             // 
             // btnExecute
             // 
-            btnExecute.Location = new System.Drawing.Point(353, 488);
+            btnExecute.Location = new System.Drawing.Point(353, 486);
             btnExecute.Name = "btnExecute";
-            btnExecute.Size = new System.Drawing.Size(138, 23);
+            btnExecute.Size = new System.Drawing.Size(138, 33);
             btnExecute.TabIndex = 6;
-            btnExecute.Text = "Execute remotely";
+            btnExecute.Text = "Execute Remotely";
             btnExecute.UseVisualStyleBackColor = true;
             btnExecute.Click += btnExecute_Click;
             // 
@@ -84,6 +84,7 @@
             groupLocalFile.Controls.Add(btnBrowse);
             groupLocalFile.Controls.Add(txtPath);
             groupLocalFile.Controls.Add(label1);
+            groupLocalFile.Controls.Add(chkUpdate);
             groupLocalFile.Location = new System.Drawing.Point(12, 65);
             groupLocalFile.Name = "groupLocalFile";
             groupLocalFile.Size = new System.Drawing.Size(479, 75);
@@ -116,6 +117,17 @@
             label1.Size = new System.Drawing.Size(33, 13);
             label1.TabIndex = 0;
             label1.Text = "Path:";
+            // 
+            // chkUpdate
+            // 
+            chkUpdate.AutoSize = true;
+            chkUpdate.Location = new System.Drawing.Point(59, 52);
+            chkUpdate.Name = "chkUpdate";
+            chkUpdate.Size = new System.Drawing.Size(167, 17);
+            chkUpdate.TabIndex = 5;
+            chkUpdate.Text = "Update clients with this file";
+            chkUpdate.UseVisualStyleBackColor = true;
+            chkUpdate.CheckedChanged += chkUpdate_CheckedChanged;
             // 
             // groupURL
             // 
@@ -173,17 +185,6 @@
             // 
             hStatus.Text = "Status";
             hStatus.Width = 173;
-            // 
-            // chkUpdate
-            // 
-            chkUpdate.AutoSize = true;
-            chkUpdate.Location = new System.Drawing.Point(180, 492);
-            chkUpdate.Name = "chkUpdate";
-            chkUpdate.Size = new System.Drawing.Size(167, 17);
-            chkUpdate.TabIndex = 5;
-            chkUpdate.Text = "Update clients with this file";
-            chkUpdate.UseVisualStyleBackColor = true;
-            chkUpdate.CheckedChanged += chkUpdate_CheckedChanged;
             // 
             // chkBoxReflectionExecute
             // 
@@ -260,7 +261,6 @@
             Controls.Add(cmbRunPETarget);
             Controls.Add(chkRunPE);
             Controls.Add(chkBoxReflectionExecute);
-            Controls.Add(chkUpdate);
             Controls.Add(lstTransfers);
             Controls.Add(radioURL);
             Controls.Add(radioLocalFile);
@@ -280,7 +280,6 @@
             groupURL.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
-
         }
 
         #endregion

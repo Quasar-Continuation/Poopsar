@@ -72,7 +72,7 @@
             // lblVersion
             // 
             lblVersion.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Italic, System.Drawing.GraphicsUnit.Point, 0);
-            lblVersion.Location = new System.Drawing.Point(438, 41);
+            lblVersion.Location = new System.Drawing.Point(438, 18);
             lblVersion.Name = "lblVersion";
             lblVersion.Size = new System.Drawing.Size(75, 13);
             lblVersion.TabIndex = 2;

@@ -414,7 +414,11 @@ namespace Pulsar.Server.Controls.Wpf
                 node.SetExpandedRecursive(true);
         }
 
-        private string BuildGlyph(ProcessTreeSortColumn forColumn) => _sortColumn != forColumn ? string.Empty : (_sortAscending ? "▲" : "▼");
+        private string BuildGlyph(ProcessTreeSortColumn forColumn)
+        {
+            // Always return empty string to hide the ▲/▼ arrows
+            return string.Empty;
+        }
 
         private void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }

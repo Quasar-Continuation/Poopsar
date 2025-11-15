@@ -67,6 +67,12 @@ namespace Pulsar.Server.Forms
 
             _countdownTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             _countdownTimer.Tick += CountdownTimer_Tick;
+
+            // ✅ Auto-refresh ON by default
+            _pauseAutoRefresh = false;
+            enableDisableAutoRefreshToolStripMenuItem.Checked = true;
+            toolStripStatusLabel1.Text = $"Refreshing in {_countdownValue}s...";
+            toolStripStatusLabel1.ForeColor = _originalLabelColor;
             _countdownTimer.Start();
 
             RegisterMessageHandler();
@@ -439,8 +445,17 @@ namespace Pulsar.Server.Forms
                 ShowSearchDialog();
                 return true;
             }
+
+            // Handle Delete key to kill selected process
+            if (keyData == Keys.Delete)
+            {
+                PerformOnSelectedProcesses(p => _taskManagerHandler.EndProcess(p.Id));
+                return true; // indicate we've handled the key
+            }
+
             return base.ProcessCmdKey(ref msg, keyData);
         }
+
 
         private void ShowSearchDialog()
         {
