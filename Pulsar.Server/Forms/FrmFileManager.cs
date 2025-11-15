@@ -78,8 +78,51 @@ namespace Pulsar.Server.Forms
             RegisterMessageHandler();
             InitializeComponent();
 
+            txtPath.KeyDown += TxtPath_KeyDown;
+
             DarkModeManager.ApplyDarkMode(this);
 			ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
+        }
+        private void TxtPath_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+                return;
+
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+
+            string newPath = txtPath.Text.Trim();
+            if (string.IsNullOrWhiteSpace(newPath))
+                return;
+
+            // Request directory contents from remote machine.
+            // The client will tell us if the path exists or not.
+            // If the path doesn't exist, DirectoryChanged will NOT fire.
+            // So we add a small fallback check.
+
+            _fileManagerHandler.GetDirectoryContents(newPath);
+            SetStatusMessage(this, $"Opening {newPath} ...");
+
+            // Fail-safe timeout check
+            var timer = new System.Windows.Forms.Timer();
+            timer.Interval = 500; // half second
+            timer.Tick += (s, ev) =>
+            {
+                timer.Stop();
+
+                // If the directory didn't update to this new path, it failed
+                if (_currentDir != newPath)
+                {
+                    //MessageBox.Show("The path does not exist on the remote machine.",
+                    //    "Invalid Path",
+                    //    MessageBoxButtons.OK,
+                    //    MessageBoxIcon.Error);
+
+                    // Reset box to current dir
+                    txtPath.Text = _currentDir;
+                }
+            };
+            timer.Start();
         }
 
         /// <summary>

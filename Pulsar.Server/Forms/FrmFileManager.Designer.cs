@@ -83,7 +83,7 @@ namespace Pulsar.Server.Forms
             // 
             contextMenuStripDirectory.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { downloadToolStripMenuItem, uploadToolStripMenuItem, lineToolStripMenuItem, zipFolderToolStripMenuItem, executeToolStripMenuItem, renameToolStripMenuItem, deleteToolStripMenuItem, line2ToolStripMenuItem, addToStartupToolStripMenuItem, line3ToolStripMenuItem, refreshToolStripMenuItem, openDirectoryInShellToolStripMenuItem });
             contextMenuStripDirectory.Name = "ctxtMenu";
-            contextMenuStripDirectory.Size = new System.Drawing.Size(240, 242);
+            contextMenuStripDirectory.Size = new System.Drawing.Size(240, 220);
             // 
             // downloadToolStripMenuItem
             // 
@@ -299,7 +299,6 @@ namespace Pulsar.Server.Forms
             txtPath.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             txtPath.Location = new System.Drawing.Point(360, 8);
             txtPath.Name = "txtPath";
-            txtPath.ReadOnly = true;
             txtPath.Size = new System.Drawing.Size(323, 22);
             txtPath.TabIndex = 3;
             txtPath.Text = "\\";
