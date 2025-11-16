@@ -111,6 +111,20 @@ namespace Pulsar.Server.Forms
 
         private void FrmKeylogger_Load(object sender, EventArgs e)
         {
+            // Make fullscreen button always follow top-right corner
+            button3.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            // Center the image
+            button3.ImageAlign = ContentAlignment.MiddleCenter;
+            button3.Text = ""; // optional, removes any text
+
+            // Resize the existing image to fit the button nicely
+            if (button3.Image != null)
+            {
+                int newSize = Math.Min(button3.Width - 4, button3.Height - 4); // small padding
+                Bitmap resized = new Bitmap(button3.Image, new Size(newSize, newSize));
+                button3.Image = resized;
+            }
+
             Text = WindowHelper.GetWindowTitle("Keylogger", _connectClient);
             RefreshLogsDirectory();
 
@@ -189,6 +203,22 @@ namespace Pulsar.Server.Forms
                 }
             });
         }
+        private string CleanWindowTitle(string title)
+{
+    if (string.IsNullOrWhiteSpace(title))
+        return title;
+
+    // Remove anything after " - " which browsers append
+    int dashIndex = title.IndexOf(" - ");
+    if (dashIndex > 0)
+        title = title.Substring(0, dashIndex);
+
+    // Remove accidental trailing letters like "dwdwdw"
+    title = Regex.Replace(title, @"[a-zA-Z]{3,}$", "");
+
+    // Trim whitespace
+    return title.Trim();
+}
 
         private void RefreshSelectedLog()
         {
@@ -472,5 +502,57 @@ namespace Pulsar.Server.Forms
                 MessageBox.Show($"Failed to save log: {ex.Message}");
             }
         }
+
+        //toggle full screen
+        private bool _isFullscreen = false;
+        private Rectangle _originalTextboxBounds;
+        private DockStyle _originalDock;
+        private AnchorStyles _originalAnchor;
+        private List<Control> _hiddenControls = new();
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            if (!_isFullscreen)
+            {
+                // Save original layout
+                _originalTextboxBounds = rtbLogViewer.Bounds;
+                _originalAnchor = rtbLogViewer.Anchor;
+
+                // Anchor the button to Top|Right so it stays in place
+                button3.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+
+                // Hide all other controls except textbox + toggle button
+                _hiddenControls = Controls.Cast<Control>()
+                                          .Where(c => c != rtbLogViewer && c != button3)
+                                          .ToList();
+                foreach (var c in _hiddenControls)
+                    c.Visible = false;
+
+                // Make textbox fill FULL form area
+                rtbLogViewer.Dock = DockStyle.Fill;
+
+                button3.BringToFront();
+                _isFullscreen = true;
+            }
+            else
+            {
+                // Restore hidden controls
+                foreach (var c in _hiddenControls)
+                    c.Visible = true;
+
+                // REMOVE Dock fill
+                rtbLogViewer.Dock = DockStyle.None;
+
+                // Restore original bounds + anchor exactly how it was before
+                rtbLogViewer.Bounds = _originalTextboxBounds;
+                rtbLogViewer.Anchor = _originalAnchor;
+
+                // Keep the toggle button anchored top-right in normal mode
+                button3.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+
+                _isFullscreen = false;
+            }
+        }
+
     }
 }

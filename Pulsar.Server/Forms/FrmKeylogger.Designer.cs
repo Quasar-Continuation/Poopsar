@@ -38,6 +38,7 @@
             button1 = new System.Windows.Forms.Button();
             checkBox1 = new System.Windows.Forms.CheckBox();
             button2 = new System.Windows.Forms.Button();
+            button3 = new System.Windows.Forms.Button();
             statusStrip.SuspendLayout();
             SuspendLayout();
             // 
@@ -125,11 +126,21 @@
             button2.Text = "Save Log To Client Folder";
             button2.Click += button2_Click;
             // 
+            // button3
+            // 
+            button3.Image = Properties.Resources.maximizewindowicon;
+            button3.Location = new System.Drawing.Point(824, 6);
+            button3.Name = "button3";
+            button3.Size = new System.Drawing.Size(24, 23);
+            button3.TabIndex = 11;
+            button3.Click += button3_Click;
+            // 
             // FrmKeylogger
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             ClientSize = new System.Drawing.Size(862, 482);
+            Controls.Add(button3);
             Controls.Add(button2);
             Controls.Add(checkBox1);
             Controls.Add(button1);
@@ -162,5 +173,6 @@
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.CheckBox checkBox1;
         private System.Windows.Forms.Button button2;
+        private System.Windows.Forms.Button button3;
     }
 }
