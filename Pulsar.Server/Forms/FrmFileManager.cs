@@ -196,13 +196,58 @@ namespace Pulsar.Server.Forms
         /// <param name="drives">The currently available drives.</param>
         private void DrivesChanged(object sender, Drive[] drives)
         {
+            var list = new List<object>();
+
+            // ----- DRIVES ON TOP -----
+            foreach (var d in drives)
+            {
+                list.Add(new
+                {
+                    DisplayName = $"{d.DisplayName}",
+                    RootDirectory = d.RootDirectory
+                });
+            }
+
+            // ----- COMMON DIRECTORIES UNDER -----
+            void AddCommon(string label, Environment.SpecialFolder folder)
+            {
+                string path = Environment.GetFolderPath(folder);
+                if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
+                {
+                    list.Add(new
+                    {
+                        DisplayName = $"[{label}]  {path}",
+                        RootDirectory = path
+                    });
+                }
+            }
+
+            AddCommon("Desktop", Environment.SpecialFolder.Desktop);
+            AddCommon("Documents", Environment.SpecialFolder.MyDocuments);
+            list.Add(new
+            {
+                DisplayName = "[Downloads]  " + SpecialPath.Downloads,
+                RootDirectory = SpecialPath.Downloads
+            });
+            AddCommon("Pictures", Environment.SpecialFolder.MyPictures);
+            AddCommon("Music", Environment.SpecialFolder.MyMusic);
+            AddCommon("Videos", Environment.SpecialFolder.MyVideos);
+            AddCommon("Temp", Environment.SpecialFolder.LocalApplicationData);
+
+            // ----- APPLY TO COMBOBOX -----
             cmbDrives.Items.Clear();
             cmbDrives.DisplayMember = "DisplayName";
             cmbDrives.ValueMember = "RootDirectory";
-            cmbDrives.DataSource = new BindingSource(drives, null);
+            cmbDrives.DataSource = list;
 
             SetStatusMessage(this, "Ready");
         }
+        private static class SpecialPath
+        {
+            public static string Downloads =>
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+        }
+
 
         /// <summary>
         /// Called whenever a directory changed.
