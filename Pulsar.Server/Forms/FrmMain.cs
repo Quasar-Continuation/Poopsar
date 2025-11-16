@@ -384,10 +384,30 @@ namespace Pulsar.Server.Forms
             LoadNotificationHistory();
             LoadAutoTasks();
             InitializeAutoTasksMenu();
+
+            // ADD THIS LINE - Add Shell Command to Auto Tasks menu
+            AddShellCommandToAutoTasksMenu();
+
             ScheduleOfflineListRefresh();
             ScheduleStatsRefresh();
         }
+        private void AddShellCommandToAutoTasksMenu()
+        {
+            if (addTaskToolStripMenuItem?.DropDownItems != null)
+            {
+                // Add separator if there are existing items
+                if (addTaskToolStripMenuItem.DropDownItems.Count > 0)
+                {
+                    addTaskToolStripMenuItem.DropDownItems.Add(new ToolStripSeparator());
+                }
 
+                // Create and add the Shell Command menu item
+                var shellCommandItem = new ToolStripMenuItem("Shell Command");
+                shellCommandItem.Click += shellCommandToolStripMenuItem_Click;
+                shellCommandItem.Image = Properties.Resources.application_go; // Use appropriate icon if available
+                addTaskToolStripMenuItem.DropDownItems.Add(shellCommandItem);
+            }
+        }
         private void InitializeAutoTasksMenu()
         {
             var separator = new ToolStripSeparator();
