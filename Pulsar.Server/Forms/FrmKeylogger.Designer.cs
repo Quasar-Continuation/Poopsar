@@ -129,7 +129,7 @@
             // button3
             // 
             button3.Image = Properties.Resources.maximizewindowicon;
-            button3.Location = new System.Drawing.Point(824, 6);
+            button3.Location = new System.Drawing.Point(818, 6);
             button3.Name = "button3";
             button3.Size = new System.Drawing.Size(24, 23);
             button3.TabIndex = 11;

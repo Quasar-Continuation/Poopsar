@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -64,11 +65,49 @@ namespace Pulsar.Server.Forms
             DarkModeManager.ApplyDarkMode(this);
             ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
 
+            // 🔧 Make lstConnections more stable / less flickery
+            EnhanceListViewStability(lstConnections);
+
             _refreshTimer = new Timer { Interval = 2000 };
             _refreshTimer.Tick += RefreshTick;
             _refreshTimer.Start();
 
             autorefreshToolStripMenuItem.Checked = _autoRefreshEnabled;
+        }
+
+        private void EnhanceListViewStability(ListView lv)
+        {
+            if (lv == null) return;
+
+            try
+            {
+                // Enable DoubleBuffered via reflection (protected)
+                var prop = lv.GetType().GetProperty("DoubleBuffered",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                prop?.SetValue(lv, true, null);
+            }
+            catch { }
+
+            // Light-weight resize + column width stabilization
+            lv.Resize += (s, e) =>
+            {
+                try
+                {
+                    lv.BeginUpdate();
+                    lv.EndUpdate();
+                }
+                catch { }
+            };
+
+            lv.ColumnWidthChanged += (s, e) =>
+            {
+                try
+                {
+                    lv.BeginUpdate();
+                    lv.EndUpdate();
+                }
+                catch { }
+            };
         }
 
         private void RegisterMessageHandler()
@@ -89,7 +128,7 @@ namespace Pulsar.Server.Forms
         private void ClientDisconnected(Client client, bool connected)
         {
             if (!connected)
-                this.Invoke((MethodInvoker)this.Close);
+                this.Invoke((System.Windows.Forms.MethodInvoker)this.Close);
         }
 
         private void RefreshTick(object sender, EventArgs e)
@@ -120,12 +159,24 @@ namespace Pulsar.Server.Forms
                 return;
             }
 
+            if (lstConnections.IsDisposed)
+                return;
+
+            int? topIndexBefore = null;
+
+            try
+            {
+                if (lstConnections.TopItem != null)
+                    topIndexBefore = lstConnections.TopItem.Index;
+            }
+            catch { }
+
             lock (lstConnections)
             {
                 lstConnections.BeginUpdate();
                 try
                 {
-                    UpdateListView(connections);
+                    UpdateListView(connections, topIndexBefore);
                 }
                 finally
                 {
@@ -134,7 +185,7 @@ namespace Pulsar.Server.Forms
             }
         }
 
-        private void UpdateListView(TcpConnection[] connections)
+        private void UpdateListView(TcpConnection[] connections, int? topIndexBefore)
         {
             var items = lstConnections.Items.Cast<ListViewItem>().ToList();
             var existing = items.ToDictionary(GetKey, x => x);
@@ -182,13 +233,16 @@ namespace Pulsar.Server.Forms
                 RemoveListViewItemDelayed(item);
             }
 
-            // Restore scroll position safely
-            try
+            // 🔒 Restore scroll position to the same top item index
+            if (topIndexBefore.HasValue && lstConnections.Items.Count > 0)
             {
-                if (lstConnections.Items.Count > 0 && items.Count > 0)
-                    lstConnections.TopItem = lstConnections.Items[Math.Min(items[0].Index, lstConnections.Items.Count - 1)];
+                int idx = Math.Max(0, Math.Min(topIndexBefore.Value, lstConnections.Items.Count - 1));
+                try
+                {
+                    lstConnections.TopItem = lstConnections.Items[idx];
+                }
+                catch { }
             }
-            catch { }
         }
 
         private ListViewItem CreateListViewItem(TcpConnection con)
@@ -231,7 +285,15 @@ namespace Pulsar.Server.Forms
             {
                 if (!lstConnections.IsDisposed && lstConnections.Items.Contains(item))
                 {
-                    lstConnections.Invoke(() => lstConnections.Items.Remove(item));
+                    try
+                    {
+                        lstConnections.Invoke(() =>
+                        {
+                            if (!lstConnections.IsDisposed && lstConnections.Items.Contains(item))
+                                lstConnections.Items.Remove(item);
+                        });
+                    }
+                    catch { }
                 }
             });
         }
@@ -359,29 +421,8 @@ namespace Pulsar.Server.Forms
 
         protected override void OnResize(EventArgs e)
         {
+            // Let base do normal layout; we don’t fight the ListView anymore.
             base.OnResize(e);
-
-            try
-            {
-                if (lstConnections.Items.Count > 0)
-                {
-                    lstConnections.BeginUpdate();
-
-                    // Always snap the first visible group to the top
-                    var topGroup = lstConnections.TopItem?.Group ?? lstConnections.Groups.Cast<ListViewGroup>().FirstOrDefault();
-                    if (topGroup != null)
-                    {
-                        // Scroll to the first item of that group
-                        var firstItemInGroup = lstConnections.Items.Cast<ListViewItem>()
-                                                    .FirstOrDefault(i => i.Group == topGroup);
-                        if (firstItemInGroup != null)
-                            lstConnections.TopItem = firstItemInGroup;
-                    }
-
-                    lstConnections.EndUpdate();
-                }
-            }
-            catch { }
         }
 
         private void searchToolStripMenuItem_Click(object sender, EventArgs e)
