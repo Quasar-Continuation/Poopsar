@@ -3,7 +3,7 @@
 ![GitHub Actions Build Status](https://img.shields.io/github/actions/workflow/status/Quasar-Continuation/Poopsar/dotnet.yml)
 [![Downloads](https://img.shields.io/github/downloads/Quasar-Continuation/Poopsar/total.svg)](https://github.com/Quasar-Continuation/Poopsar/releases)
 [![License](https://img.shields.io/github/license/Quasar-Continuation/Poopsar.svg)](LICENSE)
-![.NET](https://img.shields.io/badge/.NET-4.7.2%2B-blue)
+![.NET](https://img.shields.io/badge/.NET-4.8%2B-blue)
 ![Windows](https://img.shields.io/badge/OS-Windows-blue)
 
 > **A Free, Open-Source Remote Administration Tool for Windows**
