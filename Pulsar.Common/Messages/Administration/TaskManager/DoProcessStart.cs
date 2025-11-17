@@ -6,6 +6,9 @@ namespace Pulsar.Common.Messages.Administration.TaskManager
     [MessagePackObject]
     public class DoProcessStart : IMessage
     {
+        [Key(0)]
+        public bool IsFromFileManager { get; set; }
+
         [Key(1)]
         public string DownloadUrl { get; set; }
 

