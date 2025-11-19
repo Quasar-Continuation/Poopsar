@@ -90,12 +90,15 @@ namespace Pulsar.Server.Messages
         /// <param name="items">The directory content.</param>
         private void OnDirectoryChanged(string remotePath, FileSystemEntry[] items)
         {
+            if (string.IsNullOrWhiteSpace(remotePath))
+                remotePath = "";   // or "/"
+
             SynchronizationContext.Post(i =>
             {
-                var handler = DirectoryChanged;
-                handler?.Invoke(this, remotePath, (FileSystemEntry[])i);
+                DirectoryChanged?.Invoke(this, remotePath, (FileSystemEntry[])i);
             }, items);
         }
+
 
         /// <summary>
         /// Reports updated file transfers.
