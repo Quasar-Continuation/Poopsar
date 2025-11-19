@@ -282,40 +282,77 @@ namespace Pulsar.Server.Forms
             }
         }
 
-        /// <summary>
-        /// Starts the remote desktop stream and begin to receive desktop frames.
-        /// </summary>
+        // =========================
+        //  START STREAM (FIXED)
+        // =========================
         private void StartStream(bool useGpu)
         {
+            // --------- FORCE UI STATE ---------
+            btnStart.Enabled = false;
+            btnStop.Enabled = true;
             ToggleConfigurationControls(true);
 
-            picDesktop.Start();
-            // Subscribe to the new frame counter.
+            // Remove any stale handlers before adding new ones
+            _remoteDesktopHandler.ProgressChanged -= UpdateImage;
+            _remoteDesktopHandler.ProgressChanged += UpdateImage;
+
+            picDesktop.UnsetFrameUpdatedEvent(frameCounter_FrameUpdated);
             picDesktop.SetFrameUpdatedEvent(frameCounter_FrameUpdated);
 
-            this.ActiveControl = picDesktop;
+            // Reset counters
+            _sizeFrames = 0;
+            _previousMousePosition = Point.Empty;
 
-            _remoteDesktopHandler.BeginReceiveFrames(barQuality.Value, cbMonitors.SelectedIndex, useGpu);
+            // Start rendering control
+            picDesktop.Start();
+            picDesktop.Enabled = true;
+
+            // Tell client to begin sending frames
+            _remoteDesktopHandler.BeginReceiveFrames(
+                barQuality.Value,
+                cbMonitors.SelectedIndex,
+                useGpu);
 
             btnShowDrawingTools.Enabled = true;
+
+            // Safe side: ensure hooks only started once
+            SubscribeEvents();
         }
 
-        /// <summary>
-        /// Stops the remote desktop stream.
-        /// </summary>
+
+
+        // =========================
+        //  STOP STREAM (FIXED)
+        // =========================
         private void StopStream()
         {
+            // --------- FORCE UI STATE ---------
+            btnStart.Enabled = true;
+            btnStop.Enabled = false;
             ToggleConfigurationControls(false);
 
+            btnShowDrawingTools.Enabled = false;
+
+            // Kill hooks first (prevents race)
+            UnsubscribeEvents();
+
+            // Remove frame handler BEFORE stopping the handler (critical)
+            _remoteDesktopHandler.ProgressChanged -= UpdateImage;
+
+            // Stop picture rendering
             picDesktop.Stop();
-            // Unsubscribe from the frame counter. It will be re-created when starting again.
             picDesktop.UnsetFrameUpdatedEvent(frameCounter_FrameUpdated);
 
-            this.ActiveControl = picDesktop;
+            // Release last frame memory
+            picDesktop.UpdateImage(null, true);
 
-            _remoteDesktopHandler.EndReceiveFrames();
+            // Reset drawing modes, cursor, panel states
+            _enableDrawingMode = false;
+            _enableEraserMode = false;
+            _previousMousePosition = Point.Empty;
 
-            btnShowDrawingTools.Enabled = false;
+            ConfigureDrawingButtons();
+            picDesktop.Cursor = Cursors.Default;
 
             if (panelDrawingTools.Visible)
             {
@@ -324,13 +361,14 @@ namespace Pulsar.Server.Forms
                 toolTipButtons.SetToolTip(btnShowDrawingTools, "Show drawing tools");
             }
 
-            _enableDrawingMode = false;
-            _enableEraserMode = false;
+            // Stop receiving frames
+            _remoteDesktopHandler.EndReceiveFrames();
 
-            ConfigureDrawingButtons();
-
-            picDesktop.Cursor = Cursors.Default;
+            // Just to be 100% safe from leaks
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
         }
+
 
         /// <summary>
         /// Toggles the activatability of configuration controls in the status/configuration panel.

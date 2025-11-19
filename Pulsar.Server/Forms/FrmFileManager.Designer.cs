@@ -370,9 +370,9 @@ namespace Pulsar.Server.Forms
             // 
             // btnOpenDLFolder
             // 
-            btnOpenDLFolder.Location = new System.Drawing.Point(8, 8);
+            btnOpenDLFolder.Location = new System.Drawing.Point(8, 5);
             btnOpenDLFolder.Name = "btnOpenDLFolder";
-            btnOpenDLFolder.Size = new System.Drawing.Size(145, 21);
+            btnOpenDLFolder.Size = new System.Drawing.Size(145, 22);
             btnOpenDLFolder.TabIndex = 0;
             btnOpenDLFolder.Text = "&Open Download Folder";
             btnOpenDLFolder.UseVisualStyleBackColor = true;
