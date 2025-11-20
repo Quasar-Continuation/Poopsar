@@ -715,24 +715,64 @@ namespace DarkModeForms
                 pGrid.CategoryForeColor = OScolors.TextActive;
                 pGrid.CategorySplitterColor = OScolors.ControlLight;
             }
-            if (control is ListView lView)
+            if (control is ListView || control is AeroListView)
             {
-                // RESET EVERYTHING — prevent ListView corruption
-                lView.OwnerDraw = false;
+                var lView = control as ListView;
+                //Mode = IsDarkMode ? "DarkMode_ItemsView" : "ClearMode_ItemsView";
+                Mode = IsDarkMode ? "DarkMode_Explorer" : "ClearMode_Explorer";
+                SetWindowTheme(control.Handle, Mode, null);
 
-                lView.DrawColumnHeader -= null;
-                lView.DrawItem -= null;
-                lView.DrawSubItem -= null;
 
-                // Just apply simple colors, let Windows draw the rest
-                lView.BackColor = IsDarkMode ? Color.FromArgb(25, 25, 25) : Color.White;
-                lView.ForeColor = IsDarkMode ? Color.White : Color.Black;
+                if (lView.View == View.Details)
+                {
+                    lView.OwnerDraw = true;
+                    lView.DrawColumnHeader += (object sender, DrawListViewColumnHeaderEventArgs e) =>
+                    {
+                        //e.DrawDefault = true;
+                        //e.DrawBackground();
+                        //e.DrawText();
 
-                lView.BorderStyle = BorderStyle.None;
+                        using (SolidBrush backBrush = new SolidBrush(OScolors.ControlLight))
+                        {
+                            using (SolidBrush foreBrush = new SolidBrush(OScolors.TextActive))
+                            {
+                                using (var sf = new StringFormat())
+                                {
+                                    sf.Alignment = StringAlignment.Center;
+                                    e.Graphics.FillRectangle(backBrush, e.Bounds);
+                                    e.Graphics.DrawString(e.Header.Text, lView.Font, foreBrush, e.Bounds, sf);
+                                }
+                            }
+                        }
+                    };
+                    lView.DrawItem += (sender, e) => { e.DrawDefault = true; };
+                    lView.DrawSubItem += (sender, e) =>
+                    {
+                        e.DrawDefault = true;
 
-                // Safe theming
-                string mode = IsDarkMode ? "DarkMode_Explorer" : "ClearMode_Explorer";
-                SetWindowTheme(lView.Handle, mode, null);
+                        //IntPtr headerControl = GetHeaderControl(lView);
+                        //IntPtr hdc = GetDC(headerControl);
+                        //Rectangle rc = new Rectangle(
+                        //  e.Bounds.Right, //<- Right instead of Left - offsets the rectangle
+                        //  e.Bounds.Top,
+                        //  e.Bounds.Width,
+                        //  e.Bounds.Height
+                        //);
+                        //rc.Width += 200;
+
+                        //using (SolidBrush backBrush = new SolidBrush(OScolors.ControlLight))
+                        //{
+                        //  e.Graphics.FillRectangle(backBrush, rc);
+                        //}
+
+                        //ReleaseDC(headerControl, hdc);
+
+                    };
+
+                    Mode = IsDarkMode ? "DarkMode_Explorer" : "ClearMode_Explorer";
+                    SetWindowTheme(control.Handle, Mode, null);
+                }
+
             }
             if (control is TreeView)
             {
