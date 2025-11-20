@@ -715,61 +715,24 @@ namespace DarkModeForms
                 pGrid.CategoryForeColor = OScolors.TextActive;
                 pGrid.CategorySplitterColor = OScolors.ControlLight;
             }
-            if (control is ListView || control is AeroListView)
+            if (control is ListView lView)
             {
-                var lView = control as ListView;
+                // RESET EVERYTHING — prevent ListView corruption
+                lView.OwnerDraw = false;
 
-                if (IsDarkMode)
-                {
-                    lView.BackColor = Color.FromArgb(20, 20, 20);  // Very dark gray for dark mode
-                    lView.ForeColor = Color.White;                 // White text for dark mode
-                }
-                else
-                {
-                    lView.BackColor = Color.FromArgb(240, 240, 240); // Much lighter gray - almost white
-                    lView.ForeColor = Color.FromArgb(30, 30, 30);    // Dark text for light mode
-                }
+                lView.DrawColumnHeader -= null;
+                lView.DrawItem -= null;
+                lView.DrawSubItem -= null;
+
+                // Just apply simple colors, let Windows draw the rest
+                lView.BackColor = IsDarkMode ? Color.FromArgb(25, 25, 25) : Color.White;
+                lView.ForeColor = IsDarkMode ? Color.White : Color.Black;
+
                 lView.BorderStyle = BorderStyle.None;
 
-                // Theme setting
-                Mode = IsDarkMode ? "DarkMode_Explorer" : "ClearMode_Explorer";
-                SetWindowTheme(control.Handle, Mode, null);
-
-                if (lView.View == View.Details)
-                {
-                    lView.OwnerDraw = true;
-
-                    // Column headers - fixed for both modes
-                    lView.DrawColumnHeader += (sender, e) =>
-                    {
-                        if (IsDarkMode)
-                        {
-                            // Dark mode headers
-                            using (SolidBrush backBrush = new SolidBrush(Color.FromArgb(40, 40, 40))) // Dark header
-                            using (SolidBrush foreBrush = new SolidBrush(Color.White))                // White text
-                            using (var sf = new StringFormat() { Alignment = StringAlignment.Center })
-                            {
-                                e.Graphics.FillRectangle(backBrush, e.Bounds);
-                                e.Graphics.DrawString(e.Header.Text, lView.Font, foreBrush, e.Bounds, sf);
-                            }
-                        }
-                        else
-                        {
-                            // Light mode headers
-                            using (SolidBrush backBrush = new SolidBrush(Color.FromArgb(240, 240, 240))) // Light header
-                            using (SolidBrush foreBrush = new SolidBrush(Color.FromArgb(30, 30, 30)))    // Dark text
-                            using (var sf = new StringFormat() { Alignment = StringAlignment.Center })
-                            {
-                                e.Graphics.FillRectangle(backBrush, e.Bounds);
-                                e.Graphics.DrawString(e.Header.Text, lView.Font, foreBrush, e.Bounds, sf);
-                            }
-                        }
-                    };
-
-                    // Items
-                    lView.DrawItem += (sender, e) => e.DrawDefault = true;
-                    lView.DrawSubItem += (sender, e) => e.DrawDefault = true;
-                }
+                // Safe theming
+                string mode = IsDarkMode ? "DarkMode_Explorer" : "ClearMode_Explorer";
+                SetWindowTheme(lView.Handle, mode, null);
             }
             if (control is TreeView)
             {

@@ -551,9 +551,25 @@ namespace Pulsar.Server.Messages
                 return;
             }
 
-            decimal progress = transfer.Size == 0 ? 100 : Math.Round((decimal)((double)transfer.TransferredSize / (double)transfer.Size * 100.0), 2);
-            transfer.Status = $"Downloading...({progress}%)";
+            // Calculate progress
+            decimal progress = transfer.Size == 0
+                ? 100
+                : Math.Round((decimal)transfer.TransferredSize / transfer.Size * 100m, 2);
 
+            // Transfer reached full size but client never sent FileTransferComplete
+            if (progress >= 100)
+            {
+                transfer.Status = "Completed";
+
+                // remove from list & close file handle BEFORE notifying UI
+                RemoveFileTransfer(transfer.Id);
+
+                OnFileTransferUpdated(transfer);
+                return;
+            }
+
+            // Normal chunk progress update
+            transfer.Status = $"Downloading...({progress}%)";
             OnFileTransferUpdated(transfer);
         }
 

@@ -17,6 +17,7 @@ namespace Pulsar.Server.Forms
 {
     public partial class FrmConnections : Form
     {
+        private readonly object _updateGate = new();
         private readonly Client _connectClient;
         private readonly TcpConnectionsHandler _connectionsHandler;
         private readonly Dictionary<string, ListViewGroup> _groups = new();
@@ -32,6 +33,37 @@ namespace Pulsar.Server.Forms
         private bool _initialLoad = true;
         private bool _isRefreshing = false;
         private readonly HashSet<string> _initialKeys = new();
+
+        // ------------------------ RedrawScope Fix ------------------------
+        internal readonly struct RedrawScope : IDisposable
+        {
+            private readonly Control _ctl;
+            private readonly IntPtr _handle;
+
+            [System.Runtime.InteropServices.DllImport("user32.dll")]
+            private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+
+            private const int WM_SETREDRAW = 0x0B;
+
+            public RedrawScope(Control c)
+            {
+                _ctl = c;
+                _handle = c.IsHandleCreated ? c.Handle : IntPtr.Zero;
+
+                if (_handle != IntPtr.Zero)
+                    SendMessage(_handle, WM_SETREDRAW, 0, 0); // STOP drawing
+            }
+
+            public void Dispose()
+            {
+                if (_handle != IntPtr.Zero)
+                {
+                    SendMessage(_handle, WM_SETREDRAW, 1, 0); // RESUME drawing
+                    _ctl.Invalidate();
+                }
+            }
+        }
+        // -----------------------------------------------------------------
 
         public static FrmConnections CreateNewOrGetExisting(Client client)
         {
@@ -49,10 +81,10 @@ namespace Pulsar.Server.Forms
             _connectClient = client;
             _connectionsHandler = new TcpConnectionsHandler(client);
 
-            if (client.EndPoint is IPEndPoint endPoint)
+            if (client.EndPoint is IPEndPoint ep)
             {
-                _clientAddress = endPoint.Address.ToString();
-                _clientPort = endPoint.Port;
+                _clientAddress = ep.Address.ToString();
+                _clientPort = ep.Port;
             }
             else
             {
@@ -65,7 +97,6 @@ namespace Pulsar.Server.Forms
             DarkModeManager.ApplyDarkMode(this);
             ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
 
-            // 🔧 Make lstConnections more stable / less flickery
             EnhanceListViewStability(lstConnections);
 
             _refreshTimer = new Timer { Interval = 2000 };
@@ -77,36 +108,17 @@ namespace Pulsar.Server.Forms
 
         private void EnhanceListViewStability(ListView lv)
         {
-            if (lv == null) return;
-
             try
             {
-                // Enable DoubleBuffered via reflection (protected)
                 var prop = lv.GetType().GetProperty("DoubleBuffered",
                     BindingFlags.Instance | BindingFlags.NonPublic);
                 prop?.SetValue(lv, true, null);
             }
             catch { }
 
-            // Light-weight resize + column width stabilization
             lv.Resize += (s, e) =>
             {
-                try
-                {
-                    lv.BeginUpdate();
-                    lv.EndUpdate();
-                }
-                catch { }
-            };
-
-            lv.ColumnWidthChanged += (s, e) =>
-            {
-                try
-                {
-                    lv.BeginUpdate();
-                    lv.EndUpdate();
-                }
-                catch { }
+                try { lv.BeginUpdate(); lv.EndUpdate(); } catch { }
             };
         }
 
@@ -138,10 +150,11 @@ namespace Pulsar.Server.Forms
 
             _isRefreshing = true;
 
-            Task.Run(() =>
+            Task.Run(async () =>
             {
                 try
                 {
+                    await Task.Yield(); // prevent synchronous deadlock
                     _connectionsHandler.RefreshTcpConnections();
                 }
                 finally
@@ -149,6 +162,7 @@ namespace Pulsar.Server.Forms
                     _isRefreshing = false;
                 }
             });
+
         }
 
         private void TcpConnectionsChanged(object sender, TcpConnection[] connections)
@@ -163,7 +177,6 @@ namespace Pulsar.Server.Forms
                 return;
 
             int? topIndexBefore = null;
-
             try
             {
                 if (lstConnections.TopItem != null)
@@ -173,14 +186,18 @@ namespace Pulsar.Server.Forms
 
             lock (lstConnections)
             {
-                lstConnections.BeginUpdate();
-                try
+                // 🔥 FIX: Prevents header-drop glitch + blank space bug
+                using (new RedrawScope(lstConnections))
                 {
-                    UpdateListView(connections, topIndexBefore);
-                }
-                finally
-                {
-                    lstConnections.EndUpdate();
+                    lstConnections.BeginUpdate();
+                    try
+                    {
+                        UpdateListView(connections, topIndexBefore);
+                    }
+                    finally
+                    {
+                        lstConnections.EndUpdate();
+                    }
                 }
             }
         }
@@ -193,8 +210,8 @@ namespace Pulsar.Server.Forms
 
             if (_initialLoad)
             {
-                foreach (var con in connections)
-                    _initialKeys.Add(GetKey(con));
+                foreach (var c in connections)
+                    _initialKeys.Add(GetKey(c));
                 _initialLoad = false;
             }
 
@@ -227,21 +244,14 @@ namespace Pulsar.Server.Forms
                 catch { }
             }
 
-            // Remove items not present anymore
             foreach (var item in items.Where(i => !seenNow.Contains(GetKey(i))).ToList())
-            {
                 RemoveListViewItemDelayed(item);
-            }
 
-            // 🔒 Restore scroll position to the same top item index
+            // restore scroll position
             if (topIndexBefore.HasValue && lstConnections.Items.Count > 0)
             {
                 int idx = Math.Max(0, Math.Min(topIndexBefore.Value, lstConnections.Items.Count - 1));
-                try
-                {
-                    lstConnections.TopItem = lstConnections.Items[idx];
-                }
-                catch { }
+                try { lstConnections.TopItem = lstConnections.Items[idx]; } catch { }
             }
         }
 
@@ -257,7 +267,6 @@ namespace Pulsar.Server.Forms
                 con.State.ToString()
             });
 
-            // Highlight client connection
             if (!string.IsNullOrEmpty(_clientAddress) &&
                 string.Equals(con.LocalAddress, _clientAddress, StringComparison.OrdinalIgnoreCase) &&
                 con.LocalPort == _clientPort)
@@ -281,20 +290,23 @@ namespace Pulsar.Server.Forms
                 return;
 
             item.ForeColor = Color.IndianRed;
-            Task.Delay(800).ContinueWith(_ =>
+
+            Task.Delay(800).ContinueWith(t =>
             {
-                if (!lstConnections.IsDisposed && lstConnections.Items.Contains(item))
+                if (lstConnections.IsDisposed || item.ListView == null)
+                    return;
+
+                try
                 {
-                    try
+                    BeginInvoke(new Action(() =>
                     {
-                        lstConnections.Invoke(() =>
+                        if (!lstConnections.IsDisposed && item.ListView != null)
                         {
-                            if (!lstConnections.IsDisposed && lstConnections.Items.Contains(item))
-                                lstConnections.Items.Remove(item);
-                        });
-                    }
-                    catch { }
+                            lstConnections.Items.Remove(item);
+                        }
+                    }));
                 }
+                catch { }
             });
         }
 
@@ -324,12 +336,17 @@ namespace Pulsar.Server.Forms
         {
             foreach (ListViewItem lvi in lstConnections.SelectedItems)
             {
-                _connectionsHandler.CloseTcpConnection(
-                    lvi.SubItems[1].Text,
-                    ushort.Parse(lvi.SubItems[2].Text),
-                    lvi.SubItems[3].Text,
-                    ushort.Parse(lvi.SubItems[4].Text));
+                try
+                {
+                    _connectionsHandler.CloseTcpConnection(
+                        lvi.SubItems[1].Text,
+                        ushort.Parse(lvi.SubItems[2].Text),
+                        lvi.SubItems[3].Text,
+                        ushort.Parse(lvi.SubItems[4].Text));
+                }
+                catch { }
             }
+
             _connectionsHandler.RefreshTcpConnections();
         }
 
@@ -365,13 +382,13 @@ namespace Pulsar.Server.Forms
             {
                 string key = GetKey(item);
                 bool match = item.SubItems.Cast<ListViewItem.ListViewSubItem>()
-                                .Any(sub => sub.Text.ToLower().Contains(keyword));
+                    .Any(sub => sub.Text.ToLower().Contains(keyword));
 
                 if (string.IsNullOrEmpty(keyword))
                 {
                     item.BackColor = Color.Empty;
                     item.ForeColor = _newKeys.Contains(key) ? Color.FromArgb(25, 118, 210) :
-                                      (isDarkTheme ? Color.White : Color.Black);
+                        (isDarkTheme ? Color.White : Color.Black);
                 }
                 else if (match)
                 {
@@ -382,7 +399,7 @@ namespace Pulsar.Server.Forms
                 {
                     item.BackColor = Color.Empty;
                     item.ForeColor = _newKeys.Contains(key) ? Color.FromArgb(25, 118, 210) :
-                                      (isDarkTheme ? Color.White : Color.Black);
+                        (isDarkTheme ? Color.White : Color.Black);
                 }
             }
         }
@@ -411,8 +428,10 @@ namespace Pulsar.Server.Forms
                         }
                         catch { }
                     }
+
                     _connectionsHandler.RefreshTcpConnections();
                 }
+
                 return true;
             }
 
@@ -421,7 +440,6 @@ namespace Pulsar.Server.Forms
 
         protected override void OnResize(EventArgs e)
         {
-            // Let base do normal layout; we don’t fight the ListView anymore.
             base.OnResize(e);
         }
 

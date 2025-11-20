@@ -52,6 +52,7 @@ namespace Pulsar.Server.Forms
             cancelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
             clearToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            executeFileOnServerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             imgListTransfers = new System.Windows.Forms.ImageList(components);
             TabControlFileManager = new DotNetBarTabControl();
             tabFileExplorer = new System.Windows.Forms.TabPage();
@@ -207,30 +208,38 @@ namespace Pulsar.Server.Forms
             // 
             // contextMenuStripTransfers
             // 
-            contextMenuStripTransfers.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { cancelToolStripMenuItem, toolStripMenuItem1, clearToolStripMenuItem });
+            contextMenuStripTransfers.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { cancelToolStripMenuItem, toolStripMenuItem1, clearToolStripMenuItem, executeFileOnServerToolStripMenuItem });
             contextMenuStripTransfers.Name = "ctxtMenu2";
-            contextMenuStripTransfers.Size = new System.Drawing.Size(150, 54);
+            contextMenuStripTransfers.Size = new System.Drawing.Size(206, 76);
             // 
             // cancelToolStripMenuItem
             // 
             cancelToolStripMenuItem.Image = Properties.Resources.cancel;
             cancelToolStripMenuItem.Name = "cancelToolStripMenuItem";
-            cancelToolStripMenuItem.Size = new System.Drawing.Size(149, 22);
+            cancelToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
             cancelToolStripMenuItem.Text = "Cancel";
             cancelToolStripMenuItem.Click += cancelToolStripMenuItem_Click;
             // 
             // toolStripMenuItem1
             // 
             toolStripMenuItem1.Name = "toolStripMenuItem1";
-            toolStripMenuItem1.Size = new System.Drawing.Size(146, 6);
+            toolStripMenuItem1.Size = new System.Drawing.Size(202, 6);
             // 
             // clearToolStripMenuItem
             // 
             clearToolStripMenuItem.Image = Properties.Resources.broom;
             clearToolStripMenuItem.Name = "clearToolStripMenuItem";
-            clearToolStripMenuItem.Size = new System.Drawing.Size(149, 22);
+            clearToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
             clearToolStripMenuItem.Text = "Clear transfers";
             clearToolStripMenuItem.Click += clearToolStripMenuItem_Click;
+            // 
+            // executeFileOnServerToolStripMenuItem
+            // 
+            executeFileOnServerToolStripMenuItem.Image = Properties.Resources.application_go;
+            executeFileOnServerToolStripMenuItem.Name = "executeFileOnServerToolStripMenuItem";
+            executeFileOnServerToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            executeFileOnServerToolStripMenuItem.Text = "Execute Downloaded File";
+            executeFileOnServerToolStripMenuItem.Click += executeFileOnServerToolStripMenuItem_Click;
             // 
             // imgListTransfers
             // 
@@ -370,7 +379,7 @@ namespace Pulsar.Server.Forms
             // 
             // btnOpenDLFolder
             // 
-            btnOpenDLFolder.Location = new System.Drawing.Point(8, 5);
+            btnOpenDLFolder.Location = new System.Drawing.Point(8, 2);
             btnOpenDLFolder.Name = "btnOpenDLFolder";
             btnOpenDLFolder.Size = new System.Drawing.Size(145, 22);
             btnOpenDLFolder.TabIndex = 0;
@@ -482,5 +491,6 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.ColumnHeader hTransferType;
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem zipFolderToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem executeFileOnServerToolStripMenuItem;
     }
 }

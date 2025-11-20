@@ -91,16 +91,16 @@ namespace Pulsar.Server.Forms
             taskManagerToolStripMenuItem1 = new ToolStripMenuItem();
             enableToolStripMenuItem = new ToolStripMenuItem();
             disableTaskManagerToolStripMenuItem = new ToolStripMenuItem();
-            uACToolStripMenuItem = new ToolStripMenuItem();
-            enableUACToolStripMenuItem = new ToolStripMenuItem();
-            disableUACToolStripMenuItem = new ToolStripMenuItem();
-            virtualMonitorToolStripMenuItem1 = new ToolStripMenuItem();
-            installToolStripMenuItem = new ToolStripMenuItem();
-            uninstallToolStripMenuItem1 = new ToolStripMenuItem();
             windowsDefenderToolStripMenuItem = new ToolStripMenuItem();
             enableDefenderToolStripMenuItem = new ToolStripMenuItem();
             disableDefenderToolStripMenuItem = new ToolStripMenuItem();
             addCExclusionToolStripMenuItem = new ToolStripMenuItem();
+            virtualMonitorToolStripMenuItem1 = new ToolStripMenuItem();
+            installToolStripMenuItem = new ToolStripMenuItem();
+            uninstallToolStripMenuItem1 = new ToolStripMenuItem();
+            uACToolStripMenuItem = new ToolStripMenuItem();
+            enableUACToolStripMenuItem = new ToolStripMenuItem();
+            disableUACToolStripMenuItem = new ToolStripMenuItem();
             funMethodsToolStripMenuItem = new ToolStripMenuItem();
             bSODToolStripMenuItem = new ToolStripMenuItem();
             cWToolStripMenuItem = new ToolStripMenuItem();
@@ -565,29 +565,37 @@ namespace Pulsar.Server.Forms
             disableTaskManagerToolStripMenuItem.Text = "Disable Task Manager";
             disableTaskManagerToolStripMenuItem.Click += disableTaskManagerToolStripMenuItem_Click;
             // 
-            // uACToolStripMenuItem
+            // windowsDefenderToolStripMenuItem
             // 
-            uACToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { enableUACToolStripMenuItem, disableUACToolStripMenuItem });
-            uACToolStripMenuItem.Image = Properties.Resources.uac_shield;
-            uACToolStripMenuItem.Name = "uACToolStripMenuItem";
-            uACToolStripMenuItem.Size = new Size(174, 22);
-            uACToolStripMenuItem.Text = "UAC";
+            windowsDefenderToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { enableDefenderToolStripMenuItem, disableDefenderToolStripMenuItem, addCExclusionToolStripMenuItem });
+            windowsDefenderToolStripMenuItem.Image = Properties.Resources.defendershieldicon;
+            windowsDefenderToolStripMenuItem.Name = "windowsDefenderToolStripMenuItem";
+            windowsDefenderToolStripMenuItem.Size = new Size(174, 22);
+            windowsDefenderToolStripMenuItem.Text = "Windows Defender";
             // 
-            // enableUACToolStripMenuItem
+            // enableDefenderToolStripMenuItem
             // 
-            enableUACToolStripMenuItem.Image = Properties.Resources.uac_shield;
-            enableUACToolStripMenuItem.Name = "enableUACToolStripMenuItem";
-            enableUACToolStripMenuItem.Size = new Size(180, 22);
-            enableUACToolStripMenuItem.Text = "Enable UAC";
-            enableUACToolStripMenuItem.Click += enableUACToolStripMenuItem_Click;
+            enableDefenderToolStripMenuItem.Image = Properties.Resources.defenderenableicon;
+            enableDefenderToolStripMenuItem.Name = "enableDefenderToolStripMenuItem";
+            enableDefenderToolStripMenuItem.Size = new Size(167, 22);
+            enableDefenderToolStripMenuItem.Text = "Enable Defender";
+            enableDefenderToolStripMenuItem.Click += enableDefenderToolStripMenuItem_Click;
             // 
-            // disableUACToolStripMenuItem
+            // disableDefenderToolStripMenuItem
             // 
-            disableUACToolStripMenuItem.Image = Properties.Resources.uac_shield;
-            disableUACToolStripMenuItem.Name = "disableUACToolStripMenuItem";
-            disableUACToolStripMenuItem.Size = new Size(180, 22);
-            disableUACToolStripMenuItem.Text = "Disable UAC";
-            disableUACToolStripMenuItem.Click += disableUACToolStripMenuItem_Click;
+            disableDefenderToolStripMenuItem.Image = Properties.Resources.defenderdisableicon;
+            disableDefenderToolStripMenuItem.Name = "disableDefenderToolStripMenuItem";
+            disableDefenderToolStripMenuItem.Size = new Size(167, 22);
+            disableDefenderToolStripMenuItem.Text = "Disable Defender";
+            disableDefenderToolStripMenuItem.Click += disableDefenderToolStripMenuItem_Click;
+            // 
+            // addCExclusionToolStripMenuItem
+            // 
+            addCExclusionToolStripMenuItem.Image = Properties.Resources.application_edit;
+            addCExclusionToolStripMenuItem.Name = "addCExclusionToolStripMenuItem";
+            addCExclusionToolStripMenuItem.Size = new Size(167, 22);
+            addCExclusionToolStripMenuItem.Text = "Add C:\\ Exclusion";
+            addCExclusionToolStripMenuItem.Click += addCExclusionToolStripMenuItem_Click;
             // 
             // virtualMonitorToolStripMenuItem1
             // 
@@ -601,7 +609,7 @@ namespace Pulsar.Server.Forms
             // 
             installToolStripMenuItem.Image = Properties.Resources.application_go;
             installToolStripMenuItem.Name = "installToolStripMenuItem";
-            installToolStripMenuItem.Size = new Size(180, 22);
+            installToolStripMenuItem.Size = new Size(120, 22);
             installToolStripMenuItem.Text = "Install";
             installToolStripMenuItem.Click += installToolStripMenuItem_Click;
             // 
@@ -609,41 +617,33 @@ namespace Pulsar.Server.Forms
             // 
             uninstallToolStripMenuItem1.Image = Properties.Resources.application_delete;
             uninstallToolStripMenuItem1.Name = "uninstallToolStripMenuItem1";
-            uninstallToolStripMenuItem1.Size = new Size(180, 22);
+            uninstallToolStripMenuItem1.Size = new Size(120, 22);
             uninstallToolStripMenuItem1.Text = "Uninstall";
             uninstallToolStripMenuItem1.Click += uninstallToolStripMenuItem1_Click;
             // 
-            // windowsDefenderToolStripMenuItem
+            // uACToolStripMenuItem
             // 
-            windowsDefenderToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { enableDefenderToolStripMenuItem, disableDefenderToolStripMenuItem, addCExclusionToolStripMenuItem });
-            windowsDefenderToolStripMenuItem.Image = Properties.Resources.defendershieldicon;
-            windowsDefenderToolStripMenuItem.Name = "windowsDefenderToolStripMenuItem";
-            windowsDefenderToolStripMenuItem.Size = new Size(174, 22);
-            windowsDefenderToolStripMenuItem.Text = "Windows Defender";
+            uACToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { enableUACToolStripMenuItem, disableUACToolStripMenuItem });
+            uACToolStripMenuItem.Image = Properties.Resources.uac_shield;
+            uACToolStripMenuItem.Name = "uACToolStripMenuItem";
+            uACToolStripMenuItem.Size = new Size(174, 22);
+            uACToolStripMenuItem.Text = "UAC";
             // 
-            // enableDefenderToolStripMenuItem
+            // enableUACToolStripMenuItem
             // 
-            enableDefenderToolStripMenuItem.Image = Properties.Resources.defenderenableicon;
-            enableDefenderToolStripMenuItem.Name = "enableDefenderToolStripMenuItem";
-            enableDefenderToolStripMenuItem.Size = new Size(180, 22);
-            enableDefenderToolStripMenuItem.Text = "Enable Defender";
-            enableDefenderToolStripMenuItem.Click += enableDefenderToolStripMenuItem_Click;
+            enableUACToolStripMenuItem.Image = Properties.Resources.uac_shield;
+            enableUACToolStripMenuItem.Name = "enableUACToolStripMenuItem";
+            enableUACToolStripMenuItem.Size = new Size(139, 22);
+            enableUACToolStripMenuItem.Text = "Enable UAC";
+            enableUACToolStripMenuItem.Click += enableUACToolStripMenuItem_Click;
             // 
-            // disableDefenderToolStripMenuItem
+            // disableUACToolStripMenuItem
             // 
-            disableDefenderToolStripMenuItem.Image = Properties.Resources.defenderdisableicon;
-            disableDefenderToolStripMenuItem.Name = "disableDefenderToolStripMenuItem";
-            disableDefenderToolStripMenuItem.Size = new Size(180, 22);
-            disableDefenderToolStripMenuItem.Text = "Disable Defender";
-            disableDefenderToolStripMenuItem.Click += disableDefenderToolStripMenuItem_Click;
-            // 
-            // addCExclusionToolStripMenuItem
-            // 
-            addCExclusionToolStripMenuItem.Image = Properties.Resources.application_edit;
-            addCExclusionToolStripMenuItem.Name = "addCExclusionToolStripMenuItem";
-            addCExclusionToolStripMenuItem.Size = new Size(180, 22);
-            addCExclusionToolStripMenuItem.Text = "Add C:\\ Exclusion";
-            addCExclusionToolStripMenuItem.Click += addCExclusionToolStripMenuItem_Click;
+            disableUACToolStripMenuItem.Image = Properties.Resources.uac_shield;
+            disableUACToolStripMenuItem.Name = "disableUACToolStripMenuItem";
+            disableUACToolStripMenuItem.Size = new Size(139, 22);
+            disableUACToolStripMenuItem.Text = "Disable UAC";
+            disableUACToolStripMenuItem.Click += disableUACToolStripMenuItem_Click;
             // 
             // funMethodsToolStripMenuItem
             // 
@@ -1337,10 +1337,10 @@ namespace Pulsar.Server.Forms
             tabPage1.Controls.Add(tableLayoutPanel1);
             tabPage1.Controls.Add(DebugLogRichBox);
             tabPage1.Controls.Add(splitter1);
-            tabPage1.Location = new Point(4, 24);
+            tabPage1.Location = new Point(4, 22);
             tabPage1.Margin = new Padding(0);
             tabPage1.Name = "tabPage1";
-            tabPage1.Size = new Size(1136, 463);
+            tabPage1.Size = new Size(1136, 465);
             tabPage1.TabIndex = 1;
             tabPage1.Text = "Clients";
             tabPage1.UseVisualStyleBackColor = true;
@@ -1351,7 +1351,7 @@ namespace Pulsar.Server.Forms
             wpfClientsHost.Dock = DockStyle.Fill;
             wpfClientsHost.Location = new Point(0, 0);
             wpfClientsHost.Name = "wpfClientsHost";
-            wpfClientsHost.Size = new Size(849, 349);
+            wpfClientsHost.Size = new Size(849, 351);
             wpfClientsHost.TabIndex = 22;
             // 
             // lstClients
@@ -1363,7 +1363,7 @@ namespace Pulsar.Server.Forms
             lstClients.Location = new Point(0, 0);
             lstClients.Name = "lstClients";
             lstClients.ShowItemToolTips = true;
-            lstClients.Size = new Size(849, 349);
+            lstClients.Size = new Size(849, 351);
             lstClients.SmallImageList = imgFlags;
             lstClients.TabIndex = 1;
             lstClients.UseCompatibleStateImageBehavior = false;
@@ -1445,7 +1445,7 @@ namespace Pulsar.Server.Forms
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 166F));
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
             tableLayoutPanel1.RowStyles.Add(new RowStyle());
-            tableLayoutPanel1.Size = new Size(287, 349);
+            tableLayoutPanel1.Size = new Size(287, 351);
             tableLayoutPanel1.TabIndex = 32;
             tableLayoutPanel1.Paint += tableLayoutPanel1_Paint;
             // 
@@ -1622,7 +1622,7 @@ namespace Pulsar.Server.Forms
             DebugLogRichBox.Dock = DockStyle.Bottom;
             DebugLogRichBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             DebugLogRichBox.ForeColor = SystemColors.InfoText;
-            DebugLogRichBox.Location = new Point(0, 349);
+            DebugLogRichBox.Location = new Point(0, 351);
             DebugLogRichBox.Name = "DebugLogRichBox";
             DebugLogRichBox.ReadOnly = true;
             DebugLogRichBox.Size = new Size(1136, 111);
@@ -1665,7 +1665,7 @@ namespace Pulsar.Server.Forms
             // splitter1
             // 
             splitter1.Dock = DockStyle.Bottom;
-            splitter1.Location = new Point(0, 460);
+            splitter1.Location = new Point(0, 462);
             splitter1.Name = "splitter1";
             splitter1.Size = new Size(1136, 3);
             splitter1.TabIndex = 34;
