@@ -148,6 +148,10 @@ namespace Pulsar.Server.Controls.Wpf
                 _topCountries.Add(new CountryHeatItem(rank++, country.Name, country.CountryCode3.ToUpperInvariant(), country.Count, country.Share));
             }
         }
+        public void RefreshSeries()
+        {
+            Series = Series.ToArray(); // simple nudge to force binding update
+        }
 
         private void BuildSeries()
         {

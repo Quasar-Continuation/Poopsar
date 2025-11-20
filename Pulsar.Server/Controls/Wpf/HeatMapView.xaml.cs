@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -11,6 +11,62 @@ using Pulsar.Server.Statistics;
 
 namespace Pulsar.Server.Controls.Wpf
 {
+    using global::Pulsar.Server.Controls.Wpf.Pulsar.Server.Controls.Wpf;
+    using LiveChartsCore.SkiaSharpView.WPF;
+    using System.Windows;
+
+    namespace Pulsar.Server.Controls.Wpf
+    {
+        public class StableGeoMap : GeoMap
+        {
+            private bool _initialized;
+            private bool _firstLoad = true;
+
+            public StableGeoMap()
+            {
+                // Fired every time WPF shows or hides the control (tab switching included)
+                IsVisibleChanged += (_, __) =>
+                {
+                    if (IsVisible)
+                        InvalidateVisual();   // safe redraw
+                };
+
+                // Fired when the control loads into the visual tree
+                Loaded += (_, __) =>
+                {
+                    if (_firstLoad)
+                    {
+                        _firstLoad = false;
+                    }
+                    else
+                    {
+                        InvalidateVisual(); // refresh on subsequent loads
+                    }
+                };
+            }
+
+            protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+            {
+                // Prevent LiveCharts from recreating its internal canvas when resized
+                if (!_initialized)
+                {
+                    base.OnRenderSizeChanged(sizeInfo);
+                    _initialized = true;
+                }
+                else
+                {
+                    InvalidateVisual(); // redraw only
+                }
+            }
+
+            protected override void OnInitialized(EventArgs e)
+            {
+                base.OnInitialized(e);
+                _initialized = true;
+            }
+        }
+    }
+
     public partial class HeatMapView : UserControl
     {
         private readonly HeatMapViewModel _viewModel;
@@ -124,12 +180,13 @@ namespace Pulsar.Server.Controls.Wpf
 
         private static GeoMap CreateGeoMap()
         {
-            return new GeoMap
+            return new StableGeoMap
             {
                 Height = 360,
                 Padding = new Thickness(8)
             };
         }
+
 
         private static Binding CreateOneWayBinding(string path)
         {

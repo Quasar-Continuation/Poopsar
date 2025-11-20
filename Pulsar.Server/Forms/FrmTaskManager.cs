@@ -1,4 +1,5 @@
-﻿using Pulsar.Common.Enums;
+﻿using DarkModeForms;
+using Pulsar.Common.Enums;
 using Pulsar.Common.Messages;
 using Pulsar.Common.Messages.Administration.TaskManager;
 using Pulsar.Common.Models;
@@ -57,7 +58,15 @@ namespace Pulsar.Server.Forms
             _processTreeView = new ProcessTreeView();
 
             InitializeComponent();
-            DarkModeManager.ApplyDarkMode(this);
+
+            // --- FORCE DARK MODE FOR THIS FORM ONLY ---
+            var _ = new DarkModeCS(this)
+            {
+                ColorMode = DarkModeCS.DisplayMode.DarkMode,
+                ColorizeIcons = false
+            };
+            // --- END DARK MODE FORCE ---
+
             ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
 
             _processTreeView.SortRequested += ProcessTreeView_SortRequested;
@@ -69,7 +78,6 @@ namespace Pulsar.Server.Forms
             _countdownTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             _countdownTimer.Tick += CountdownTimer_Tick;
 
-            // ✅ Auto-refresh ON by default
             _pauseAutoRefresh = false;
             enableDisableAutoRefreshToolStripMenuItem.Checked = true;
             toolStripStatusLabel1.Text = $"Refreshing in {_countdownValue}s...";
