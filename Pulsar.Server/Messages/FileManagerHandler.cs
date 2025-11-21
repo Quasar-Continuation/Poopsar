@@ -536,14 +536,16 @@ namespace Pulsar.Server.Messages
             if (transfer == null)
                 return;
 
-            transfer.Size = message.FileSize;
-            transfer.TransferredSize += message.Chunk.Data.Length;
+            // Only set total size once
+            if (transfer.Size == 0 && message.FileSize > 0)
+                transfer.Size = message.FileSize;
 
             try
             {
                 transfer.FileSplit.WriteChunk(message.Chunk);
+                transfer.TransferredSize += message.Chunk.Data.Length;
             }
-            catch (Exception)
+            catch
             {
                 transfer.Status = "Error writing file";
                 OnFileTransferUpdated(transfer);
@@ -551,24 +553,35 @@ namespace Pulsar.Server.Messages
                 return;
             }
 
-            // Calculate progress
-            decimal progress = transfer.Size == 0
-                ? 100
-                : Math.Round((decimal)transfer.TransferredSize / transfer.Size * 100m, 2);
+            // Detect the real and only valid finish condition
+            bool fullyDone = (transfer.Size > 0) &&
+                             (transfer.TransferredSize >= transfer.Size);
 
-            // Transfer reached full size but client never sent FileTransferComplete
-            if (progress >= 100)
+            if (fullyDone)
             {
+                // Normalize values
+                transfer.TransferredSize = transfer.Size;
+
+                // Final correct status
                 transfer.Status = "Completed";
 
-                // remove from list & close file handle BEFORE notifying UI
-                RemoveFileTransfer(transfer.Id);
+                try { transfer.FileSplit.Dispose(); } catch { }
 
                 OnFileTransferUpdated(transfer);
+
+                lock (_syncLock)
+                {
+                    _activeFileTransfers.Remove(transfer);
+                }
+
                 return;
             }
 
-            // Normal chunk progress update
+            // Live progress
+            decimal progress = transfer.Size == 0
+                ? 0
+                : Math.Round((decimal)transfer.TransferredSize / transfer.Size * 100m, 2);
+
             transfer.Status = $"Downloading...({progress}%)";
             OnFileTransferUpdated(transfer);
         }

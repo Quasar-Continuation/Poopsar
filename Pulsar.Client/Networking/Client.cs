@@ -38,11 +38,30 @@ namespace Pulsar.Client.Networking
         /// Fires an event that informs subscribers that the client has failed.
         /// </summary>
         /// <param name="ex">The exception containing information about the cause of the client's failure.</param>
+        private void SafeInvoke(MulticastDelegate multi, params object[] args)
+        {
+            if (multi == null)
+                return;
+
+            foreach (Delegate d in multi.GetInvocationList())
+            {
+                try
+                {
+                    d.DynamicInvoke(args);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("[EVENT HANDLER ERROR] " + ex);
+                }
+            }
+        }
+
         private void OnClientFail(Exception ex)
         {
-            var handler = ClientFail;
-            handler?.Invoke(this, ex);
+            SafeInvoke(ClientFail, this, ex);
         }
+
+
 
         /// <summary>
         /// Occurs when the state of the client has changed.
@@ -65,9 +84,7 @@ namespace Pulsar.Client.Networking
             if (Connected == connected) return;
 
             Connected = connected;
-
-            var handler = ClientState;
-            handler?.Invoke(this, connected);
+            SafeInvoke(ClientState, this, connected);
         }
 
         /// <summary>
@@ -91,8 +108,7 @@ namespace Pulsar.Client.Networking
         private void OnClientRead(IMessage message, int messageLength)
         {
             Debug.WriteLine($"[CLIENT] Received packet: {message.GetType().Name} (Length: {messageLength} bytes)");
-            var handler = ClientRead;
-            handler?.Invoke(this, message, messageLength);
+            SafeInvoke(ClientRead, this, message, messageLength);
         }
 
         /// <summary>

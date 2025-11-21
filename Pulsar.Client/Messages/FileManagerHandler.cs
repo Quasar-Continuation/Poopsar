@@ -332,13 +332,22 @@ namespace Pulsar.Client.Messages
                 var dest = _activeTransfers[message.Id];
                 dest.WriteChunk(message.Chunk);
 
-                if (dest.FileSize == message.FileSize)
+                if (dest.FileSize >= message.FileSize)
                 {
-                    // --- FIXED ---
-                    SendCompleted(client, message.Id, dest.FilePath);
-                    Thread.Sleep(5);
-                    RemoveFileTransfer(message.Id);
+                    // Capture path before we dispose
+                    string finalPath = dest.FilePath;
+
+                    // 1) Close & flush the file FIRST
+                    RemoveFileTransfer(message.Id);   // this disposes FileSplit & its FileStream
+
+                    // 2) Tiny delay to let OS flush buffers (prevents cut-off files)
+                    Thread.Sleep(20);
+
+                    // 3) Now tell the server it's done
+                    SendCompleted(client, message.Id, finalPath);
                 }
+
+
             }
             catch
             {

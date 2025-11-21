@@ -41,17 +41,22 @@ namespace Pulsar.Server.Forms
             renameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             deleteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             line2ToolStripMenuItem = new System.Windows.Forms.ToolStripSeparator();
+            openDirectoryInShellToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             addToStartupToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             line3ToolStripMenuItem = new System.Windows.Forms.ToolStripSeparator();
+            copyPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            searchToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            previewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             refreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            openDirectoryInShellToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             imgListDirectory = new System.Windows.Forms.ImageList(components);
             statusStrip = new System.Windows.Forms.StatusStrip();
             stripLblStatus = new System.Windows.Forms.ToolStripStatusLabel();
             contextMenuStripTransfers = new System.Windows.Forms.ContextMenuStrip(components);
+            deleteFileFromServerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             cancelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
             clearToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
+            previewTransferFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             executeFileOnServerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             imgListTransfers = new System.Windows.Forms.ImageList(components);
             TabControlFileManager = new DotNetBarTabControl();
@@ -82,9 +87,9 @@ namespace Pulsar.Server.Forms
             // 
             // contextMenuStripDirectory
             // 
-            contextMenuStripDirectory.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { downloadToolStripMenuItem, uploadToolStripMenuItem, lineToolStripMenuItem, zipFolderToolStripMenuItem, executeToolStripMenuItem, renameToolStripMenuItem, deleteToolStripMenuItem, line2ToolStripMenuItem, addToStartupToolStripMenuItem, line3ToolStripMenuItem, refreshToolStripMenuItem, openDirectoryInShellToolStripMenuItem });
+            contextMenuStripDirectory.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { previewToolStripMenuItem, downloadToolStripMenuItem, uploadToolStripMenuItem, lineToolStripMenuItem, zipFolderToolStripMenuItem, executeToolStripMenuItem, renameToolStripMenuItem, deleteToolStripMenuItem, line2ToolStripMenuItem, openDirectoryInShellToolStripMenuItem, addToStartupToolStripMenuItem, line3ToolStripMenuItem, copyPathToolStripMenuItem, searchToolStripMenuItem, refreshToolStripMenuItem });
             contextMenuStripDirectory.Name = "ctxtMenu";
-            contextMenuStripDirectory.Size = new System.Drawing.Size(240, 220);
+            contextMenuStripDirectory.Size = new System.Drawing.Size(240, 286);
             // 
             // downloadToolStripMenuItem
             // 
@@ -145,6 +150,14 @@ namespace Pulsar.Server.Forms
             line2ToolStripMenuItem.Name = "line2ToolStripMenuItem";
             line2ToolStripMenuItem.Size = new System.Drawing.Size(236, 6);
             // 
+            // openDirectoryInShellToolStripMenuItem
+            // 
+            openDirectoryInShellToolStripMenuItem.Image = Properties.Resources.terminal;
+            openDirectoryInShellToolStripMenuItem.Name = "openDirectoryInShellToolStripMenuItem";
+            openDirectoryInShellToolStripMenuItem.Size = new System.Drawing.Size(239, 22);
+            openDirectoryInShellToolStripMenuItem.Text = "Open Directory in Remote Shell";
+            openDirectoryInShellToolStripMenuItem.Click += openDirectoryToolStripMenuItem_Click;
+            // 
             // addToStartupToolStripMenuItem
             // 
             addToStartupToolStripMenuItem.Image = Properties.Resources.application_add;
@@ -158,6 +171,30 @@ namespace Pulsar.Server.Forms
             line3ToolStripMenuItem.Name = "line3ToolStripMenuItem";
             line3ToolStripMenuItem.Size = new System.Drawing.Size(236, 6);
             // 
+            // copyPathToolStripMenuItem
+            // 
+            copyPathToolStripMenuItem.Image = Properties.Resources.clipboard_paste_image;
+            copyPathToolStripMenuItem.Name = "copyPathToolStripMenuItem";
+            copyPathToolStripMenuItem.Size = new System.Drawing.Size(239, 22);
+            copyPathToolStripMenuItem.Text = "Copy Path (Ctrl+C)";
+            copyPathToolStripMenuItem.Click += copyPathToolStripMenuItem_Click;
+            // 
+            // searchToolStripMenuItem
+            // 
+            searchToolStripMenuItem.Image = Properties.Resources.magnifyingglassicon;
+            searchToolStripMenuItem.Name = "searchToolStripMenuItem";
+            searchToolStripMenuItem.Size = new System.Drawing.Size(239, 22);
+            searchToolStripMenuItem.Text = "Search (Ctrl+F)";
+            searchToolStripMenuItem.Click += searchToolStripMenuItem_Click;
+            // 
+            // previewToolStripMenuItem
+            // 
+            previewToolStripMenuItem.Image = Properties.Resources.previeweye;
+            previewToolStripMenuItem.Name = "previewToolStripMenuItem";
+            previewToolStripMenuItem.Size = new System.Drawing.Size(239, 22);
+            previewToolStripMenuItem.Text = "Preview File";
+            previewToolStripMenuItem.Click += previewToolStripMenuItem_Click;
+            // 
             // refreshToolStripMenuItem
             // 
             refreshToolStripMenuItem.Image = Properties.Resources.refresh;
@@ -165,14 +202,6 @@ namespace Pulsar.Server.Forms
             refreshToolStripMenuItem.Size = new System.Drawing.Size(239, 22);
             refreshToolStripMenuItem.Text = "Refresh";
             refreshToolStripMenuItem.Click += refreshToolStripMenuItem_Click;
-            // 
-            // openDirectoryInShellToolStripMenuItem
-            // 
-            openDirectoryInShellToolStripMenuItem.Image = Properties.Resources.terminal;
-            openDirectoryInShellToolStripMenuItem.Name = "openDirectoryInShellToolStripMenuItem";
-            openDirectoryInShellToolStripMenuItem.Size = new System.Drawing.Size(239, 22);
-            openDirectoryInShellToolStripMenuItem.Text = "Open Directory in Remote Shell";
-            openDirectoryInShellToolStripMenuItem.Click += openDirectoryToolStripMenuItem_Click;
             // 
             // imgListDirectory
             // 
@@ -208,30 +237,46 @@ namespace Pulsar.Server.Forms
             // 
             // contextMenuStripTransfers
             // 
-            contextMenuStripTransfers.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { cancelToolStripMenuItem, toolStripMenuItem1, clearToolStripMenuItem, executeFileOnServerToolStripMenuItem });
+            contextMenuStripTransfers.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { deleteFileFromServerToolStripMenuItem, cancelToolStripMenuItem, clearToolStripMenuItem, toolStripMenuItem1, previewTransferFileToolStripMenuItem, executeFileOnServerToolStripMenuItem });
             contextMenuStripTransfers.Name = "ctxtMenu2";
-            contextMenuStripTransfers.Size = new System.Drawing.Size(206, 76);
+            contextMenuStripTransfers.Size = new System.Drawing.Size(206, 120);
+            // 
+            // deleteFileFromServerToolStripMenuItem
+            // 
+            deleteFileFromServerToolStripMenuItem.Image = Properties.Resources.garbage;
+            deleteFileFromServerToolStripMenuItem.Name = "deleteFileFromServerToolStripMenuItem";
+            deleteFileFromServerToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            deleteFileFromServerToolStripMenuItem.Text = "Delete From Server";
+            deleteFileFromServerToolStripMenuItem.Click += deleteFileFromServerToolStripMenuItem_Click;
             // 
             // cancelToolStripMenuItem
             // 
             cancelToolStripMenuItem.Image = Properties.Resources.cancel;
             cancelToolStripMenuItem.Name = "cancelToolStripMenuItem";
             cancelToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
-            cancelToolStripMenuItem.Text = "Cancel";
+            cancelToolStripMenuItem.Text = "Cancel Transfer";
             cancelToolStripMenuItem.Click += cancelToolStripMenuItem_Click;
-            // 
-            // toolStripMenuItem1
-            // 
-            toolStripMenuItem1.Name = "toolStripMenuItem1";
-            toolStripMenuItem1.Size = new System.Drawing.Size(202, 6);
             // 
             // clearToolStripMenuItem
             // 
             clearToolStripMenuItem.Image = Properties.Resources.broom;
             clearToolStripMenuItem.Name = "clearToolStripMenuItem";
             clearToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
-            clearToolStripMenuItem.Text = "Clear transfers";
+            clearToolStripMenuItem.Text = "Clear All Transfers";
             clearToolStripMenuItem.Click += clearToolStripMenuItem_Click;
+            // 
+            // toolStripMenuItem1
+            // 
+            toolStripMenuItem1.Name = "toolStripMenuItem1";
+            toolStripMenuItem1.Size = new System.Drawing.Size(202, 6);
+            // 
+            // previewTransferFileToolStripMenuItem
+            // 
+            previewTransferFileToolStripMenuItem.Image = Properties.Resources.previeweye;
+            previewTransferFileToolStripMenuItem.Name = "previewTransferFileToolStripMenuItem";
+            previewTransferFileToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            previewTransferFileToolStripMenuItem.Text = "Preview File";
+            previewTransferFileToolStripMenuItem.Click += previewTransferFileToolStripMenuItem_Click;
             // 
             // executeFileOnServerToolStripMenuItem
             // 
@@ -492,5 +537,10 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem zipFolderToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem executeFileOnServerToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem searchToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem copyPathToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem previewToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem deleteFileFromServerToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem previewTransferFileToolStripMenuItem;
     }
 }

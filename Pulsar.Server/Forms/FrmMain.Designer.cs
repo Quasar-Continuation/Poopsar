@@ -1314,10 +1314,10 @@ namespace Pulsar.Server.Forms
             // tabStats
             // 
             tabStats.Controls.Add(statsElementHost);
-            tabStats.Location = new Point(4, 24);
+            tabStats.Location = new Point(4, 22);
             tabStats.Margin = new Padding(0);
             tabStats.Name = "tabStats";
-            tabStats.Size = new Size(1136, 463);
+            tabStats.Size = new Size(1136, 465);
             tabStats.TabIndex = 1;
             tabStats.Text = "Stats";
             tabStats.UseVisualStyleBackColor = true;
@@ -1327,7 +1327,7 @@ namespace Pulsar.Server.Forms
             statsElementHost.Dock = DockStyle.Fill;
             statsElementHost.Location = new Point(0, 0);
             statsElementHost.Name = "statsElementHost";
-            statsElementHost.Size = new Size(1136, 463);
+            statsElementHost.Size = new Size(1136, 465);
             statsElementHost.TabIndex = 0;
             // 
             // tabPage1
@@ -1337,10 +1337,10 @@ namespace Pulsar.Server.Forms
             tabPage1.Controls.Add(tableLayoutPanel1);
             tabPage1.Controls.Add(DebugLogRichBox);
             tabPage1.Controls.Add(splitter1);
-            tabPage1.Location = new Point(4, 22);
+            tabPage1.Location = new Point(4, 24);
             tabPage1.Margin = new Padding(0);
             tabPage1.Name = "tabPage1";
-            tabPage1.Size = new Size(1136, 465);
+            tabPage1.Size = new Size(1136, 463);
             tabPage1.TabIndex = 1;
             tabPage1.Text = "Clients";
             tabPage1.UseVisualStyleBackColor = true;
@@ -1351,7 +1351,7 @@ namespace Pulsar.Server.Forms
             wpfClientsHost.Dock = DockStyle.Fill;
             wpfClientsHost.Location = new Point(0, 0);
             wpfClientsHost.Name = "wpfClientsHost";
-            wpfClientsHost.Size = new Size(849, 351);
+            wpfClientsHost.Size = new Size(849, 349);
             wpfClientsHost.TabIndex = 22;
             // 
             // lstClients
@@ -1363,7 +1363,7 @@ namespace Pulsar.Server.Forms
             lstClients.Location = new Point(0, 0);
             lstClients.Name = "lstClients";
             lstClients.ShowItemToolTips = true;
-            lstClients.Size = new Size(849, 351);
+            lstClients.Size = new Size(849, 349);
             lstClients.SmallImageList = imgFlags;
             lstClients.TabIndex = 1;
             lstClients.UseCompatibleStateImageBehavior = false;
@@ -1445,7 +1445,7 @@ namespace Pulsar.Server.Forms
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 166F));
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
             tableLayoutPanel1.RowStyles.Add(new RowStyle());
-            tableLayoutPanel1.Size = new Size(287, 351);
+            tableLayoutPanel1.Size = new Size(287, 349);
             tableLayoutPanel1.TabIndex = 32;
             tableLayoutPanel1.Paint += tableLayoutPanel1_Paint;
             // 
@@ -1622,7 +1622,7 @@ namespace Pulsar.Server.Forms
             DebugLogRichBox.Dock = DockStyle.Bottom;
             DebugLogRichBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             DebugLogRichBox.ForeColor = SystemColors.InfoText;
-            DebugLogRichBox.Location = new Point(0, 351);
+            DebugLogRichBox.Location = new Point(0, 349);
             DebugLogRichBox.Name = "DebugLogRichBox";
             DebugLogRichBox.ReadOnly = true;
             DebugLogRichBox.Size = new Size(1136, 111);
@@ -1665,7 +1665,7 @@ namespace Pulsar.Server.Forms
             // splitter1
             // 
             splitter1.Dock = DockStyle.Bottom;
-            splitter1.Location = new Point(0, 462);
+            splitter1.Location = new Point(0, 460);
             splitter1.Name = "splitter1";
             splitter1.Size = new Size(1136, 3);
             splitter1.TabIndex = 34;
@@ -1675,10 +1675,10 @@ namespace Pulsar.Server.Forms
             // tabHeatMap
             // 
             tabHeatMap.Controls.Add(heatMapElementHost);
-            tabHeatMap.Location = new Point(4, 24);
+            tabHeatMap.Location = new Point(4, 22);
             tabHeatMap.Margin = new Padding(0);
             tabHeatMap.Name = "tabHeatMap";
-            tabHeatMap.Size = new Size(1136, 463);
+            tabHeatMap.Size = new Size(1136, 465);
             tabHeatMap.TabIndex = 2;
             tabHeatMap.Text = "Heat Map";
             tabHeatMap.UseVisualStyleBackColor = true;
@@ -1688,7 +1688,7 @@ namespace Pulsar.Server.Forms
             heatMapElementHost.Dock = DockStyle.Fill;
             heatMapElementHost.Location = new Point(0, 0);
             heatMapElementHost.Name = "heatMapElementHost";
-            heatMapElementHost.Size = new Size(1136, 463);
+            heatMapElementHost.Size = new Size(1136, 465);
             heatMapElementHost.TabIndex = 0;
             // 
             // tabPage2
