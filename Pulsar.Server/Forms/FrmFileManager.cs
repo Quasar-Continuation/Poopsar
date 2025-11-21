@@ -394,26 +394,68 @@ namespace Pulsar.Server.Forms
         /// </summary>
         private void DirectoryChanged(object sender, string remotePath, FileSystemEntry[] items)
         {
+            // Protect against nulls (your crash source)
+            if (string.IsNullOrWhiteSpace(remotePath))
+                return;
+
+            if (items == null)
+                items = Array.Empty<FileSystemEntry>();
+
+            // Update current path
             _currentDir = remotePath;
-            txtPath.Text = remotePath;
 
-            _cachedItems = (items ?? Array.Empty<FileSystemEntry>())
-                .OrderBy(e => e.EntryType != FileType.Directory)
-                .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
+            // Update textbox safely
+            if (txtPath.InvokeRequired)
+            {
+                txtPath.Invoke(new Action(() => txtPath.Text = remotePath));
+            }
+            else
+            {
+                txtPath.Text = remotePath;
+            }
 
+            // Sanitize + sort
+            try
+            {
+                _cachedItems = items
+                    .Where(i => i != null && !string.IsNullOrWhiteSpace(i.Name))
+                    .OrderBy(e => e.EntryType != FileType.Directory)
+                    .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+            }
+            catch
+            {
+                _cachedItems = Array.Empty<FileSystemEntry>();
+            }
+
+            // Update the ListView
+            try
+            {
+                if (lstDirectory.InvokeRequired)
+                {
+                    lstDirectory.Invoke(new Action(UpdateList));
+                }
+                else
+                {
+                    UpdateList();
+                }
+            }
+            catch { }
+
+            SetStatusMessage(this, "Ready");
+        }
+
+        private void UpdateList()
+        {
             using (new RedrawScope(lstDirectory))
             {
                 lstDirectory.BeginUpdate();
-                lstDirectory.VirtualListSize = _cachedItems.Length + 1;
+                lstDirectory.VirtualListSize = _cachedItems.Length + 1; // +1 for ".."
                 ForceListViewViewportReset();
                 lstDirectory.EndUpdate();
             }
 
-            // Make sure layout stays consistent after virtual size change
             FixListViewLayout();
-
-            SetStatusMessage(this, "Ready");
         }
 
         /// <summary>
