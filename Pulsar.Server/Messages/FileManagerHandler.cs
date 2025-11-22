@@ -88,16 +88,22 @@ namespace Pulsar.Server.Messages
         /// </summary>
         /// <param name="remotePath">The remote path of the directory.</param>
         /// <param name="items">The directory content.</param>
-        private void OnDirectoryChanged(string remotePath, FileSystemEntry[] items)
+        private void OnDirectoryChanged(string? remotePath, FileSystemEntry[]? items)
         {
+            // Ignore invalid remote paths (prevents downstream crashes)
             if (string.IsNullOrWhiteSpace(remotePath))
-                remotePath = "";   // or "/"
+                return;
+
+            // Normalize null items
+            if (items == null)
+                items = Array.Empty<FileSystemEntry>();
 
             SynchronizationContext.Post(i =>
             {
-                DirectoryChanged?.Invoke(this, remotePath, (FileSystemEntry[])i);
+                DirectoryChanged?.Invoke(this, remotePath!, (FileSystemEntry[])i);
             }, items);
         }
+
 
 
         /// <summary>

