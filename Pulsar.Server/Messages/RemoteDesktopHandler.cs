@@ -279,6 +279,41 @@ namespace Pulsar.Server.Messages
             });
         }
 
+        private async Task ForceFrameRequestFallbackAsync()
+        {
+            if (!IsStarted) return;
+
+            if (!await _frameRequestSemaphore.WaitAsync(0).ConfigureAwait(false))
+                return;
+
+            try
+            {
+                int batch = _defaultFrameRequestBatch;
+
+                Debug.WriteLine($"[Failsafe] Requesting {batch} frames (pending stuck).");
+
+                Interlocked.Add(ref _pendingFrames, batch);
+
+                _client.Send(new GetDesktop
+                {
+                    CreateNew = false,
+                    Quality = _codec?.ImageQuality ?? 75,
+                    DisplayIndex = _codec?.Monitor ?? 0,
+                    Status = RemoteDesktopStatus.Continue,
+                    IsBufferedMode = true,
+                    FramesRequested = batch
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failsafe request error: {ex}");
+            }
+            finally
+            {
+                _frameRequestSemaphore.Release();
+            }
+        }
+
         // ==============================
         //   MAIN FRAME HANDLER
         // ==============================
@@ -309,12 +344,14 @@ namespace Pulsar.Server.Messages
 
             lock (_syncLock)
             {
+                // Validate incoming image
                 if (!IsStarted || message.Image == null || message.Image.Length == 0)
                 {
                     Interlocked.Decrement(ref _pendingFrames);
                     return;
                 }
 
+                // Recreate codec if necessary
                 if (_codec == null ||
                     _codec.ImageQuality != message.Quality ||
                     _codec.Monitor != message.Monitor ||
@@ -388,7 +425,7 @@ namespace Pulsar.Server.Messages
                 while (_frameTimestamps.Count > _fpsCalculationWindow &&
                        _frameTimestamps.TryDequeue(out _)) { }
 
-                // Push frame to UI via MessageProcessorBase<Bitmap> (ProgressChanged in your form)
+                // Push frame to UI
                 OnReport(decoded);
             }
             else
@@ -396,9 +433,21 @@ namespace Pulsar.Server.Messages
                 Debug.WriteLine("Decoded frame was null.");
             }
 
+            // Decrease pending (may hit 0)
             Interlocked.Decrement(ref _pendingFrames);
 
-            // Request more frames if needed (buffered mode)
+            // -------------------------------
+            // FAILSAFE: Never allow streaming to stall
+            // -------------------------------
+            if (IsStarted && Volatile.Read(ref _pendingFrames) <= 0)
+            {
+                Debug.WriteLine("Failsafe triggered: pendingFrames <= 0, requesting frames.");
+                _ = ForceFrameRequestFallbackAsync();
+            }
+
+            // -------------------------------
+            // Normal buffered mode request logic
+            // -------------------------------
             if (IsBufferedMode &&
                 (message.IsLastRequestedFrame || Volatile.Read(ref _pendingFrames) <= 8))
             {

