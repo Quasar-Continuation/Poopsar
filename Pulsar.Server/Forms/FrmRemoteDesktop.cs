@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Pulsar.Server.Forms
@@ -223,11 +224,22 @@ namespace Pulsar.Server.Forms
         /// <param name="connected">True if the client connected, false if disconnected</param>
         private void ClientDisconnected(Client client, bool connected)
         {
-            if (!connected)
+            if (connected) return;
+
+            if (IsDisposed || !IsHandleCreated)
+                return;
+
+            try
             {
-                this.Invoke((MethodInvoker)this.Close);
+                BeginInvoke((MethodInvoker)(() =>
+                {
+                    if (!IsDisposed)
+                        Close();
+                }));
             }
+            catch (ObjectDisposedException) { }
         }
+
 
         /// <summary>
         /// Registers the remote desktop message handler for client communication.
@@ -250,73 +262,138 @@ namespace Pulsar.Server.Forms
             _remoteDesktopHandler.ProgressChanged -= UpdateImage;
             _connectClient.ClientState -= ClientDisconnected;
         }
+        private bool _inputHooksAttached;
 
-        /// <summary>
-        /// Subscribes to local mouse and keyboard events for remote desktop input.
-        /// </summary>
         private void SubscribeEvents()
         {
-            _keyboardHook = Hook.GlobalEvents();
-            _keyboardHook.KeyDown += OnKeyDown;
-            _keyboardHook.KeyUp += OnKeyUp;
+            if (_inputHooksAttached)
+                return;
 
-            _mouseHook = Hook.AppEvents();
-            _mouseHook.MouseWheel += OnMouseWheelMove;
+            try
+            {
+                _keyboardHook = Hook.GlobalEvents();
+                _keyboardHook.KeyDown += OnKeyDown;
+                _keyboardHook.KeyUp += OnKeyUp;
+
+                _mouseHook = Hook.AppEvents();
+                _mouseHook.MouseWheel += OnMouseWheelMove;
+
+                _inputHooksAttached = true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"SubscribeEvents failed: {ex}");
+                _inputHooksAttached = false;
+            }
         }
 
-        /// <summary>
-        /// Unsubscribes from local mouse and keyboard events.
-        /// </summary>
         private void UnsubscribeEvents()
         {
-            if (_keyboardHook != null)
+            if (!_inputHooksAttached)
+                return;
+
+            try
             {
-                _keyboardHook.KeyDown -= OnKeyDown;
-                _keyboardHook.KeyUp -= OnKeyUp;
-                _keyboardHook.Dispose();
+                if (_keyboardHook != null)
+                {
+                    _keyboardHook.KeyDown -= OnKeyDown;
+                    _keyboardHook.KeyUp -= OnKeyUp;
+                    _keyboardHook.Dispose();
+                    _keyboardHook = null;
+                }
+
+                if (_mouseHook != null)
+                {
+                    _mouseHook.MouseWheel -= OnMouseWheelMove;
+                    _mouseHook.Dispose();
+                    _mouseHook = null;
+                }
             }
-            if (_mouseHook != null)
+            catch (Exception ex)
             {
-                _mouseHook.MouseWheel -= OnMouseWheelMove;
-                _mouseHook.Dispose();
+                Debug.WriteLine($"UnsubscribeEvents failed: {ex}");
+            }
+            finally
+            {
+                _inputHooksAttached = false;
             }
         }
+
 
         // =========================
         //  START STREAM (FIXED)
         // =========================
         private void StartStream(bool useGpu)
         {
-            // --------- FORCE UI STATE ---------
+            // --- UI state ---
             btnStart.Enabled = false;
             btnStop.Enabled = true;
             ToggleConfigurationControls(true);
 
-            // Remove any stale handlers before adding new ones
+            // --- Ensure only one image handler ---
             _remoteDesktopHandler.ProgressChanged -= UpdateImage;
             _remoteDesktopHandler.ProgressChanged += UpdateImage;
 
-            picDesktop.UnsetFrameUpdatedEvent(frameCounter_FrameUpdated);
-            picDesktop.SetFrameUpdatedEvent(frameCounter_FrameUpdated);
+            // --- FPS EVENT FIX (always reattach before Start) ---
+            try { picDesktop.UnsetFrameUpdatedEvent(frameCounter_FrameUpdated); } catch { }
+            try
+            {
+                picDesktop.SetFrameUpdatedEvent(frameCounter_FrameUpdated);
+                Debug.WriteLine("FPS event attached (initial).");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to attach FPS event: {ex}");
+            }
 
-            // Reset counters
+            // --- Reset counters ---
             _sizeFrames = 0;
             _previousMousePosition = Point.Empty;
 
-            // Start rendering control
+            // --- Start rendering control ---
             picDesktop.Start();
             picDesktop.Enabled = true;
 
-            // Tell client to begin sending frames
-            _remoteDesktopHandler.BeginReceiveFrames(
-                barQuality.Value,
-                cbMonitors.SelectedIndex,
-                useGpu);
+            // --- Tell client to begin streaming frames ---
+            try
+            {
+                _remoteDesktopHandler.BeginReceiveFrames(
+                    barQuality.Value,
+                    cbMonitors.SelectedIndex,
+                    useGpu);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"BeginReceiveFrames failed: {ex}");
+                throw; // handled in btnStart_Click
+            }
 
+            // --- SAFETY: some GPUs / first-frame delays detach events ---
+            Task.Delay(150).ContinueWith(_ =>
+            {
+                if (IsDisposed || !IsHandleCreated) return;
+
+                try
+                {
+                    BeginInvoke(new MethodInvoker(() =>
+                    {
+                        try { picDesktop.UnsetFrameUpdatedEvent(frameCounter_FrameUpdated); } catch { }
+                        try
+                        {
+                            picDesktop.SetFrameUpdatedEvent(frameCounter_FrameUpdated);
+                            Debug.WriteLine("FPS event attached (delayed).");
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Delayed FPS reattach failed: {ex}");
+                        }
+                    }));
+                }
+                catch { }
+            });
+
+            // Enable drawing toolbar button
             btnShowDrawingTools.Enabled = true;
-
-            // Safe side: ensure hooks only started once
-            SubscribeEvents();
         }
 
 
@@ -326,47 +403,46 @@ namespace Pulsar.Server.Forms
         // =========================
         private void StopStream()
         {
-            // --------- FORCE UI STATE ---------
-            btnStart.Enabled = true;
-            btnStop.Enabled = false;
-            ToggleConfigurationControls(false);
-
-            btnShowDrawingTools.Enabled = false;
-
-            // Kill hooks first (prevents race)
-            UnsubscribeEvents();
-
-            // Remove frame handler BEFORE stopping the handler (critical)
-            _remoteDesktopHandler.ProgressChanged -= UpdateImage;
-
-            // Stop picture rendering
-            picDesktop.Stop();
-            picDesktop.UnsetFrameUpdatedEvent(frameCounter_FrameUpdated);
-
-            // Release last frame memory
-            picDesktop.UpdateImage(null, true);
-
-            // Reset drawing modes, cursor, panel states
-            _enableDrawingMode = false;
-            _enableEraserMode = false;
-            _previousMousePosition = Point.Empty;
-
-            ConfigureDrawingButtons();
-            picDesktop.Cursor = Cursors.Default;
-
-            if (panelDrawingTools.Visible)
+            try
             {
-                panelDrawingTools.Visible = false;
-                btnShowDrawingTools.Image = Properties.Resources.arrow_up;
-                toolTipButtons.SetToolTip(btnShowDrawingTools, "Show drawing tools");
+                ToggleConfigurationControls(false);
+                btnShowDrawingTools.Enabled = false;
+
+                UnsubscribeEvents();
+
+                _remoteDesktopHandler.ProgressChanged -= UpdateImage;
+
+                picDesktop.Stop();
+                picDesktop.UnsetFrameUpdatedEvent(frameCounter_FrameUpdated);
+                picDesktop.UpdateImage(null, true);
+
+                _enableDrawingMode = false;
+                _enableEraserMode = false;
+                _previousMousePosition = Point.Empty;
+
+                ConfigureDrawingButtons();
+                picDesktop.Cursor = Cursors.Default;
+
+                if (panelDrawingTools.Visible)
+                {
+                    panelDrawingTools.Visible = false;
+                    btnShowDrawingTools.Image = Properties.Resources.arrow_up;
+                    toolTipButtons.SetToolTip(btnShowDrawingTools, "Show drawing tools");
+                }
+
+                _remoteDesktopHandler.EndReceiveFrames();
             }
-
-            // Stop receiving frames
-            _remoteDesktopHandler.EndReceiveFrames();
-
-            // Just to be 100% safe from leaks
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"StopStream error: {ex}");
+            }
+            finally
+            {
+                btnStart.Enabled = true;
+                btnStop.Enabled = false;
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+            }
         }
 
 
@@ -404,14 +480,42 @@ namespace Pulsar.Server.Forms
         /// <param name="displays">The currently available displays.</param>
         private void DisplaysChanged(object sender, int displays)
         {
+            if (IsDisposed || !IsHandleCreated)
+                return;
+
+            if (InvokeRequired)
+            {
+                try
+                {
+                    BeginInvoke(new Action<object, int>(DisplaysChanged), sender, displays);
+                }
+                catch (ObjectDisposedException) { }
+                return;
+            }
+
             cbMonitors.Items.Clear();
             for (int i = 0; i < displays; i++)
                 cbMonitors.Items.Add($"Display {i + 1}");
-            cbMonitors.SelectedIndex = 0;
+            if (cbMonitors.Items.Count > 0)
+                cbMonitors.SelectedIndex = 0;
         }
+
 
         private void UpdateImage(object sender, Bitmap bmp)
         {
+            if (IsDisposed || !IsHandleCreated)
+                return;
+
+            if (InvokeRequired)
+            {
+                try
+                {
+                    BeginInvoke(new Action<object, Bitmap>(UpdateImage), sender, bmp);
+                }
+                catch (ObjectDisposedException) { }
+                return;
+            }
+
             _sizeFrames++;
             if (_sizeFrames >= 60)
             {
@@ -420,14 +524,11 @@ namespace Pulsar.Server.Forms
                 double avg = _remoteDesktopHandler.AverageFrameSizeBytes;
                 if (last > 0 || avg > 0)
                 {
-                    double lastKB = last / 1024.0;
                     double avgKB = avg / 1024.0;
-                    this.Invoke((MethodInvoker)delegate
-                    {
-                        sizeLabelCounter.Text = $"{avgKB:0.0}  KB";
-                    });
+                    sizeLabelCounter.Text = $"{avgKB:0.0}  KB";
                 }
             }
+
             picDesktop.UpdateImage(bmp, false);
         }
 
@@ -531,16 +632,26 @@ namespace Pulsar.Server.Forms
                 return;
             }
 
-            SubscribeEvents();
-            StartStream(_useGPU);
+            try
+            {
+                SubscribeEvents();
+                StartStream(_useGPU);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"StartStream error: {ex}");
+                MessageBox.Show($"Failed to start Remote Desktop.\n\n{ex.Message}",
+                    "Remote Desktop Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                StopStream(); // cleanup
+            }
         }
 
         private void btnStop_Click(object sender, EventArgs e)
         {
             picDesktop.Enabled = false;
-            UnsubscribeEvents();
             StopStream();
         }
+
 
         #region Remote Desktop Input
 
