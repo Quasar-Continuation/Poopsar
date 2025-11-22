@@ -102,6 +102,7 @@ namespace Pulsar.Server.Forms
 
         private void FrmRemoteExecution_Load(object sender, EventArgs e)
         {
+            btnExecute.Dock = DockStyle.Bottom;
             this.Text = WindowHelper.GetWindowTitle("Remote Execution", _clients.Length);
         }
 

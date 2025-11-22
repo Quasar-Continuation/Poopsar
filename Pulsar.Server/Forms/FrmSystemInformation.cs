@@ -5,6 +5,7 @@ using Pulsar.Server.Forms.DarkMode;
 using Pulsar.Server.Helper;
 using Pulsar.Server.Messages;
 using Pulsar.Server.Networking;
+using Pulsar.Server.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,44 +15,56 @@ namespace Pulsar.Server.Forms
 {
     public partial class FrmSystemInformation : Form
     {
-        /// <summary>
-        /// The client which can be used for the system information.
-        /// </summary>
+        // -------------------------------------------------------------
+        // FIXED: StableListView now inherits AeroListView
+        // -------------------------------------------------------------
+        private class StableListView : AeroListView
+        {
+            public StableListView()
+            {
+                this.DoubleBuffered = true;
+                this.ResizeRedraw = false;
+
+                this.SetStyle(ControlStyles.OptimizedDoubleBuffer |
+                              ControlStyles.AllPaintingInWmPaint, true);
+
+                this.UpdateStyles();
+            }
+
+            protected override void OnResize(EventArgs e)
+            {
+                this.BeginUpdate();
+                base.OnResize(e);
+                this.EndUpdate();
+            }
+
+            protected override void OnColumnWidthChanged(ColumnWidthChangedEventArgs e)
+            {
+                this.BeginUpdate();
+                base.OnColumnWidthChanged(e);
+                this.EndUpdate();
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Fields
+        // -------------------------------------------------------------
         private readonly Client _connectClient;
-
-        /// <summary>
-        /// The message handler for handling the communication with the client.
-        /// </summary>
         private readonly SystemInformationHandler _sysInfoHandler;
+        private static readonly Dictionary<Client, FrmSystemInformation> OpenedForms = new();
 
-        /// <summary>
-        /// Holds the opened system information form for each client.
-        /// </summary>
-        private static readonly Dictionary<Client, FrmSystemInformation> OpenedForms = new Dictionary<Client, FrmSystemInformation>();
-
-        /// <summary>
-        /// Creates a new system information form for the client or gets the current open form, if there exists one already.
-        /// </summary>
-        /// <param name="client">The client used for the system information form.</param>
-        /// <returns>
-        /// Returns a new system information form for the client if there is none currently open, otherwise creates a new one.
-        /// </returns>
         public static FrmSystemInformation CreateNewOrGetExisting(Client client)
         {
             if (OpenedForms.ContainsKey(client))
-            {
                 return OpenedForms[client];
-            }
-            FrmSystemInformation f = new FrmSystemInformation(client);
-            f.Disposed += (sender, args) => OpenedForms.Remove(client);
-            OpenedForms.Add(client, f);
+
+            var f = new FrmSystemInformation(client);
+            f.Disposed += (s, a) => OpenedForms.Remove(client);
+            OpenedForms[client] = f;
+
             return f;
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FrmSystemInformation"/> class using the given client.
-        /// </summary>
-        /// <param name="client">The client used for the remote desktop form.</param>
         public FrmSystemInformation(Client client)
         {
             _connectClient = client;
@@ -60,13 +73,67 @@ namespace Pulsar.Server.Forms
             RegisterMessageHandler();
             InitializeComponent();
 
+            ConvertAllListViewsToStable();
+
             DarkModeManager.ApplyDarkMode(this);
-			ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
+            ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
         }
 
-        /// <summary>
-        /// Registers the system information message handler for client communication.
-        /// </summary>
+        // -------------------------------------------------------------
+        // Replace ALL AeroListView controls with StableListView
+        // -------------------------------------------------------------
+        private void ConvertAllListViewsToStable()
+        {
+            foreach (Control ctrl in GetAllControls(this))
+            {
+                if (ctrl is AeroListView oldLv)
+                {
+                    var stable = new StableListView
+                    {
+                        Name = oldLv.Name,
+                        Location = oldLv.Location,
+                        Size = oldLv.Size,
+                        Anchor = oldLv.Anchor,
+                        Dock = oldLv.Dock,
+                        FullRowSelect = oldLv.FullRowSelect,
+                        GridLines = oldLv.GridLines,
+                        HeaderStyle = oldLv.HeaderStyle,
+                        HideSelection = oldLv.HideSelection,
+                        MultiSelect = oldLv.MultiSelect,
+                        View = oldLv.View,
+                        BorderStyle = oldLv.BorderStyle
+                    };
+
+                    foreach (ColumnHeader col in oldLv.Columns)
+                        stable.Columns.Add((ColumnHeader)col.Clone());
+
+                    var parent = oldLv.Parent;
+                    int index = parent.Controls.IndexOf(oldLv);
+
+                    parent.Controls.Remove(oldLv);
+                    parent.Controls.Add(stable);
+                    parent.Controls.SetChildIndex(stable, index);
+
+                    if (oldLv.Name == "lstSystem")
+                        lstSystem = stable;
+                }
+            }
+        }
+
+        private List<Control> GetAllControls(Control parent)
+        {
+            List<Control> list = new();
+            foreach (Control child in parent.Controls)
+            {
+                list.Add(child);
+                list.AddRange(GetAllControls(child));
+            }
+            return list;
+        }
+
+        // -------------------------------------------------------------
+        // Handlers
+        // -------------------------------------------------------------
         private void RegisterMessageHandler()
         {
             _connectClient.ClientState += ClientDisconnected;
@@ -74,9 +141,6 @@ namespace Pulsar.Server.Forms
             MessageHandler.Register(_sysInfoHandler);
         }
 
-        /// <summary>
-        /// Unregisters the system information message handler.
-        /// </summary>
         private void UnregisterMessageHandler()
         {
             MessageHandler.Unregister(_sysInfoHandler);
@@ -84,22 +148,16 @@ namespace Pulsar.Server.Forms
             _connectClient.ClientState -= ClientDisconnected;
         }
 
-        /// <summary>
-        /// Called whenever a client disconnects.
-        /// </summary>
-        /// <param name="client">The client which disconnected.</param>
-        /// <param name="connected">True if the client connected, false if disconnected</param>
         private void ClientDisconnected(Client client, bool connected)
         {
             if (!connected)
-            {
                 this.Invoke((MethodInvoker)this.Close);
-            }
         }
 
         private void FrmSystemInformation_Load(object sender, EventArgs e)
         {
             this.Text = WindowHelper.GetWindowTitle("System Information", _connectClient);
+
             _sysInfoHandler.RefreshSystemInformation();
             AddBasicSystemInformation();
         }
@@ -111,30 +169,51 @@ namespace Pulsar.Server.Forms
 
         private void SystemInformationChanged(object sender, List<Tuple<string, string>> infos)
         {
-            // remove "Loading..." information
             lstSystem.Items.RemoveAt(2);
 
             foreach (var info in infos)
             {
-                var lvi = new ListViewItem(new[] { info.Item1, info.Item2 });
-                lstSystem.Items.Add(lvi);
+                lstSystem.Items.Add(new ListViewItem(new[] { info.Item1, info.Item2 }));
             }
 
+            lstSystem.BeginUpdate();
             lstSystem.AutosizeColumns();
+            lstSystem.EndUpdate();
+        }
+
+        private void AddBasicSystemInformation()
+        {
+            lstSystem.Items.Add(new ListViewItem(new[]
+            {
+                "Operating System",
+                _connectClient.Value.OperatingSystem
+            }));
+
+            lstSystem.Items.Add(new ListViewItem(new[]
+            {
+                "Architecture",
+                _connectClient.Value.OperatingSystem.Contains("32 Bit")
+                    ? "x86 (32 Bit)"
+                    : "x64 (64 Bit)"
+            }));
+
+            lstSystem.Items.Add(new ListViewItem(new[]
+            {
+                "",
+                "Getting more information..."
+            }));
         }
 
         private void copyAllToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (lstSystem.Items.Count == 0) return;
 
-            string output = string.Empty;
-
-            foreach (ListViewItem lvi in lstSystem.Items)
-            {
-                output = lvi.SubItems.Cast<ListViewItem.ListViewSubItem>().Aggregate(output, (current, lvs) => current + (lvs.Text + " : "));
-                output = output.Remove(output.Length - 3);
-                output = output + "\r\n";
-            }
+            string output = string.Join("\r\n",
+                lstSystem.Items.Cast<ListViewItem>()
+                               .Select(item =>
+                                   string.Join(" : ",
+                                       item.SubItems.Cast<ListViewItem.ListViewSubItem>()
+                                                    .Select(s => s.Text))));
 
             ClipboardHelper.SetClipboardTextSafe(output);
         }
@@ -143,14 +222,12 @@ namespace Pulsar.Server.Forms
         {
             if (lstSystem.SelectedItems.Count == 0) return;
 
-            string output = string.Empty;
-
-            foreach (ListViewItem lvi in lstSystem.SelectedItems)
-            {
-                output = lvi.SubItems.Cast<ListViewItem.ListViewSubItem>().Aggregate(output, (current, lvs) => current + (lvs.Text + " : "));
-                output = output.Remove(output.Length - 3);
-                output = output + "\r\n";
-            }
+            string output = string.Join("\r\n",
+                lstSystem.SelectedItems.Cast<ListViewItem>()
+                                       .Select(item =>
+                                           string.Join(" : ",
+                                               item.SubItems.Cast<ListViewItem.ListViewSubItem>()
+                                                            .Select(s => s.Text))));
 
             ClipboardHelper.SetClipboardTextSafe(output);
         }
@@ -160,25 +237,6 @@ namespace Pulsar.Server.Forms
             lstSystem.Items.Clear();
             _sysInfoHandler.RefreshSystemInformation();
             AddBasicSystemInformation();
-        }
-
-        /// <summary>
-        /// Adds basic system information which is already available to the ListView.
-        /// </summary>
-        private void AddBasicSystemInformation()
-        {
-            ListViewItem lvi =
-                new ListViewItem(new[] { "Operating System", _connectClient.Value.OperatingSystem });
-            lstSystem.Items.Add(lvi);
-            lvi =
-                new ListViewItem(new[]
-                {
-                    "Architecture",
-                    (_connectClient.Value.OperatingSystem.Contains("32 Bit")) ? "x86 (32 Bit)" : "x64 (64 Bit)"
-                });
-            lstSystem.Items.Add(lvi);
-            lvi = new ListViewItem(new[] { "", "Getting more information..." });
-            lstSystem.Items.Add(lvi);
         }
     }
 }

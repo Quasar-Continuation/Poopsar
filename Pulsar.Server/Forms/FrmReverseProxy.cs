@@ -82,6 +82,7 @@ namespace Pulsar.Server.Forms
 
         private void FrmReverseProxy_Load(object sender, EventArgs e)
         {
+            lstConnections.GridLines = false;
             if (_clients.Length > 1)
             {
                 this.Text = "Reverse Proxy [Load-Balancer is active]";
@@ -106,12 +107,44 @@ namespace Pulsar.Server.Forms
         {
             lock (_reverseProxyHandler)
             {
-                lstConnections.BeginUpdate();
-                _openConnections = proxyClients;
-                lstConnections.VirtualListSize = _openConnections.Length;
-                lstConnections.EndUpdate();
+                // 🔥 FIX: Prevent header drop + blank space in virtual list
+                using (new RedrawScope(lstConnections))
+                {
+                    _openConnections = proxyClients;
+                    lstConnections.VirtualListSize = _openConnections.Length;
+                }
             }
         }
+
+        // ------------------------ RedrawScope Fix ------------------------
+        internal readonly struct RedrawScope : IDisposable
+        {
+            private readonly Control _ctl;
+            private readonly IntPtr _handle;
+
+            [System.Runtime.InteropServices.DllImport("user32.dll")]
+            private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+
+            private const int WM_SETREDRAW = 0x0B;
+
+            public RedrawScope(Control c)
+            {
+                _ctl = c;
+                _handle = c.IsHandleCreated ? c.Handle : IntPtr.Zero;
+                if (_handle != IntPtr.Zero)
+                    SendMessage(_handle, WM_SETREDRAW, 0, 0); // stop redraw
+            }
+
+            public void Dispose()
+            {
+                if (_handle != IntPtr.Zero)
+                {
+                    SendMessage(_handle, WM_SETREDRAW, 1, 0); // resume redraw
+                    _ctl.Invalidate();
+                }
+            }
+        }
+        // -----------------------------------------------------------------
 
         private void btnStart_Click(object sender, EventArgs e)
         {

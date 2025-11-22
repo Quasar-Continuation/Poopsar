@@ -25,7 +25,7 @@ namespace Pulsar.Server.Forms
 - [cpores](https://github.com/vahrervert) – VNC Drawing, Favorites, Overlays
 - [Rishie](https://github.com/rishieissocool) – Gatherer Options
 - [jungsuxx](https://github.com/jungsuxx) – HVNC Input & Code Simplification
-- [MOOM aka my lebron](https://github.com/moom825) – Inspiration & Batch Obfuscation
+- [Moom825](https://github.com/moom825) – Inspiration & Batch Obfuscation
 - [Poli](https://github.com/paulmaster59) – Discord Server & Custom Pulsar Crypter
 - [Deadman](https://github.com/DeadmanLabs) – Memory Dumping and Shellcode Builder
 - [User76](https://github.com/user76-real) – Networking Optimizations
